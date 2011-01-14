@@ -19,11 +19,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class PropertyManager
 {
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "rawtypes" })
     private final Map<PropertyKey<?>, PropertyProvider> properties = Collections
             .synchronizedMap(new HashMap<PropertyKey<?>, PropertyProvider>());
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "rawtypes" })
     private final Map<PropertyKey<?>, List> listeners = Collections
             .synchronizedMap(new HashMap<PropertyKey<?>, List>());
 
