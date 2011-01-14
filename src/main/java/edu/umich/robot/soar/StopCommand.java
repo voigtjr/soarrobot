@@ -56,7 +56,7 @@ public class StopCommand extends AbstractMultipleCycleCommand
     @Override
     boolean isComplete()
     {
-        double[] vel = Misc.toPrimitiveArray(output.getPose().getVel());
+        double[] vel = Misc.toPrimitiveDoubleArray(output.getPose().getVel());
         return Double.compare(LinAlg.magnitude(vel), TOLERANCE) < 0;
     }
 }

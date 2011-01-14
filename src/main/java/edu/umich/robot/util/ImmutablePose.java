@@ -100,7 +100,7 @@ public class ImmutablePose extends Pose
     public double getYaw()
     {
         return LinAlg.quatToRollPitchYaw(Misc
-                .toPrimitiveArray(getOrientation()))[2];
+                .toPrimitiveDoubleArray(getOrientation()))[2];
     }
 
     @Override

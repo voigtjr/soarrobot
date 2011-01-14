@@ -73,7 +73,7 @@ public class Pose
 
     public Pose(List<Double> pos)
     {
-        this(Misc.toPrimitiveArray(pos));
+        this(Misc.toPrimitiveDoubleArray(pos));
     }
 
     public Pose(Pose copy)
@@ -213,7 +213,7 @@ public class Pose
 
     public double getYaw()
     {
-        return LinAlg.quatToRollPitchYaw(Misc.toPrimitiveArray(orientation))[2];
+        return LinAlg.quatToRollPitchYaw(Misc.toPrimitiveDoubleArray(orientation))[2];
     }
 
     public Pose setYaw(double yaw)
@@ -227,16 +227,16 @@ public class Pose
     
     public double getDistance(Pose other)
     {
-        double[] x = Misc.toPrimitiveArray(pos);
-        double[] y = Misc.toPrimitiveArray(other.getPos());
+        double[] x = Misc.toPrimitiveDoubleArray(pos);
+        double[] y = Misc.toPrimitiveDoubleArray(other.getPos());
 
         return LinAlg.distance(x, y);
     }
 
     public RelativePose getRelative(Pose other)
     {
-        double[] x = Misc.toPrimitiveArray(pos);
-        double[] y = Misc.toPrimitiveArray(other.getPos());
+        double[] x = Misc.toPrimitiveDoubleArray(pos);
+        double[] y = Misc.toPrimitiveDoubleArray(other.getPos());
 
         double distance = LinAlg.distance(x, y);
 
@@ -252,11 +252,11 @@ public class Pose
     public pose_t asLcmType()
     {
         pose_t ret = new pose_t();
-        ret.pos = Misc.toPrimitiveArray(pos);
-        ret.vel = Misc.toPrimitiveArray(vel);
-        ret.orientation = Misc.toPrimitiveArray(orientation);
-        ret.rotation_rate = Misc.toPrimitiveArray(rotationRate);
-        ret.accel = Misc.toPrimitiveArray(accel);
+        ret.pos = Misc.toPrimitiveDoubleArray(pos);
+        ret.vel = Misc.toPrimitiveDoubleArray(vel);
+        ret.orientation = Misc.toPrimitiveDoubleArray(orientation);
+        ret.rotation_rate = Misc.toPrimitiveDoubleArray(rotationRate);
+        ret.accel = Misc.toPrimitiveDoubleArray(accel);
         return ret;
     }
 

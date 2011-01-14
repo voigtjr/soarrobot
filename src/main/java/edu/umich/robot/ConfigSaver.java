@@ -69,14 +69,14 @@ public class ConfigSaver
                 doors.add(i);
         }
         if (doors.size() > 0)
-            meta.setInts("doors", Misc.toPrimitiveArray(doors));
+            meta.setInts("doors", Misc.toPrimitiveIntArray(doors));
         
         Config objects = meta.getChild("objects");
         for (String name : metamap.getObjectNames())
         {
             VirtualObject template = metamap.getTemplate(name);
             Config c = objects.getChild(name);
-            c.setDoubles("size", Misc.toPrimitiveArray(template.getSize()));
+            c.setDoubles("size", Misc.toPrimitiveDoubleArray(template.getSize()));
             for(Map.Entry<String, String> e : template.getProperties().entrySet())
                 c.setString(e.getKey(), e.getValue());
         }
@@ -104,7 +104,7 @@ public class ConfigSaver
         splinters.add(name);
         config.setStrings("splinters", splinters.toArray(new String[splinters.size()]));
         
-        config.setDoubles(name + ".position", Misc.toPrimitiveArray(position));
+        config.setDoubles(name + ".position", Misc.toPrimitiveDoubleArray(position));
         
         if (sa == null)
             return;

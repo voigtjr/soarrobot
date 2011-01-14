@@ -164,7 +164,7 @@ public class Controller
         
         Config rconfig = new Config();
         rconfig.setString("class", "april.sim.SimSplinter");
-        rconfig.setDoubles("initialPosition", Misc.toPrimitiveArray(sd.initialPose.getPos()));
+        rconfig.setDoubles("initialPosition", Misc.toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
         SimObject ss = sim.addObject(sd.name, rconfig);
         if (ss != null && ss instanceof SimSplinter)

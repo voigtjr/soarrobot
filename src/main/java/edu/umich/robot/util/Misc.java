@@ -37,7 +37,7 @@ public class Misc
         return value;
     }
 
-    public static int[] toPrimitiveArray(List<Integer> l)
+    public static int[] toPrimitiveIntArray(List<Integer> l)
     {
         int[] ret = new int[l.size()];
         for (int i = 0; i < l.size(); ++i)
@@ -45,7 +45,7 @@ public class Misc
         return ret;
     }
     
-    public static double[] toPrimitiveArray(List<Double> l)
+    public static double[] toPrimitiveDoubleArray(List<Double> l)
     {
         double[] ret = new double[l.size()];
         for (int i = 0; i < l.size(); ++i)
