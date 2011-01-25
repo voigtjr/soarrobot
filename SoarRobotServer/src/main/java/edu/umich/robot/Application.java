@@ -55,7 +55,7 @@ public class Application
         else
             multipleRuns(config.getChild("multiple-runs"));
     }
-
+    
     private void multipleRuns(Config config)
     {
         String[] configs = config.requireStrings("configs");

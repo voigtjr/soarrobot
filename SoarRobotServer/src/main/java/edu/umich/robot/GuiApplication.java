@@ -80,6 +80,7 @@ import edu.umich.robot.actions.DisableFollowAction;
 import edu.umich.robot.actions.ExitAction;
 import edu.umich.robot.actions.FollowPositionAction;
 import edu.umich.robot.actions.FollowPositionAndThetaAction;
+import edu.umich.robot.actions.ForwardToTabletAction;
 import edu.umich.robot.actions.MoveCameraAboveAction;
 import edu.umich.robot.actions.MoveCameraBehindAction;
 import edu.umich.robot.actions.ResetAction;
@@ -146,6 +147,8 @@ public class GuiApplication
     private String objectToAdd;
     
     private ActionManager actionManager;
+    
+    private TabletLCM tabletlcm;
     
     private Config promptForConfig()
     {
@@ -226,6 +229,8 @@ public class GuiApplication
         JMenu fileMenu = new JMenu("File");
         fileMenu.add(actionManager.getAction(CreateSplinterRobotAction.class));
         fileMenu.add(actionManager.getAction(ResetPreferencesAction.class));
+        fileMenu.add(new JSeparator());
+        fileMenu.add(actionManager.getAction(ForwardToTabletAction.class));
         fileMenu.add(new JSeparator());
         fileMenu.add(actionManager.getAction(SaveMapAction.class));
         fileMenu.add(new JSeparator());
@@ -400,6 +405,7 @@ public class GuiApplication
         new MoveCameraAboveAction(actionManager);
         new MoveCameraBehindAction(actionManager);
         new SimSpeedAction(actionManager);
+        new ForwardToTabletAction(actionManager);
     }
     
     public Controller getController()
@@ -704,6 +710,31 @@ public class GuiApplication
     public Preferences getPreferences()
     {
         return PREFERENCES;
+    }
+
+    public synchronized void toggleForward()
+    {
+        if (tabletlcm == null)
+        {
+            try
+            {
+                tabletlcm = new TabletLCM();
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        else
+        {
+            tabletlcm.close();
+            tabletlcm = null;
+        }
+    }
+
+    public synchronized boolean getForward()
+    {
+        return tabletlcm != null;
     }
 
 }
