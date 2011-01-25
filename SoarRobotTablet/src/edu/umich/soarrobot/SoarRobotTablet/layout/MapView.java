@@ -1,30 +1,43 @@
 package edu.umich.soarrobot.SoarRobotTablet.layout;
 
+import java.security.InvalidAlgorithmParameterException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
+import android.view.View;
 import android.view.SurfaceHolder.Callback;
+import android.view.View.OnClickListener;
 import android.view.SurfaceView;
+import android.widget.ToggleButton;
 
 public class MapView extends SurfaceView implements Callback {
 
 	public static final String TAG = "MAP_VIEW";
 	public static final int PX_PER_METER = 32;
 	
-	DrawThread dt;
-	SoarRobotTablet activity;
-	Point camera;
-	float zoom;
-	Point lastTouch;
+	private DrawThread dt;
+	private SoarRobotTablet activity;
+	private PointF camera;
+	private float zoom;
+	private PointF lastTouch;
+	private HashMap<Integer, SimObject> objects;
+	private ArrayList<ToggleButton> controlButtons;
 	
 	public MapView(Context context) {
 		super(context);
@@ -45,18 +58,31 @@ public class MapView extends SurfaceView implements Callback {
 		SurfaceHolder sh = getHolder();
 		sh.addCallback(this);
 		dt = new DrawThread(sh);
-		camera = new Point(0, 0);
+		camera = new PointF(-2.0f, -2.0f);
 		zoom = 1.0f;
-		lastTouch = new Point(-1, -1);
+		lastTouch = new PointF(-1.0f, -1.0f);
+		objects = new HashMap<Integer, SimObject>();
 	}
 	
 	public void setActivity(SoarRobotTablet activity) {
 		this.activity = activity;
 	}
 	
+	public void addObject(SimObject object) {
+		objects.put(object.getID(), object);
+	}
+	
+	public void removeObject(SimObject object) {
+		objects.remove(object.getID());
+	}
+	
+	public SimObject getObject(int objectID) {
+		return objects.get(objectID);
+	}
+	
 	@Override
-	public void surfaceChanged(SurfaceHolder holder, int format, int width,
-			int height) {
+	public void surfaceChanged(SurfaceHolder holder, int format, int width,	int height) {
+		
 	}
 
 	@Override
@@ -82,21 +108,31 @@ public class MapView extends SurfaceView implements Callback {
 	public boolean onTouchEvent(MotionEvent event) {
 		int action = event.getAction();
 		if (action == MotionEvent.ACTION_MOVE) {
-			Point touch = new Point((int) event.getX(), (int) event.getY());
-			if (lastTouch.x != -1 && lastTouch.y != -1) {
+			PointF touch = new PointF(event.getX(), event.getY());
+			if (lastTouch.x >= 0.0f && lastTouch.y >= 0.0f) {
 				synchronized (camera) {
-					camera.x += touch.x - lastTouch.x;
-					camera.y += touch.y - lastTouch.y;
+					camera.x -= (touch.x - lastTouch.x) / PX_PER_METER;
+					camera.y -= (touch.y - lastTouch.y) / PX_PER_METER;
 				}
 			}
 			lastTouch = touch;
 		} else if (action == MotionEvent.ACTION_DOWN) {
+			PointF touch = new PointF(event.getX() / PX_PER_METER + camera.x, event.getY() / PX_PER_METER + camera.y);
+			synchronized (objects) {
+				for (int i = objects.size() - 1; i >= 0; --i) {
+					SimObject obj = objects.get(i);
+					if (obj.intersectsPoint(touch)) {
+						activity.setSelectedObject(obj);
+						break;
+					}
+				}
+			}
 			lastTouch.x = (int) event.getX();
 			lastTouch.y = (int) event.getY();
 		} else if (action == MotionEvent.ACTION_CANCEL
 				|| action == MotionEvent.ACTION_UP) {
-			lastTouch.x = -1;
-			lastTouch.y = -1;
+			lastTouch.x = -1.0f;
+			lastTouch.y = -1.0f;
 		}
 		return true;
 	}
@@ -118,44 +154,29 @@ public class MapView extends SurfaceView implements Callback {
 		
 		@Override
 		public void run() {
-			while(running) {
+			while (running) {
 				Canvas c = null;
-				try {
-					c = sh.lockCanvas(null);
-					synchronized (sh) {
+				synchronized (sh) {
+					try {
+						c = sh.lockCanvas(null);
 						draw(c);
+					} finally {
+						if (c != null)
+							sh.unlockCanvasAndPost(c);
 					}
-				} finally {
-					if (c != null)
-						sh.unlockCanvasAndPost(c);
 				}
 				try {
 					sleep(DELAY);
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
 		}
 		
-		// marker coords
-		float x = 0.0f;
-		float y = 0.0f;
-		float angle = 0.0f;
-		float[] triangle = {0.0f, 0.0f, -0.5f, -1.0f,
-				 -0.5f, -1.0f, 0.5f, -1.0f,
-				 0.5f, -1.0f, 0.0f, 0.0f};
-		
 		// Map info
 		float mapSize = 10.0f;
+		
 		private void draw(Canvas c) {
-
-			x += 0.03f;
-			x = x % mapSize;
-			y += 0.07f;
-			y = y % mapSize;
-			angle += 1.0f;
-			angle = angle % 360;
 			
 			Paint p = new Paint();
 			
@@ -163,7 +184,7 @@ public class MapView extends SurfaceView implements Callback {
 			p.setColor(Color.WHITE);
 			c.drawRect(new Rect(0,0, c.getWidth(), c.getHeight()), p);
 			
-			int cx, cy;
+			float cx, cy;
 			synchronized (camera) {
 				cx = camera.x;
 				cy = camera.y;
@@ -171,9 +192,9 @@ public class MapView extends SurfaceView implements Callback {
 			
 			c.save();
 			
-			c.translate(cx, cy);
-			c.scale(zoom, zoom);
 			c.scale(PX_PER_METER, PX_PER_METER);
+			c.translate(-cx, -cy);
+			c.scale(zoom, zoom);
 			
 			p.setColor(Color.GRAY);
 			for (int i = 0; i <= mapSize; ++i) {
@@ -181,15 +202,11 @@ public class MapView extends SurfaceView implements Callback {
 				c.drawLine(i, 0, i, mapSize, p);
 			}
 			
-			c.save();
-			c.translate(x, y);
-			c.rotate(angle);
-			p.setColor(Color.RED);
-			c.drawLines(triangle, p);
-			p.setColor(Color.BLACK);
-			p.setStyle(Style.STROKE);
-			c.drawLines(triangle, p);
-			c.restore();
+			for (SimObject object : objects.values()) {
+				c.save();
+				object.draw(c, p);
+				c.restore();
+			}
 			
 			c.restore();
 		}

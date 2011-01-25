@@ -13,10 +13,11 @@ public class TabletLCM
     
     public TabletLCM() throws IOException
     {
+        output = new LCM("udp://141.212.203.213:12122");
+
         input = LCM.getSingleton();
         input.subscribe("POSE_seek", subscriber);
         
-        output = new LCM("udp://127.0.0.1:12122");
     }
     
     private final LCMSubscriber subscriber = new LCMSubscriber() 

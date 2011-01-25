@@ -65,7 +65,7 @@ metadata
 			shape = cube;
 			type = block;
 		}
-	
+
 		blue-short-burn-sphere 
 		{
 			size = [ .25, .25 ];

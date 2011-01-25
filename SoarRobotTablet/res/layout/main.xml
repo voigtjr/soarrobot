@@ -1,36 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="fill_parent" 
-              android:layout_height="fill_parent"
-              android:background="#fff">
-    <edu.umich.soarrobot.SoarRobotTablet.layout.MapView
-                 android:id = "@+id/mapView"
-                 android:layout_width = "fill_parent"
-                 android:layout_height = "fill_parent" />
-    <RelativeLayout android:id="@+id/propertiesLayout"
-                  android:layout_width="fill_parent" 
-                  android:layout_height="100px"
-                  android:background="#000"
-                  android:layout_above="@+id/commandsLayout">
-        <TextView android:id="@+id/propertiesTextView"
-                  android:layout_width="wrap_content"
-                  android:layout_height="wrap_content"
-                  android:textColor="#fff"
-                  android:text="Hello, I am a TextView 1" />
-    </RelativeLayout>
-    <RelativeLayout android:id="@+id/commandsLayout"
-                  android:layout_width="fill_parent"
-                  android:layout_height="wrap_content"
-                  android:background="#000"
-                  android:layout_alignParentBottom="true">
-        <Button android:id="@+id/commandsButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentRight="true"
-                android:text="Send\nCommand" />
-        <EditText android:id="@+id/commandsEditText"
-                  android:layout_width="400px"
-                  android:layout_height="wrap_content"
-                  android:layout_alignParentLeft="true" />             
-    </RelativeLayout>
-</RelativeLayout>
+<edu.umich.soarrobot.SoarRobotTablet.layout.NoTouchScroll xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent"
+	android:fillViewport="true">
+	<RelativeLayout
+	    android:focusable="true"
+	    android:focusableInTouchMode="true"
+		android:layout_width="fill_parent"
+		android:layout_height="fill_parent"
+		android:background="#fff">
+		<edu.umich.soarrobot.SoarRobotTablet.layout.MapView
+			android:id="@+id/mapView"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:layout_above="@+id/propertiesLayout" />
+		<RelativeLayout android:id="@id/propertiesLayout"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:background="#000"
+			android:layout_above="@+id/commandsLayout">
+			<TextView android:id="@+id/propertiesTextView"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textColor="#fff"
+				android:text="Hello, I am a TextView 1" />
+		</RelativeLayout>
+		<RelativeLayout android:id="@id/commandsLayout"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:background="#000"
+			android:layout_alignParentBottom="true">
+			<Button android:id="@+id/commandsButton"
+			    android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_alignParentRight="true"
+				android:text="Send\nCommand" />
+			<EditText android:id="@+id/commandsEditText"
+				android:layout_width="400px"
+				android:layout_height="wrap_content"
+				android:layout_alignParentLeft="true"
+				android:singleLine="true" />
+		</RelativeLayout>
+	</RelativeLayout>
+</edu.umich.soarrobot.SoarRobotTablet.layout.NoTouchScroll>
