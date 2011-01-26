@@ -14,8 +14,8 @@ public final class map_objects_t implements lcm.lcm.LCMEncodable
 {
     public long utime;
     public int nobjects;
-    public byte object_types[];
-    public short object_ids[];
+    public int object_types[];
+    public int object_ids[];
     public double objects[][];
  
     public map_objects_t()
@@ -23,7 +23,7 @@ public final class map_objects_t implements lcm.lcm.LCMEncodable
     }
  
     public static final long LCM_FINGERPRINT;
-    public static final long LCM_FINGERPRINT_BASE = 0x9703c8647d5f1a40L;
+    public static final long LCM_FINGERPRINT_BASE = 0x032121add5055b09L;
  
     static {
         LCM_FINGERPRINT = _hashRecursive(new ArrayList<Class>());
@@ -53,11 +53,12 @@ public final class map_objects_t implements lcm.lcm.LCMEncodable
  
         outs.writeInt(this.nobjects); 
  
-        if (this.nobjects > 0)
-            outs.write(this.object_types, 0, nobjects);
+        for (int a = 0; a < this.nobjects; a++) {
+            outs.writeInt(this.object_types[a]); 
+        }
  
         for (int a = 0; a < this.nobjects; a++) {
-            outs.writeShort(this.object_ids[a]); 
+            outs.writeInt(this.object_ids[a]); 
         }
  
         for (int a = 0; a < this.nobjects; a++) {
@@ -94,11 +95,14 @@ public final class map_objects_t implements lcm.lcm.LCMEncodable
  
         this.nobjects = ins.readInt();
  
-        this.object_types = new byte[(int) nobjects];
-        ins.readFully(this.object_types, 0, nobjects); 
-        this.object_ids = new short[(int) nobjects];
+        this.object_types = new int[(int) nobjects];
         for (int a = 0; a < this.nobjects; a++) {
-            this.object_ids[a] = ins.readShort();
+            this.object_types[a] = ins.readInt();
+        }
+ 
+        this.object_ids = new int[(int) nobjects];
+        for (int a = 0; a < this.nobjects; a++) {
+            this.object_ids[a] = ins.readInt();
         }
  
         this.objects = new double[(int) nobjects][(int) 3];
@@ -117,10 +121,10 @@ public final class map_objects_t implements lcm.lcm.LCMEncodable
  
         outobj.nobjects = this.nobjects;
  
-        outobj.object_types = new byte[(int) nobjects];
+        outobj.object_types = new int[(int) nobjects];
         if (this.nobjects > 0)
             System.arraycopy(this.object_types, 0, outobj.object_types, 0, this.nobjects); 
-        outobj.object_ids = new short[(int) nobjects];
+        outobj.object_ids = new int[(int) nobjects];
         if (this.nobjects > 0)
             System.arraycopy(this.object_ids, 0, outobj.object_ids, 0, this.nobjects); 
         outobj.objects = new double[(int) nobjects][(int) 3];
