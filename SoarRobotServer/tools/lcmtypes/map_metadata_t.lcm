@@ -1,0 +1,16 @@
+struct map_metadata_t
+{
+    int64_t utime;                  // microsecond time stamp
+
+    int32_t nareas;
+    double areas[nareas][4][2];      // wall center x, y for each direction
+
+    int32_t ngateways;
+    double gateways[ngateways][2];  // x, y for each gateway
+
+    int32_t nobjects;
+    int8_t object_types[nobjects];  // what object class
+    int16_t object_ids[nobjects];   // which object
+    double objects[nobjects][3];    // where: x, y, theta
+}
+
