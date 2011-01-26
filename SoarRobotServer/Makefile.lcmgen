@@ -12,7 +12,7 @@ all:    $(LCMTYPES_JAVA)
 
 
 src/main/java/edu/umich/robot/lcmtypes/%.java: tools/lcmtypes/%.lcm
-	$(LCM) -j --jpath=src/main --jdefaultpkg=edu.umich.robot.lcmtypes $<
+	$(LCM) -j --jpath=src/main/java --jdefaultpkg=edu.umich.robot.lcmtypes $<
 
 clean:
 	rm -rf *~ src/main/java/edu/umich/robot/lcmtypes/*
