@@ -13,10 +13,6 @@ import lcm.lcm.*;
 public final class map_metadata_t implements lcm.lcm.LCMEncodable
 {
     public long utime;
-    public int nareas;
-    public double areas[][][];
-    public int ngateways;
-    public double gateways[][];
     public int nobjects;
     public byte object_types[];
     public short object_ids[];
@@ -27,7 +23,7 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
     }
  
     public static final long LCM_FINGERPRINT;
-    public static final long LCM_FINGERPRINT_BASE = 0xc22c306197ba155bL;
+    public static final long LCM_FINGERPRINT_BASE = 0x9703c8647d5f1a40L;
  
     static {
         LCM_FINGERPRINT = _hashRecursive(new ArrayList<Class>());
@@ -54,24 +50,6 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
     public void _encodeRecursive(DataOutput outs) throws IOException
     {
         outs.writeLong(this.utime); 
- 
-        outs.writeInt(this.nareas); 
- 
-        for (int a = 0; a < this.nareas; a++) {
-            for (int b = 0; b < 4; b++) {
-                for (int c = 0; c < 2; c++) {
-                    outs.writeDouble(this.areas[a][b][c]); 
-                }
-            }
-        }
- 
-        outs.writeInt(this.ngateways); 
- 
-        for (int a = 0; a < this.ngateways; a++) {
-            for (int b = 0; b < 2; b++) {
-                outs.writeDouble(this.gateways[a][b]); 
-            }
-        }
  
         outs.writeInt(this.nobjects); 
  
@@ -114,26 +92,6 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
     {
         this.utime = ins.readLong();
  
-        this.nareas = ins.readInt();
- 
-        this.areas = new double[(int) nareas][(int) 4][(int) 2];
-        for (int a = 0; a < this.nareas; a++) {
-            for (int b = 0; b < 4; b++) {
-                for (int c = 0; c < 2; c++) {
-                    this.areas[a][b][c] = ins.readDouble();
-                }
-            }
-        }
- 
-        this.ngateways = ins.readInt();
- 
-        this.gateways = new double[(int) ngateways][(int) 2];
-        for (int a = 0; a < this.ngateways; a++) {
-            for (int b = 0; b < 2; b++) {
-                this.gateways[a][b] = ins.readDouble();
-            }
-        }
- 
         this.nobjects = ins.readInt();
  
         this.object_types = new byte[(int) nobjects];
@@ -156,20 +114,6 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
     {
         edu.umich.robot.lcmtypes.map_metadata_t outobj = new edu.umich.robot.lcmtypes.map_metadata_t();
         outobj.utime = this.utime;
- 
-        outobj.nareas = this.nareas;
- 
-        outobj.areas = new double[(int) nareas][(int) 4][(int) 2];
-        for (int a = 0; a < this.nareas; a++) {
-            for (int b = 0; b < 4; b++) {
-                System.arraycopy(this.areas[a][b], 0, outobj.areas[a][b], 0, 2);            }
-        }
- 
-        outobj.ngateways = this.ngateways;
- 
-        outobj.gateways = new double[(int) ngateways][(int) 2];
-        for (int a = 0; a < this.ngateways; a++) {
-            System.arraycopy(this.gateways[a], 0, outobj.gateways[a], 0, 2);        }
  
         outobj.nobjects = this.nobjects;
  
