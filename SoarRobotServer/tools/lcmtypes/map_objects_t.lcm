@@ -1,4 +1,4 @@
-struct map_metadata_t
+struct map_objects_t
 {
     int64_t utime;                  // microsecond time stamp
 
