@@ -13,17 +13,18 @@ import lcm.lcm.*;
 public final class map_metadata_t implements lcm.lcm.LCMEncodable
 {
     public long utime;
-    public int nobjects;
-    public byte object_types[];
-    public short object_ids[];
-    public double objects[][];
+    public int nareas;
+    public double areas[][];
+    public int ngateways;
+    public int gateway_ids[];
+    public double gateways[][];
  
     public map_metadata_t()
     {
     }
  
     public static final long LCM_FINGERPRINT;
-    public static final long LCM_FINGERPRINT_BASE = 0x9703c8647d5f1a40L;
+    public static final long LCM_FINGERPRINT_BASE = 0xed3a3aacdc5e5179L;
  
     static {
         LCM_FINGERPRINT = _hashRecursive(new ArrayList<Class>());
@@ -51,18 +52,23 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
     {
         outs.writeLong(this.utime); 
  
-        outs.writeInt(this.nobjects); 
+        outs.writeInt(this.nareas); 
  
-        if (this.nobjects > 0)
-            outs.write(this.object_types, 0, nobjects);
- 
-        for (int a = 0; a < this.nobjects; a++) {
-            outs.writeShort(this.object_ids[a]); 
+        for (int a = 0; a < this.nareas; a++) {
+            for (int b = 0; b < 4; b++) {
+                outs.writeDouble(this.areas[a][b]); 
+            }
         }
  
-        for (int a = 0; a < this.nobjects; a++) {
-            for (int b = 0; b < 3; b++) {
-                outs.writeDouble(this.objects[a][b]); 
+        outs.writeInt(this.ngateways); 
+ 
+        for (int a = 0; a < this.ngateways; a++) {
+            outs.writeInt(this.gateway_ids[a]); 
+        }
+ 
+        for (int a = 0; a < this.ngateways; a++) {
+            for (int b = 0; b < 2; b++) {
+                outs.writeDouble(this.gateways[a][b]); 
             }
         }
  
@@ -92,19 +98,26 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
     {
         this.utime = ins.readLong();
  
-        this.nobjects = ins.readInt();
+        this.nareas = ins.readInt();
  
-        this.object_types = new byte[(int) nobjects];
-        ins.readFully(this.object_types, 0, nobjects); 
-        this.object_ids = new short[(int) nobjects];
-        for (int a = 0; a < this.nobjects; a++) {
-            this.object_ids[a] = ins.readShort();
+        this.areas = new double[(int) nareas][(int) 4];
+        for (int a = 0; a < this.nareas; a++) {
+            for (int b = 0; b < 4; b++) {
+                this.areas[a][b] = ins.readDouble();
+            }
         }
  
-        this.objects = new double[(int) nobjects][(int) 3];
-        for (int a = 0; a < this.nobjects; a++) {
-            for (int b = 0; b < 3; b++) {
-                this.objects[a][b] = ins.readDouble();
+        this.ngateways = ins.readInt();
+ 
+        this.gateway_ids = new int[(int) ngateways];
+        for (int a = 0; a < this.ngateways; a++) {
+            this.gateway_ids[a] = ins.readInt();
+        }
+ 
+        this.gateways = new double[(int) ngateways][(int) 2];
+        for (int a = 0; a < this.ngateways; a++) {
+            for (int b = 0; b < 2; b++) {
+                this.gateways[a][b] = ins.readDouble();
             }
         }
  
@@ -115,17 +128,20 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
         edu.umich.robot.lcmtypes.map_metadata_t outobj = new edu.umich.robot.lcmtypes.map_metadata_t();
         outobj.utime = this.utime;
  
-        outobj.nobjects = this.nobjects;
+        outobj.nareas = this.nareas;
  
-        outobj.object_types = new byte[(int) nobjects];
-        if (this.nobjects > 0)
-            System.arraycopy(this.object_types, 0, outobj.object_types, 0, this.nobjects); 
-        outobj.object_ids = new short[(int) nobjects];
-        if (this.nobjects > 0)
-            System.arraycopy(this.object_ids, 0, outobj.object_ids, 0, this.nobjects); 
-        outobj.objects = new double[(int) nobjects][(int) 3];
-        for (int a = 0; a < this.nobjects; a++) {
-            System.arraycopy(this.objects[a], 0, outobj.objects[a], 0, 3);        }
+        outobj.areas = new double[(int) nareas][(int) 4];
+        for (int a = 0; a < this.nareas; a++) {
+            System.arraycopy(this.areas[a], 0, outobj.areas[a], 0, 4);        }
+ 
+        outobj.ngateways = this.ngateways;
+ 
+        outobj.gateway_ids = new int[(int) ngateways];
+        if (this.ngateways > 0)
+            System.arraycopy(this.gateway_ids, 0, outobj.gateway_ids, 0, this.ngateways); 
+        outobj.gateways = new double[(int) ngateways][(int) 2];
+        for (int a = 0; a < this.ngateways; a++) {
+            System.arraycopy(this.gateways[a], 0, outobj.gateways[a], 0, 2);        }
  
         return outobj;
     }

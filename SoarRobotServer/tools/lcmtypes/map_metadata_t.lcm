@@ -6,7 +6,7 @@ struct map_metadata_t
     double areas[nareas][4];        // x, y, w, h for each area
 
     int32_t ngateways;
-    int16_t gateway_ids[ngateways]; // gateway id numbers
+    int32_t gateway_ids[ngateways]; // gateway id numbers
     double gateways[ngateways][2];  // x, y for each gateway
 }
 
