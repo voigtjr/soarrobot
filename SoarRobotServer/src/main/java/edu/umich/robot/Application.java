@@ -31,12 +31,20 @@ import april.config.ConfigUtil;
 import edu.umich.robot.util.swing.SwingTools;
 
 /**
+ * <p> Top level entry point for the application.
+ *
+ * <p> Creates either GUI or Headless/batch runner depending on config file.
+ *
  * @author voigtjr@gmail.com
  */
 public class Application
 {
     private static final Log logger = LogFactory.getLog(Application.class);
     
+    /**
+     * <p> When running in batch mode, this generates the command line for a
+     * run.
+     */
     private String[] toArgs(String config)
     {
         return new String[] { "--config", config };
@@ -47,6 +55,14 @@ public class Application
         new Application(args);
     }
 
+    /**
+     * <p> Call with --config CONFIG_FILE or with no args to start a file
+     * chooser.
+     * 
+     * <p> If the config file contains the key "multiple-runs.configs", a
+     * headless batch run will be started using each config file in the array.
+     * Otherwise the GUI is started.
+     */
     public Application(final String[] args)
     {
         Config config = ConfigUtil.getDefaultConfig(args);
@@ -56,6 +72,16 @@ public class Application
             multipleRuns(config.getChild("multiple-runs"));
     }
     
+    /**
+     * <p> Loops, running each config file in a batch mode.
+     * 
+     * <p> Each run continues until a specified timeout or a number of cycles
+     * is exceeded. Both or neither may be specified.  The run also will stop
+     * if Soar stops for whatever reason.
+     *
+     * <p> After a run, the garbage collector is called and the system sleeps
+     * for a few seconds. This helps Java manage its memory and threads.
+     */
     private void multipleRuns(Config config)
     {
         String[] configs = config.requireStrings("configs");
@@ -94,11 +120,21 @@ public class Application
         });
     }
     
+    /**
+     * Utility code placed here to avoid duplication.
+     *
+     * Modifies the config file for the simulator.
+     */
     public static void setupSimulatorConfig(Config config)
     {
         addImageData(config, "simulator.obstacles.");
     }
     
+    /**
+     * Utility code placed here to avoid duplication.
+     *
+     * Modifies the config file for the simulator.
+     */
     public static void addImageData(Config config, String prefix)
     {
         config.setStrings(prefix + "image_path", config.requireStrings("image_path"));
@@ -109,3 +145,4 @@ public class Application
     }
     
 }
+

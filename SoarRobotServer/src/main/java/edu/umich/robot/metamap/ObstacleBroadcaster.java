@@ -27,13 +27,16 @@ import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import lcm.lcm.LCM;
 import april.lcmtypes.sim_obstacles_t;
+import april.util.TimeUtil;
 
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umich.robot.lcmtypes.map_objects_t;
 import edu.umich.robot.util.Pose;
 
 /**
@@ -49,6 +52,8 @@ class ObstacleBroadcaster
     
     private static interface Obstacle
     {
+        int getId();
+        int getType();
         double[] getRect();
         double[] getColorHack();
     }
@@ -60,6 +65,16 @@ class ObstacleBroadcaster
         ObstacleVO(VirtualObject vo)
         {
             this.vo = vo;
+        }
+        
+        public int getId()
+        {
+            return vo.getId();
+        }
+        
+        public int getType()
+        {
+            return 1; // TODO
         }
         
         public double[] getRect()
@@ -114,10 +129,12 @@ class ObstacleBroadcaster
     
     private static class ObstacleD implements Obstacle
     {
+        private int id;
         private final double[] xywh;
         
         public ObstacleD(Door door)
         {
+            id = (short)door.getId();
             this.xywh = new double[] {
                     door.getxywh().get(0) + door.getxywh().get(2) * 0.5,
                     door.getxywh().get(1) + door.getxywh().get(3) * 0.5,
@@ -125,6 +142,16 @@ class ObstacleBroadcaster
                     door.getxywh().get(3),
                     0
             };
+        }
+        
+        public int getId()
+        {
+            return id;
+        }
+        
+        public int getType()
+        {
+            return 0;
         }
         
         public double[] getRect()
@@ -138,25 +165,67 @@ class ObstacleBroadcaster
         }
     }
     
+    private final sim_obstacles_t obs = new sim_obstacles_t();
+    private final map_objects_t objs = new map_objects_t();
+    private boolean changed = true;
+    private final ReentrantLock obstacleLock = new ReentrantLock();
+    
     ObstacleBroadcaster()
     {
+        obs.generation = 0;
         schexec.scheduleAtFixedRate(new Runnable()
         {
             public void run()
             {
-                sim_obstacles_t obs = new sim_obstacles_t();
-                obs.nrects = obstacles.size();
-                obs.ncircles = obstacles.size();
-                obs.rects = new double[obs.nrects][];
-                obs.circles = new double[obs.ncircles][];
-                Obstacle[] obsArray = obstacles.values().toArray(new Obstacle[obs.nrects]);
-                for (int i = 0; i < obstacles.size(); ++i)
+                boolean c = false;
+                int n = -1;
+                Obstacle[] obsArray = null;
+                
+                obstacleLock.lock();
+                try
                 {
-                    obs.rects[i] = obsArray[i].getRect();
-                    obs.circles[i] = obsArray[i].getColorHack();
+                    if (changed)
+                    {
+                        changed = false;
+                        c = true;
+                        n = obstacles.size();
+                        obsArray = obstacles.values().toArray(new Obstacle[n]);
+                    }
+                } 
+                finally
+                {
+                    obstacleLock.unlock();
                 }
-                obs.generation = 0;
+                
+                if (c)
+                {
+                    obs.nrects = n;
+                    obs.ncircles = n;
+                    obs.rects = new double[n][];
+                    obs.circles = new double[n][];
+                    for (int i = 0; i < n; ++i)
+                    {
+                        obs.rects[i] = obsArray[i].getRect();
+                        obs.circles[i] = obsArray[i].getColorHack();
+                    }
+                    
+                    objs.nobjects = n;
+                    objs.object_ids = new int[n];
+                    objs.object_types = new int[n];
+                    objs.objects = new double[n][3];
+                    for (int i = 0; i < n; ++i)
+                    {
+                        objs.object_ids[i] = obsArray[i].getId();
+                        objs.object_types[i] = obsArray[i].getType();
+                        objs.objects[i][0] = obsArray[i].getRect()[0];
+                        objs.objects[i][1] = obsArray[i].getRect()[1];
+                        objs.objects[i][2] = obsArray[i].getRect()[4];
+                    }
+                }
+
                 lcm.publish("SIM_OBSTACLES", obs);
+                objs.utime = TimeUtil.utime();
+                lcm.publish("MAP_OBJECTS", objs);
             }
         }, 0, 250, TimeUnit.MILLISECONDS);    
     }
