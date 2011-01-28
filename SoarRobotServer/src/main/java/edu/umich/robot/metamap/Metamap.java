@@ -81,6 +81,12 @@ public class Metamap implements RobotEventListener
         this.origin = Arrays.copyOf(origin, origin.length);
         
         this.areaList = areaList;
+        
+//        StringBuilder builder = AreaDescriptions.render(null, areaList);
+//        System.out.println(builder.toString());
+//        List<AbridgedAreaDescription> abad = AreaDescriptions.parseAreas(builder.toString());
+//        System.out.println(abad.toString());
+        
         this.objects = objects;
         this.doors.putAll(doors);
 
