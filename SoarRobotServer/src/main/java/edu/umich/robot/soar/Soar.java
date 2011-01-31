@@ -214,7 +214,10 @@ public class Soar implements RobotEventListener
         }
     };
 
-    public void toggleRunState()
+    /**
+     * @return <code>true</code> if Soar is now running.
+     */
+    public boolean toggleRunState()
     {
         synchronized (exec)
         {
@@ -228,9 +231,10 @@ public class Soar implements RobotEventListener
                         kernel.RunAllAgentsForever();
                     }
                 });
-            }
-            else
-                soarTask.cancel(true);
+                return true;
+			}
+			soarTask.cancel(true);
+			return false;
         }
     }
     

@@ -54,6 +54,7 @@ import edu.umich.robot.events.control.DriveEStopEvent;
 import edu.umich.robot.gp.Gamepad;
 import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.MetamapFactory;
+import edu.umich.robot.network.Server;
 import edu.umich.robot.radio.Radio;
 import edu.umich.robot.radio.SimRadio;
 import edu.umich.robot.soar.Soar;
@@ -96,6 +97,8 @@ public class Controller
 
     private String selectedRobot;
     
+    private Server server;
+    
     private static class SplinterData
     {
         public SplinterData(String name, Pose pose, boolean collisions)
@@ -131,6 +134,14 @@ public class Controller
 
         events.addListener(BeforeResetEvent.class, soar);
         events.addListener(AfterResetEvent.class, soar);
+        
+        try {
+			server = new Server(12122);
+			server.setController(this);
+			server.start();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
     }
     
     private final SystemEventInterface soarHandler = new Kernel.SystemEventInterface()
@@ -283,9 +294,13 @@ public class Controller
         }
     }
 
-    public void toggleSoarRunState()
+    /**
+     * 
+     * @return <code>True if Soar is now running.
+     */
+    public boolean toggleSoarRunState()
     {
-        soar.toggleRunState();
+        return soar.toggleRunState();
     }
     
     public void startSoar()
@@ -408,11 +423,6 @@ public class Controller
         }
         
         cs.write(selectedFile);
-    }
-
-    public void soarToggle()
-    {
-        soar.toggleRunState();
     }
 
     public void soarStep()

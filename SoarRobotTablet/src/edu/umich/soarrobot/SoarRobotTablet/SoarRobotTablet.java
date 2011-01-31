@@ -27,6 +27,9 @@ public class SoarRobotTablet extends Activity {
 		@Override
 		public void onClick(View v) {
 			// send the message
+			String message = commandsEditText.getText().toString();
+			String response = robotSession.sendMessage(message);
+			propertiesTextView.setText(response);
 			commandsEditText.setText("");
 		}
 	};
@@ -42,7 +45,7 @@ public class SoarRobotTablet extends Activity {
         propertiesTextView = (TextView) findViewById(R.id.propertiesTextView);
         commandsEditText = (EditText) findViewById(R.id.commandsEditText);
         setSelectedObject(null);
-        robotSession = new RobotSession(this, "141.212.109.131", 50422);
+        robotSession = new RobotSession(this, "141.212.109.131", 12122);
         robotSession.start();
         ((Button)findViewById(R.id.commandsButton)).setOnClickListener(buttonListener);
     	}
@@ -51,10 +54,10 @@ public class SoarRobotTablet extends Activity {
     	}
     }
     
-	public void showAlert(final String message) {
+	public void showAlert(final String message, final int length) {
 		runOnUiThread(new Runnable() {
 			public void run() {
-				Toast t = Toast.makeText(SoarRobotTablet.this, message, Toast.LENGTH_LONG);
+				Toast t = Toast.makeText(SoarRobotTablet.this, message, length);
 				t.show();
 			}
 		});
