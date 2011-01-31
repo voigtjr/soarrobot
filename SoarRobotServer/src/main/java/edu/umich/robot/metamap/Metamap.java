@@ -30,7 +30,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import lcm.lcm.LCM;
-import april.lcmtypes.tag_pose_t;
+import april.lcmtypes.map_metadata_t;
 import april.util.TimeUtil;
 
 import com.google.common.collect.Lists;
@@ -81,6 +81,12 @@ public class Metamap implements RobotEventListener
         this.origin = Arrays.copyOf(origin, origin.length);
         
         this.areaList = areaList;
+        
+//        StringBuilder builder = AreaDescriptions.render(null, areaList);
+//        System.out.println(builder.toString());
+//        List<AbridgedAreaDescription> abad = AreaDescriptions.parseAreas(builder.toString());
+//        System.out.println(abad.toString());
+        
         this.objects = objects;
         this.doors.putAll(doors);
 
@@ -88,27 +94,38 @@ public class Metamap implements RobotEventListener
             initialDoorState.put(door.getId(), door.copy());
         broadcastDoors();
         
-        final tag_pose_t tpt = new tag_pose_t();
-        tpt.ntags = areaList.size();
-        tpt.id = new int[areaList.size()];
-        tpt.poses = new double[areaList.size()][4][4];
-        
+        final map_metadata_t meta = new map_metadata_t();
+        meta.nareas = areaList.size();
+        meta.areas = new double[areaList.size()][4];
+        List<Gateway> gatewayList = Lists.newArrayList();
         for (int i = 0; i < areaList.size(); ++i)
         {
             AreaDescription ad = areaList.get(i);
-            tpt.id[i] = ad.getId();
-            for (int j = 0; j < 3; ++j)
-                tpt.poses[i][0][j] = ad.getPose().getPos().get(j) + metersPerPixel / 2/*+ (ad.getPose().getVel().get(j) / 2)*/;
+            meta.areas[i][0] = ad.getPose().getPos(0);
+            meta.areas[i][1] = ad.getPose().getPos(1);
+            meta.areas[i][2] = ad.getPose().getVel().get(0);
+            meta.areas[i][3] = ad.getPose().getVel().get(1);
+            gatewayList.addAll(ad.getGateways());
         }
         
+        meta.ngateways = gatewayList.size();
+        meta.gateway_ids = new int[gatewayList.size()];
+        meta.gateways = new double[gatewayList.size()][2];
+        for (int i = 0; i < gatewayList.size(); ++i)
+        {
+            meta.gateway_ids[i] = gatewayList.get(i).getId();
+            meta.gateways[i][0] = gatewayList.get(i).getPose().getPos(0);
+            meta.gateways[i][1] = gatewayList.get(i).getPose().getPos(1);
+        }
+
         schexec.scheduleAtFixedRate(new Runnable()
         {
             final LCM lcm = LCM.getSingleton();
             
             public void run()
             {
-                tpt.utime = TimeUtil.utime();
-                lcm.publish("AREA_DESCRIPTIONS", tpt);
+                meta.utime = TimeUtil.utime();
+                lcm.publish("AREA_DESCRIPTIONS", meta);
             }
         }, 0, 1, TimeUnit.SECONDS);
     }

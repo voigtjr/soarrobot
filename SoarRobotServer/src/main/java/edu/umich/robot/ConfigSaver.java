@@ -46,6 +46,12 @@ import edu.umich.robot.util.properties.PropertyKey;
 import edu.umich.robot.util.properties.PropertyManager;
 
 /**
+ * <p> Utility class to generate a new configuration from the current program
+ * state.
+ *
+ * <p> Also writes out the configuration to a file in a halfway-readable
+ * format.
+ *
  * @author voigtjr@gmail.com
  */
 public class ConfigSaver
@@ -74,10 +80,10 @@ public class ConfigSaver
         Config objects = meta.getChild("objects");
         for (String name : metamap.getObjectNames())
         {
-            VirtualObject template = metamap.getTemplate(name);
+            VirtualObject tpl = metamap.getTemplate(name);
             Config c = objects.getChild(name);
-            c.setDoubles("size", Misc.toPrimitiveDoubleArray(template.getSize()));
-            for(Map.Entry<String, String> e : template.getProperties().entrySet())
+            c.setDoubles("size", Misc.toPrimitiveDoubleArray(tpl.getSize()));
+            for(Map.Entry<String, String> e : tpl.getProperties().entrySet())
                 c.setString(e.getKey(), e.getValue());
         }
         
@@ -98,6 +104,12 @@ public class ConfigSaver
         saveProperty(soarProperties, SoarProperties.SPAWN_DEBUGGERS, soar);
     }
     
+    /**
+     * <p> Writes the current position and associated Soar controller
+     * productions of a Splinter bot.
+     *
+     * <p> Null ok to pass if there is no agent associated with the Splinter.
+     */
     public void addSplinter(String name, List<Double> position, SoarAgent sa)
     {
         List<String> splinters = Lists.newArrayList(config.getStrings("splinters", new String[0]));
@@ -160,6 +172,10 @@ public class ConfigSaver
         }
     }
 
+    /**
+     * <p> Creates or overwrites the passed file with this current
+     * configuration.
+     */
     public void write(File selectedFile) throws IOException
     {
         selectedFile.createNewFile();
@@ -186,6 +202,5 @@ public class ConfigSaver
         pout.flush();
         pout.close();
     }
-    
-    
 }
+

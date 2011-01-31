@@ -40,8 +40,12 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.spi.LoggingEvent;
 
 /**
+ * <p> Simple panel that shows the last few lines from the console output,
+ * helpful for debugging.
+ *
  * @author voigtjr@gmail.com
  */
+
 public class ConsoleView extends JPanel
 {
     private static final long serialVersionUID = 5579225590193881099L;
@@ -83,6 +87,14 @@ public class ConsoleView extends JPanel
         }
     }
     
+    /** 
+     * <p> Length of scroll-back buffer.
+     *
+     * <p> Changing  this with the current implementation can severely affect
+     * performance.
+     */
+    private static final int maxLines = 10;
+    
     public ConsoleView()
     {
         super(new BorderLayout());
@@ -95,7 +107,6 @@ public class ConsoleView extends JPanel
              AbstractDocument adoc = (AbstractDocument)doc;
              adoc.setDocumentFilter(new DocumentFilter()
              {
-                 private static final int maxLines = 10;
                  private int lines = 0;
 
                  @Override

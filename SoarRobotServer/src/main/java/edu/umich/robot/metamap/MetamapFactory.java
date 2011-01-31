@@ -21,12 +21,9 @@
  */
 package edu.umich.robot.metamap;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -264,33 +261,5 @@ public class MetamapFactory
         
         return left || right;
     }
-    
-    public static void main(String[] args) throws FileNotFoundException
-    {
-        Scanner sc = new Scanner(new File("/Users/voigtjr/Desktop/3fcse.rooms"));
-        int id = 0;
-        List<Integer> doors = Lists.newArrayList();
-        while (sc.hasNext())
-        {
-            int x = sc.nextInt();
-            int y = sc.nextInt();
-            int w = sc.nextInt();
-            int h = sc.nextInt();
-            String type = sc.next();
-            
-            if (type.equals("d"))
-                doors.add(id);
-            
-            System.out.format("\t%3d = [ %3d, %3d, %3d, %3d ];%n", id, x, y, w, h);            
-            id += 1;
-        }
-        
-        System.out.print("\n\tdoors = [ ");
-        for (Integer d : doors)
-        {
-            System.out.print(d);
-            System.out.print(", ");
-        }
-        System.out.println();
-    }
+
 }
