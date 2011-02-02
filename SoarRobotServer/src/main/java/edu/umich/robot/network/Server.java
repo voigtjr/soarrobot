@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import javax.swing.JOptionPane;
@@ -57,19 +58,21 @@ public class Server {
 							}
 						} catch (IOException e) {
 							e.printStackTrace();
+						} catch (NoSuchElementException e) {
+							e.printStackTrace();
 						} finally {
 							client.close();
 						}
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					stopLCM();
 				}
 				try {
 					socket.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				stopLCM();
 				System.out.println("Server done");
 			}
 		}.start();
@@ -122,6 +125,7 @@ public class Server {
 			String connectionString = "udp://" + client.getHostAddress() + ":" + port;
 			try {
 				lcm = new TabletLCM(connectionString);
+				System.out.println("Started UDP LCM forwarding to client: " + connectionString);
 			} catch (IllegalArgumentException e) {
 				e.printStackTrace();
 			} catch (IOException e) {

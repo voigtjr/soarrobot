@@ -14,7 +14,7 @@
 			android:layout_width="fill_parent"
 			android:layout_height="fill_parent"
 			android:layout_above="@+id/propertiesLayout" />
-		<RelativeLayout android:id="@id/propertiesLayout"
+		<RelativeLayout android:id="@+id/propertiesLayout"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
 			android:background="#000"
@@ -25,7 +25,7 @@
 				android:textColor="#fff"
 				android:text="Hello, I am a TextView 1" />
 		</RelativeLayout>
-		<RelativeLayout android:id="@id/commandsLayout"
+		<RelativeLayout android:id="@+id/commandsLayout"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
 			android:background="#000"

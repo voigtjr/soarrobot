@@ -1,11 +1,6 @@
 package edu.umich.soarrobot.SoarRobotTablet.layout;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
-
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 import android.content.Context;
@@ -13,18 +8,13 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
-import android.view.View;
 import android.view.SurfaceHolder.Callback;
-import android.view.View.OnClickListener;
 import android.view.SurfaceView;
-import android.widget.ToggleButton;
 
 public class MapView extends SurfaceView implements Callback {
 
@@ -37,7 +27,6 @@ public class MapView extends SurfaceView implements Callback {
 	private float zoom;
 	private PointF lastTouch;
 	private HashMap<Integer, SimObject> objects;
-	private ArrayList<ToggleButton> controlButtons;
 	
 	public MapView(Context context) {
 		super(context);
