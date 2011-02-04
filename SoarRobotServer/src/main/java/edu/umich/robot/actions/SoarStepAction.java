@@ -40,7 +40,7 @@ public class SoarStepAction extends AbstractRobotAction
     
     public void actionPerformed(ActionEvent e)
     {
-        getApplication().getController().soarStep();
+        getApplication().getController().startSoar(1);
     }
 
     @Override
