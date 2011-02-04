@@ -25,6 +25,9 @@ import edu.umich.robot.events.control.AbstractControlEvent;
 import edu.umich.robot.util.events.RobotEventListener;
 
 /**
+ * <p>
+ * Controller that does nothing, nameed "none".
+ * 
  * @author voigtjr@gmail.com
  */
 public enum NullController implements RobotController

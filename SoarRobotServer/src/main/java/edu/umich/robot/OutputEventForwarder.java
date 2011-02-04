@@ -32,6 +32,10 @@ import edu.umich.robot.util.events.RobotEventListener;
 import edu.umich.robot.util.events.RobotEventManager;
 
 /**
+ * <p>
+ * Pipes events between robots and robot controllers. Maintains a stack of robot
+ * controllers so that new ones can be pushed on top.
+ * 
  * @author voigtjr@gmail.com
  */
 class OutputEventForwarder
@@ -42,12 +46,28 @@ class OutputEventForwarder
 
     private final Deque<RobotController> stack = new ArrayDeque<RobotController>();
 
+    /**
+     * <p>
+     * Constructor serving a robot. Takes a reference to the program event
+     * controller so that it can fire controller activated/deactivated. This is
+     * probably a bad dependency.
+     * 
+     * @param robot
+     *            The robot to manage controllers for.
+     * @param events
+     *            Controller event manager for program events.
+     */
     OutputEventForwarder(Robot robot, RobotEventManager events)
     {
         this.robot = robot;
         this.events = events;
     }
 
+    /**
+     * <p>
+     * Control events are picked up here and sent on to the robot. This class
+     * could alternatively just register the robot for these events directly.
+     */
     private final RobotEventListener forwarder = new RobotEventListener()
     {
         public void onEvent(RobotEvent event)
@@ -56,11 +76,25 @@ class OutputEventForwarder
         }
     };
 
+    /**
+     * <p>
+     * Check if there are no controllers for this robot.
+     * 
+     * @return true if there are no controllers.
+     */
     synchronized boolean isEmpty()
     {
         return stack.isEmpty();
     }
 
+    /**
+     * <p>
+     * Push a controller on to the stack. This controller becomes the one in
+     * control, the previous controller is unregistered.
+     * 
+     * @param controller
+     *            The new controller to take over.
+     */
     synchronized void pushController(RobotController controller)
     {
         RobotController temp = stack.peekFirst();
@@ -70,6 +104,11 @@ class OutputEventForwarder
         registerInternal(controller);
     }
 
+    /**
+     * <p>
+     * Unregister the previously registered controller, popping it from the
+     * stack of controllers.
+     */
     synchronized void popController()
     {
         RobotController controller = stack.removeFirst();
@@ -82,6 +121,10 @@ class OutputEventForwarder
             registerInternal(controller);
     }
 
+    /**
+     * <p>
+     * Pop all controllers.
+     */
     synchronized void clear()
     {
         if (!stack.isEmpty())
