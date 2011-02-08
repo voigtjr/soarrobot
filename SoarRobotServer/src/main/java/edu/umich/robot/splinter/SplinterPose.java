@@ -44,7 +44,7 @@ public class SplinterPose
 
     private static final double MIN_ELABORATION_INTERVAL_SEC = 0.010; 
 
-    private static final String POSE_CHANNEL_BASE = "POSE_";
+    public static final String POSE_CHANNEL_BASE = "POSE_";
 
     private pose_t pose;
 

@@ -71,4 +71,54 @@ public class SplinterProperties
         .defaultValue( new double[] { 1.8, 0, 0.125 })
         .build();
 
+    public static PropertyKey<String> HOSTNAME =
+        key("hostname", String.class)
+        .defaultValue("192.168.237.7")
+        .build();
+    
+    public static PropertyKey<Integer> LEFT_MOTOR_PORT = 
+        key("left-motor-port", Integer.class)
+        .defaultValue(0)
+        .build();
+    
+    public static PropertyKey<Boolean> LEFT_MOTOR_INVERT = 
+        key("left-motor-invert", Boolean.class)
+        .defaultValue(true)
+        .build();
+    
+    public static PropertyKey<Integer> RIGHT_MOTOR_PORT = 
+        key("right-motor-port", Integer.class)
+        .defaultValue(0)
+        .build();
+    
+    public static PropertyKey<Boolean> RIGHT_MOTOR_INVERT = 
+        key("right-motor-invert", Boolean.class)
+        .defaultValue(false)
+        .build();
+    
+    public static PropertyKey<Integer> MILLIS_BEFORE_WARN_NO_INPUT = 
+        key("millis-before-warn-no-input", Integer.class)
+        .defaultValue(5000)
+        .build();
+    
+    public static PropertyKey<Double> BASELINE = 
+        key("millis-before-warn-no-input", Double.class)
+        .defaultValue(0.383)
+        .build();
+    
+    public static PropertyKey<Double> ENCODERRATE = 
+        key("millis-before-warn-no-input", Double.class)
+        .defaultValue(0.000043225)
+        .build();
+    
+    public static PropertyKey<Double> MAX_THROTTLE_ACCEL =
+        key("max-throttle-accel", Double.class)
+        .defaultValue(2.0)
+        .build();
+    
+    public static PropertyKey<Double> UPDATE_HZ =
+        key("update-hz", Double.class)
+        .defaultValue(30.0)
+        .build();
+    
 }
