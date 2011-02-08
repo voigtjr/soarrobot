@@ -28,11 +28,11 @@ import edu.umich.robot.util.properties.PropertyKey;
  */
 public class SuperdroidProperties
 {
-    private static final String PACKBOT_PREFIX = "packbot.";
+    private static final String SUPERDROID_PREFIX = "superdroid.";
 
     private static <T> PropertyKey.Builder<T> key(String name, Class<T> type)
     {
-        return PropertyKey.builder(PACKBOT_PREFIX + name, type);
+        return PropertyKey.builder(SUPERDROID_PREFIX + name, type);
     }
 
     public static PropertyKey<Long> UPDATE_PERIOD = key("update-period",

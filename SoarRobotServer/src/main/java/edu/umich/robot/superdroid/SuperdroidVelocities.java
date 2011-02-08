@@ -21,16 +21,13 @@
  */
 package edu.umich.robot.superdroid;
 
-import java.net.SocketException;
-import java.net.UnknownHostException;
-
 import edu.umich.grrc.GrrcSuperdroid;
 import edu.umich.robot.util.Updatable;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class SuperdroidInterface implements Updatable
+public class SuperdroidVelocities implements Updatable
 {
     private final GrrcSuperdroid sd;
 
@@ -38,18 +35,9 @@ public class SuperdroidInterface implements Updatable
 
     private float av;
 
-    /**
-     * "141.212.203.164" "141.212.205.136" 3192
-     * 
-     * @param hostname
-     * @param port
-     * @throws SocketException
-     * @throws UnknownHostException
-     */
-    public SuperdroidInterface(String hostname, int port)
-            throws UnknownHostException, SocketException
+    public SuperdroidVelocities(GrrcSuperdroid sd)
     {
-        sd = new GrrcSuperdroid(hostname, port);
+        this.sd = sd;
     }
 
     public void setLinear(float lv)
@@ -67,8 +55,4 @@ public class SuperdroidInterface implements Updatable
         sd.setVelocities(lv, av);
     }
     
-    public void shutdown()
-    {
-        sd.shutdown();
-    }
 }
