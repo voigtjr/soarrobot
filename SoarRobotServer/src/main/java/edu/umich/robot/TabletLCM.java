@@ -11,13 +11,11 @@ public class TabletLCM
     private final LCM input;
     private final LCM output;
     
-    public TabletLCM() throws IOException
+    public TabletLCM(String connectionString) throws IOException, IllegalArgumentException
     {
-        output = new LCM("udp://141.212.203.213:12122");
-
+        output = new LCM(connectionString);
         input = LCM.getSingleton();
         input.subscribe("POSE_seek", subscriber);
-        
     }
     
     private final LCMSubscriber subscriber = new LCMSubscriber() 

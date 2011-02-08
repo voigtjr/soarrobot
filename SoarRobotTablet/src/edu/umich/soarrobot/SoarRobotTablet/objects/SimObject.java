@@ -14,7 +14,6 @@ import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.PixelXorXfermode;
 import android.graphics.PointF;
 import android.graphics.Paint.Style;
 

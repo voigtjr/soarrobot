@@ -54,6 +54,7 @@ import edu.umich.robot.events.control.DriveEStopEvent;
 import edu.umich.robot.gp.Gamepad;
 import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.MetamapFactory;
+import edu.umich.robot.network.Server;
 import edu.umich.robot.radio.Radio;
 import edu.umich.robot.radio.SimRadio;
 import edu.umich.robot.soar.Soar;
@@ -125,6 +126,8 @@ public class Controller
 
     private String selectedRobot;
     
+    private Server server;
+    
     /**
      * <p>
      * Data structure representing a splinter, its initial conditions, and
@@ -173,6 +176,14 @@ public class Controller
 
         events.addListener(BeforeResetEvent.class, soar);
         events.addListener(AfterResetEvent.class, soar);
+        
+        try {
+			server = new Server(12122);
+			server.setController(this);
+			server.start();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
     }
     
     /**
@@ -393,10 +404,11 @@ public class Controller
     /**
      * <p>
      * Toggles the current Soar running state.
+     * @return True if Soar is now running.
      */
-    public void toggleSoarRunState()
+    public boolean toggleSoarRunState()
     {
-        soar.toggleRunState();
+        return soar.toggleRunState();
     }
     
     /**

@@ -164,7 +164,7 @@ public class AreaDescriptionIL extends InputLinkElement
         lcmwps.waypoints = lcmtemplist.toArray(new waypoint_t[lcmtemplist.size()]);
         lcmwps.nwaypoints = lcmwps.waypoints.length;
         
-        lcm.publish(channel, lcmwps);
+		lcm.publish(channel, lcmwps);
     }
 
     @Override

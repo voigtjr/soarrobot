@@ -80,7 +80,6 @@ import edu.umich.robot.actions.DisableFollowAction;
 import edu.umich.robot.actions.ExitAction;
 import edu.umich.robot.actions.FollowPositionAction;
 import edu.umich.robot.actions.FollowPositionAndThetaAction;
-import edu.umich.robot.actions.ForwardToTabletAction;
 import edu.umich.robot.actions.MoveCameraAboveAction;
 import edu.umich.robot.actions.MoveCameraBehindAction;
 import edu.umich.robot.actions.ResetAction;
@@ -203,12 +202,6 @@ public class GuiApplication
     
     /**
      * <p>
-     * Experimental entry point for the tablet communication.
-     */
-    private TabletLCM tabletlcm;
-    
-    /**
-     * <p>
      * Firing up this application requires a configuration file. If no
      * configuration file is presented on the command line, this is called to
      * prompt the user to select a configuration file.
@@ -310,8 +303,10 @@ public class GuiApplication
         JMenu fileMenu = new JMenu("File");
         fileMenu.add(actionManager.getAction(CreateSplinterRobotAction.class));
         fileMenu.add(actionManager.getAction(ResetPreferencesAction.class));
-        fileMenu.add(new JSeparator());
-        fileMenu.add(actionManager.getAction(ForwardToTabletAction.class));
+
+        //fileMenu.add(new JSeparator());
+        //fileMenu.add(actionManager.getAction(ForwardToTabletAction.class));
+        
         fileMenu.add(new JSeparator());
         fileMenu.add(actionManager.getAction(SaveMapAction.class));
         fileMenu.add(new JSeparator());
@@ -491,7 +486,7 @@ public class GuiApplication
         new MoveCameraAboveAction(actionManager);
         new MoveCameraBehindAction(actionManager);
         new SimSpeedAction(actionManager);
-        new ForwardToTabletAction(actionManager);
+        //new ForwardToTabletAction(actionManager);
     }
     
     /**
@@ -906,41 +901,6 @@ public class GuiApplication
     public Preferences getPreferences()
     {
         return PREFERENCES;
-    }
-
-    /**
-     * <p>
-     * Change communication with tablet.
-     */
-    public synchronized void toggleForward()
-    {
-        if (tabletlcm == null)
-        {
-            try
-            {
-                tabletlcm = new TabletLCM();
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-        }
-        else
-        {
-            tabletlcm.close();
-            tabletlcm = null;
-        }
-    }
-
-    /**
-     * <p>
-     * Check if forwarding to tablet.
-     * 
-     * @return true if forwarding to tablet.
-     */
-    public synchronized boolean getForward()
-    {
-        return tabletlcm != null;
     }
 
 }
