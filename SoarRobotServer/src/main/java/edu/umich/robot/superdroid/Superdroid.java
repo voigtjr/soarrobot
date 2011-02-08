@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot.packbot;
+package edu.umich.robot.superdroid;
 
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -54,13 +54,13 @@ import edu.umich.robot.util.properties.PropertyManager;
 /**
  * @author voigtjr@gmail.com
  */
-public class PackBot implements Robot
+public class Superdroid implements Robot
 {
     private final String name;
 
     private final int port;
 
-    private final PackBotInterface velocities;
+    private final SuperdroidInterface velocities;
 
     private final ScheduledExecutorService schexec = MoreExecutors.getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1));
 
@@ -68,16 +68,16 @@ public class PackBot implements Robot
 
     private long last;
 
-    public PackBot(String name, String hostname, int port,
+    public Superdroid(String name, String hostname, int port,
             PropertyManager properties) throws UnknownHostException,
             SocketException
     {
         this.name = name;
-        this.port = port == 0 ? properties.get(PackBotProperties.PORT) : port;
+        this.port = port == 0 ? properties.get(SuperdroidProperties.PORT) : port;
 
-        velocities = new PackBotInterface(hostname, this.port);
+        velocities = new SuperdroidInterface(hostname, this.port);
 
-        long period = properties.get(PackBotProperties.UPDATE_PERIOD);
+        long period = properties.get(SuperdroidProperties.UPDATE_PERIOD);
         schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
     }
 

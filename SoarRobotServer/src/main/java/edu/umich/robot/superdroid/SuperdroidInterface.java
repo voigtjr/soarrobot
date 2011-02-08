@@ -19,20 +19,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot.packbot;
+package edu.umich.robot.superdroid;
 
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
-import edu.umich.grrc.GrrcPackBot;
+import edu.umich.grrc.GrrcSuperdroid;
 import edu.umich.robot.util.Updatable;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class PackBotInterface implements Updatable
+public class SuperdroidInterface implements Updatable
 {
-    private final GrrcPackBot pb;
+    private final GrrcSuperdroid sd;
 
     private float lv;
 
@@ -46,10 +46,10 @@ public class PackBotInterface implements Updatable
      * @throws SocketException
      * @throws UnknownHostException
      */
-    public PackBotInterface(String hostname, int port)
+    public SuperdroidInterface(String hostname, int port)
             throws UnknownHostException, SocketException
     {
-        pb = new GrrcPackBot(hostname, port);
+        sd = new GrrcSuperdroid(hostname, port);
     }
 
     public void setLinear(float lv)
@@ -64,11 +64,11 @@ public class PackBotInterface implements Updatable
 
     public void update(double dt)
     {
-        pb.setVelocities(lv, av);
+        sd.setVelocities(lv, av);
     }
     
     public void shutdown()
     {
-        pb.shutdown();
+        sd.shutdown();
     }
 }

@@ -19,14 +19,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot.packbot;
+package edu.umich.robot.superdroid;
 
 import edu.umich.robot.util.properties.PropertyKey;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class PackBotProperties
+public class SuperdroidProperties
 {
     private static final String PACKBOT_PREFIX = "packbot.";
 
