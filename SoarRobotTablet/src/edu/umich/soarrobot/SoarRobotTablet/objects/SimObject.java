@@ -44,6 +44,7 @@ public class SimObject {
 	private String type;
 	private HashMap<String, Object> attributes;
 	private PointF location;
+	private double[] orientation;
 	private PointF size;
 	private int color;
 	private int id;
@@ -63,6 +64,7 @@ public class SimObject {
 		this.type = type;
 		this.attributes = classes.get(type);
 		this.location = location;
+		this.orientation = new double[3]; // Stored as Roll, Pitch, and Yaw
 		this.id = maxID;
 		++maxID;
 		selected = false;
@@ -93,6 +95,7 @@ public class SimObject {
 	 */
 	public void draw(Canvas c, Paint p) {
 		c.translate(location.x, location.y);
+		c.rotate((float)getOrientation()[2]);
 		p.setStrokeWidth(selected ? 3.0f / MapView.PX_PER_METER : 1.0f / MapView.PX_PER_METER);
 		p.setColor(color);
 		p.setStyle(Style.FILL);
@@ -139,6 +142,15 @@ public class SimObject {
 	
 	public void setLocation(PointF location) {
 		this.location = location;
+	}
+	
+	public double[] getOrientation() {
+	    return orientation;
+	}
+	
+	public void setOrientation(double[] orientation) {
+	    assert(orientation.length==3);
+	    this.orientation = orientation;
 	}
 	
 	public void setSelected(boolean selected) {

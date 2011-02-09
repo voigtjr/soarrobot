@@ -45,7 +45,7 @@ public class SoarRobotTablet extends Activity {
     		propertiesTextView = (TextView) findViewById(R.id.propertiesTextView);
     		commandsEditText = (EditText) findViewById(R.id.commandsEditText);
     		setSelectedObject(null);
-    		robotSession = new RobotSession(this, "141.212.109.131", 12122);
+    		robotSession = new RobotSession(this, "141.212.109.194", 12122);
     		robotSession.start();
     		((Button)findViewById(R.id.commandsButton)).setOnClickListener(buttonListener);
     	} catch (RuntimeException e) {
