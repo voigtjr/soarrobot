@@ -21,38 +21,111 @@
  */
 package edu.umich.robot.superdroid;
 
-import edu.umich.grrc.GrrcSuperdroid;
-import edu.umich.robot.util.Updatable;
+import lcm.lcm.LCM;
+import april.jmat.LinAlg;
+import april.jmat.MathUtil;
+import april.lcmtypes.differential_drive_command_t;
+import april.lcmtypes.pose_t;
+import april.util.TimeUtil;
+import edu.umich.robot.util.PIDController;
+import edu.umich.robot.util.PoseProvider;
+import edu.umich.robot.util.VelocitiesController;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class SuperdroidVelocities implements Updatable
+public class SuperdroidVelocities implements VelocitiesController
 {
-    private final GrrcSuperdroid sd;
+    private double lv;
 
-    private float lv;
+    private double av;
+    
+    public static final String VELOCITIES_CHANNEL_BASE = "VELOCITIES_";
 
-    private float av;
+    private final String velocitiesChannel;
+    
+    private final differential_drive_command_t vels = new differential_drive_command_t();
+    
+    private LCM lcm = LCM.getSingleton();
+    
+    private final PIDController apid;
 
-    public SuperdroidVelocities(GrrcSuperdroid sd)
+    private final PIDController lpid;
+
+    private final SuperdroidDrive drive;
+    
+    private final PoseProvider pose;
+
+    public SuperdroidVelocities(String name, SuperdroidDrive drive, PoseProvider pose
+            , PIDController apid, PIDController lpid)
     {
-        this.sd = sd;
+        this.velocitiesChannel = VELOCITIES_CHANNEL_BASE + name;
+        this.drive = drive;
+        this.pose = pose;
+        this.apid = apid;
+        this.lpid = lpid;
+        
+        vels.left_enabled = true;
+        vels.right_enabled = true;
     }
 
-    public void setLinear(float lv)
+    public void setLinear(double lv)
     {
         this.lv = lv;
     }
 
-    public void setAngular(float av)
+    public void setAngular(double av)
     {
         this.av = av;
     }
 
     public void update(double dt)
     {
-        sd.setVelocities(lv, av);
+        vels.left = lv;
+        vels.right = av;
+        
+        vels.utime = TimeUtil.utime();
+        lcm.publish(velocitiesChannel, vels);
+        
+        pose_t p = pose.getPose();
+        if (p.orientation == null || p.orientation.length < 3)
+            throw new IllegalArgumentException("pose has invalid orientation");
+
+        double aout = apid.compute(dt, av, p.rotation_rate[2]);
+        differential_drive_command_t dc = drive.getDrive();
+
+        if (!dc.left_enabled)
+        {
+            dc.left = 0;
+            dc.left_enabled = true;
+        }
+
+        if (!dc.right_enabled)
+        {
+            dc.right = 0;
+            dc.right_enabled = true;
+        }
+
+        dc.left -= aout;
+        dc.right += aout;
+
+        // convert vector to local frame and get forward (x)
+        // component
+        double theta = MathUtil
+                .mod2pi(LinAlg.quatToRollPitchYaw(p.orientation)[2]);
+        double xvel = LinAlg.rotate2(p.vel, -theta)[0];
+        double lout = lpid.compute(dt, lv, xvel);
+        dc.left += lout;
+        dc.right += lout;
+
+        drive.setDrive(dc.left, dc.right);
+        drive.update(dt);
     }
-    
+
+    public void reset()
+    {
+        vels.left = 0;
+        vels.right = 0;
+    }
+
 }

@@ -25,31 +25,58 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import april.util.TimeUtil;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
-import edu.umich.grrc.GrrcSuperdroid;
 import edu.umich.robot.Robot;
 import edu.umich.robot.RobotConfiguration;
 import edu.umich.robot.RobotOutput;
 import edu.umich.robot.events.control.AbstractControlEvent;
 import edu.umich.robot.events.control.AbstractDriveEvent;
+import edu.umich.robot.events.control.AbstractEffectorEvent;
+import edu.umich.robot.events.control.DoorCloseEvent;
+import edu.umich.robot.events.control.DoorLockEvent;
+import edu.umich.robot.events.control.DoorOpenEvent;
+import edu.umich.robot.events.control.DoorUnlockEvent;
 import edu.umich.robot.events.control.DriveAngularEvent;
 import edu.umich.robot.events.control.DriveEStopEvent;
+import edu.umich.robot.events.control.DriveHeadingAndLinearEvent;
+import edu.umich.robot.events.control.DriveHeadingEvent;
 import edu.umich.robot.events.control.DriveLinearEvent;
+import edu.umich.robot.events.control.EffectorCancelEvent;
+import edu.umich.robot.events.control.EffectorDiffuseObjectByWireEvent;
+import edu.umich.robot.events.control.EffectorDiffuseObjectEvent;
+import edu.umich.robot.events.control.EffectorDropObjectEvent;
+import edu.umich.robot.events.control.EffectorGetObjectEvent;
+import edu.umich.robot.events.control.SetHeadLightEvent;
+import edu.umich.robot.events.control.SetRoomLightEvent;
+import edu.umich.robot.events.feedback.AbstractEffectorFeedbackEvent;
 import edu.umich.robot.events.feedback.AbstractFeedbackEvent;
+import edu.umich.robot.events.feedback.EffectorFailureEvent;
+import edu.umich.robot.events.feedback.EffectorSuccessEvent;
+import edu.umich.robot.events.feedback.RobotConfigChangedEvent;
 import edu.umich.robot.laser.Laser;
+import edu.umich.robot.laser.Lidar;
 import edu.umich.robot.metamap.AreaDescription;
 import edu.umich.robot.metamap.AreaState;
+import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.radio.Radio;
+import edu.umich.robot.util.HeadingController;
+import edu.umich.robot.util.PIDController;
 import edu.umich.robot.util.Pose;
+import edu.umich.robot.util.SimBattery;
 import edu.umich.robot.util.Updatable;
 import edu.umich.robot.util.events.RobotEventListener;
+import edu.umich.robot.util.events.RobotEventManager;
+import edu.umich.robot.util.properties.PropertyChangeEvent;
+import edu.umich.robot.util.properties.PropertyListener;
 import edu.umich.robot.util.properties.PropertyManager;
 
 /**
@@ -57,33 +84,105 @@ import edu.umich.robot.util.properties.PropertyManager;
  */
 public class Superdroid implements Robot
 {
-    private final String name;
+    private final PropertyManager properties = new PropertyManager();
 
-    private final GrrcSuperdroid sd;
+    private final String name;
 
     private final SuperdroidPose pose;
     
     private final SuperdroidVelocities velocities;
+    
+    private final SuperdroidDrive drive;
+    
+    private final HeadingController heading;
+
+    private final PIDController hpid = new PIDController();
+
+    private final PIDController apid = new PIDController();
+
+    private final PIDController lpid = new PIDController();
 
     private final ScheduledExecutorService schexec = MoreExecutors.getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1));
 
     private Updatable controller;
 
     private long last;
+    
+    private final SimBattery battery = new SimBattery(10, 0.7);
 
-    public Superdroid(String name, String hostname, int port,
-            PropertyManager properties) throws UnknownHostException,
+    private final AtomicBoolean headlightOn = new AtomicBoolean(false);
+    
+    private final Metamap metamap;
+
+    private final RobotEventManager events = new RobotEventManager();
+
+    private final Lidar lidar;
+    
+    private final Radio radio;
+
+    private ScheduledFuture<?> commandTask;
+
+    private final int PERIOD = 33;
+    
+    public Superdroid(String name, 
+            Radio radio, Metamap metamap) throws UnknownHostException,
             SocketException
     {
         this.name = name;
-        port = port == 0 ? properties.get(SuperdroidProperties.PORT) : port;
-        sd = new GrrcSuperdroid(hostname, port);
+        this.radio = radio;
+        this.metamap = metamap;
+        this.lidar = new Lidar(name);
+        
+        pose = new SuperdroidPose(name);
+        initGains();
+        drive = new SuperdroidDrive(name);
+        velocities = new SuperdroidVelocities(name, drive, pose, apid, lpid);
+        heading = new HeadingController(velocities, pose, hpid);
 
-        pose = new SuperdroidPose(sd);
-        velocities = new SuperdroidVelocities(sd);
-
+        // TODO: simulated battery current draw, will stay at 100% now
+        // except for headlight, that does pull power, see setHeadlight()
+        
         long period = properties.get(SuperdroidProperties.UPDATE_PERIOD);
-        schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
+        commandTask = schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
+    }
+
+    private void initGains()
+    {
+        properties.addListener(SuperdroidProperties.HEADING_PID_GAINS,
+                new PropertyListener<double[]>()
+                {
+                    public void propertyChanged(
+                            PropertyChangeEvent<double[]> event)
+                    {
+                        hpid.setGains(event.getNewValue());
+                        events.fireEvent(new RobotConfigChangedEvent(output.getRobotConfiguration()));
+                    }
+                });
+        hpid.setGains(properties.get(SuperdroidProperties.HEADING_PID_GAINS));
+        
+        properties.addListener(SuperdroidProperties.ANGULAR_PID_GAINS,
+                new PropertyListener<double[]>()
+                {
+                    public void propertyChanged(
+                            PropertyChangeEvent<double[]> event)
+                    {
+                        apid.setGains(event.getNewValue());
+                        events.fireEvent(new RobotConfigChangedEvent(output.getRobotConfiguration()));
+                    }
+                });
+        apid.setGains(properties.get(SuperdroidProperties.ANGULAR_PID_GAINS));
+        
+        properties.addListener(SuperdroidProperties.LINEAR_PID_GAINS,
+                new PropertyListener<double[]>()
+                {
+                    public void propertyChanged(
+                            PropertyChangeEvent<double[]> event)
+                    {
+                        lpid.setGains(event.getNewValue());
+                        events.fireEvent(new RobotConfigChangedEvent(output.getRobotConfiguration()));
+                    }
+                });
+        lpid.setGains(properties.get(SuperdroidProperties.LINEAR_PID_GAINS));
     }
 
     private final Runnable command = new Runnable()
@@ -96,7 +195,6 @@ public class Superdroid implements Robot
                 double dt = (now - last) / (double)TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS);
                 if (last != 0)
                 {
-                    pose.update(dt);
                     if (controller != null)
                         controller.update(dt);
                 }
@@ -114,67 +212,72 @@ public class Superdroid implements Robot
     {
         public AreaDescription getAreaDescription()
         {
-            throw new UnsupportedOperationException("Not implemented");
+            return metamap.getArea(getPose());
         }
 
         public Laser getLaser()
         {
-            throw new UnsupportedOperationException("Not implemented");
+            return lidar.getLaserLowRes();
         }
 
         public Radio getRadio()
         {
-            throw new UnsupportedOperationException("Not implemented");
+            return radio;
         }
 
         public List<VirtualObject> getVisibleObjects()
         {
-            throw new UnsupportedOperationException("Not implemented");
+            return metamap.getVisibleObjects(Superdroid.this);
         }
 
         public Pose getPose()
         {
-            throw new UnsupportedOperationException("Not implemented");
+            return new Pose(pose.getPose());
         }
 
         public VirtualObject getCarriedObject()
         {
-            throw new UnsupportedOperationException("Not implemented");
+            return metamap.getCarried(Superdroid.this);
         }
 
         public <T extends AbstractFeedbackEvent> void addFeedbackEventListener(
                 Class<T> klass, RobotEventListener listener)
         {
-            throw new UnsupportedOperationException("Not implemented");
+            events.addListener(klass, listener);
         }
 
         public RobotConfiguration getRobotConfiguration()
         {
+            // TODO: more
             return new RobotConfiguration.Builder()
+            .gainsHeading(properties.get(SuperdroidProperties.HEADING_PID_GAINS))
             .build();
         }
 
         public <T extends AbstractFeedbackEvent> void removeFeedbackEventListener(
                 Class<T> klass, RobotEventListener listener)
         {
-            throw new UnsupportedOperationException("Not implemented");
+            events.removeListener(klass, listener);
         }
 
         public AreaState getAreaState()
         {
-            throw new UnsupportedOperationException("Not implemented");
+            AreaDescription ad = getAreaDescription();
+            if (ad != null)
+                return metamap.getAreaState(ad.getId());
+            return null;
         }
 
         public double getBatteryLife()
         {
-            throw new UnsupportedOperationException("Not implemented");
+            return battery.getRemainingLife();
         }
 
         public boolean isHeadlightOn()
         {
-            throw new UnsupportedOperationException("Not implemented");
+            return headlightOn.get();
         }
-
+        
     };
     
     public void handleControlEvent(AbstractControlEvent event)
@@ -185,24 +288,147 @@ public class Superdroid implements Robot
             {
                 estop();
             }
+            else if (event instanceof DriveLinearEvent)
+            {
+                DriveLinearEvent d = (DriveLinearEvent)event;
+                setLinear(d.getLinearVelocity());
+            }
             else if (event instanceof DriveAngularEvent)
             {
                 DriveAngularEvent d = (DriveAngularEvent)event;
                 setAngular(d.getAngularVelocity());
             }
-            else if (event instanceof DriveLinearEvent)
+            else if (event instanceof DriveHeadingAndLinearEvent)
             {
-                DriveLinearEvent d = (DriveLinearEvent)event;
-                setLinear(d.getLinearVelocity());
+                DriveHeadingAndLinearEvent d = (DriveHeadingAndLinearEvent)event;
+                setHeadingAndLinear(d.getHeadingRadians(), d.getLinearVelocity());
+            }
+            else if (event instanceof DriveHeadingEvent)
+            {
+                DriveHeadingEvent d = (DriveHeadingEvent)event;
+                setHeading(d.getHeadingRadians());
+            }
+            else 
+                throw new UnsupportedOperationException("Superdroid does not support " + event);
+        } 
+        else if (event instanceof AbstractEffectorEvent)
+        {
+            if (event instanceof EffectorCancelEvent)
+            {
+                boolean result = metamap.cancelEffector(this);
+                fireEffectorResultEvent(result, (EffectorCancelEvent)event);
+            }
+            else if (event instanceof EffectorGetObjectEvent)
+            {
+                EffectorGetObjectEvent e = (EffectorGetObjectEvent)event;
+                boolean result = metamap.pickupObject(this, e.getId());
+                fireEffectorResultEvent(result, e);
+            }
+            else if (event instanceof EffectorDropObjectEvent)
+            {
+                boolean result = metamap.dropObject(this);
+                fireEffectorResultEvent(result, (EffectorDropObjectEvent)event);
+            }
+            else if (event instanceof EffectorDiffuseObjectEvent)
+            {
+                EffectorDiffuseObjectEvent e = (EffectorDiffuseObjectEvent)event;
+                boolean result = metamap.diffuseObject(this, e.getId());
+                fireEffectorResultEvent(result, e);
+            }
+            else if (event instanceof EffectorDiffuseObjectByWireEvent)
+            {
+                EffectorDiffuseObjectByWireEvent e = (EffectorDiffuseObjectByWireEvent)event;
+                boolean result = metamap.diffuseObjectByWire(this, e.getId(), e.getColor());
+                fireEffectorResultEvent(result, e);
+            }
+            else if (event instanceof SetRoomLightEvent)
+            {
+                AreaDescription ad = metamap.getArea(output.getPose());
+                if (ad != null)
+                {
+                    SetRoomLightEvent e = (SetRoomLightEvent)event;
+                    metamap.setRoomLight(ad.getId(), e.isOn());
+                }
+            }
+            else if (event instanceof SetHeadLightEvent)
+            {
+                SetHeadLightEvent e = (SetHeadLightEvent)event;
+                setHeadlight(e.isOn());
+            }
+            else if (event instanceof DoorOpenEvent)
+            {
+                DoorOpenEvent e = (DoorOpenEvent)event;
+                metamap.doorOpen(this, e.getId());
+            }
+            else if (event instanceof DoorCloseEvent)
+            {
+                DoorCloseEvent e = (DoorCloseEvent)event;
+                metamap.doorClose(this, e.getId());
+            }
+            else if (event instanceof DoorUnlockEvent)
+            {
+                DoorUnlockEvent e = (DoorUnlockEvent)event;
+                metamap.doorUnlock(this, e.getId(), e.getCode());
+            }
+            else if (event instanceof DoorLockEvent)
+            {
+                DoorLockEvent e = (DoorLockEvent)event;
+                metamap.doorLock(this, e.getId(), e.getCode());
             } 
             else 
             {
-                throw new UnsupportedOperationException("Packbot does not support " + event);
+                throw new UnsupportedOperationException("Superdroid does not support " + event);
             }
         }
         else 
         {
-            throw new UnsupportedOperationException("Packbot does not support " + event);
+            throw new UnsupportedOperationException("Superdroid does not support " + event);
+        }
+    }
+
+    private void setHeadlight(boolean on)
+    {
+        synchronized (this)
+        {
+            boolean old = headlightOn.getAndSet(on);
+            if (!old && on)
+                battery.setMilliAmpCurrent("headlight", 5); // made up number
+            else if (old && !on)
+                battery.removeMilliAmpCurrent("headlight");
+        }
+    }
+    
+    private void fireEffectorResultEvent(boolean result, AbstractEffectorEvent e)
+    {
+        if (result)
+            events.fireEvent(new EffectorSuccessEvent(e), AbstractEffectorFeedbackEvent.class);
+        else
+            events.fireEvent(new EffectorFailureEvent(e), AbstractEffectorFeedbackEvent.class);
+    }
+    
+    private void setHeading(double radians)
+    {
+        synchronized (this)
+        {
+            if (controller != heading)
+            {
+                heading.reset();
+                controller = heading;
+            }
+            heading.setHeading(radians);
+        }
+    }
+
+    private void setHeadingAndLinear(double radians, double lv)
+    {
+        synchronized (this)
+        {
+            if (controller != heading)
+            {
+                heading.reset();
+                controller = heading;
+            }
+            heading.setHeadingAndLinear(radians, lv);
         }
     }
 
@@ -250,14 +476,15 @@ public class Superdroid implements Robot
 
     public void setTimeScale(int multiplier)
     {
-        // TODO Auto-generated method stub
-        
+        commandTask.cancel(false);
+        schexec.scheduleAtFixedRate(command, 0, PERIOD / multiplier, TimeUnit.MILLISECONDS);
     }
 
     public void shutdown()
     {
-        sd.shutdown();
         schexec.shutdown();
+        lidar.shutdown();
+        battery.shutdown();
     }
 
 }

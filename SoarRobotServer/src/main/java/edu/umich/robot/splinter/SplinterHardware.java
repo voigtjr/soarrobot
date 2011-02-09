@@ -342,4 +342,9 @@ public class SplinterHardware
         right.setPWM(0);
     }
 
+    public void shutdown()
+    {
+        schexec.shutdown();
+    }
+
 }

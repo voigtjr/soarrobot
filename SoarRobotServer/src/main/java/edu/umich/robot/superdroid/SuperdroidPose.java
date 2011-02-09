@@ -1,44 +1,57 @@
 package edu.umich.robot.superdroid;
 
-import april.jmat.LinAlg;
+import java.io.IOException;
+
+import lcm.lcm.LCM;
+import lcm.lcm.LCMDataInputStream;
+import lcm.lcm.LCMSubscriber;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import april.lcmtypes.pose_t;
-import april.util.TimeUtil;
-import edu.umich.grrc.GrrcSuperdroid;
+import edu.umich.robot.util.PoseProvider;
 import edu.umich.robot.util.Poses;
-import edu.umich.robot.util.Updatable;
 
-public class SuperdroidPose implements Updatable
+public class SuperdroidPose implements PoseProvider
 {
-    private final GrrcSuperdroid sd;
+    private static final Log logger = LogFactory.getLog(Poses.class);
 
-    private final double[] rpy = new double[] { 0, 0, 0 };
-    
+    public static final String POSE_CHANNEL_BASE = "POSE_";
+
     private pose_t pose;
-    
+
     private pose_t elaboratedPose = new pose_t();
 
-    public SuperdroidPose(GrrcSuperdroid sd)
+    SuperdroidPose(String id)
     {
-        this.sd = sd;
-    }
-
-    public void update(double dt)
-    {
-        pose_t newPose = new pose_t();
-        rpy[2] = sd.getTheta();
-        sd.getPos(newPose.pos);
-        newPose.orientation = LinAlg.rollPitchYawToQuat(rpy);
-        newPose.utime = TimeUtil.utime();
-        pose = newPose;
+        String channel = POSE_CHANNEL_BASE + id;
+        LCM.getSingleton().subscribe(channel, new LCMSubscriber()
+        {
+            public void messageReceived(LCM lcm, String channel,
+                    LCMDataInputStream ins)
+            {
+                try
+                {
+                    pose = new pose_t(ins);
+                }
+                catch (IOException e)
+                {
+                    logger.error("Error decoding pose_t message: "
+                            + e.getMessage());
+                }
+            }
+        });
     }
     
     public pose_t getPose()
     {
-        pose_t newPose = pose;
+        pose_t newPose = pose; // grab a reference once
 
         if (newPose != null && newPose.utime > elaboratedPose.utime)
             elaboratedPose = Poses.elaborate(elaboratedPose, newPose);
         
         return elaboratedPose.copy();
     }
+
 }

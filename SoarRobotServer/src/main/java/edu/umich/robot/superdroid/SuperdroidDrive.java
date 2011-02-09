@@ -19,33 +19,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot.splinter;
+package edu.umich.robot.superdroid;
 
 import lcm.lcm.LCM;
 import april.lcmtypes.differential_drive_command_t;
 import april.util.TimeUtil;
 import edu.umich.robot.util.Misc;
-import edu.umich.robot.util.SimBattery;
 import edu.umich.robot.util.Updatable;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class SplinterDrive implements Updatable
+public class SuperdroidDrive implements Updatable
 {
     private static final LCM lcm = LCM.getSingleton();
     public static final String DRIVE_CHANNEL_BASE = "DIFFERENTIAL_DRIVE_COMMAND_";
 
     private final String driveChannel;
     
-    private final SimBattery battery;
-
     private final differential_drive_command_t dc = new differential_drive_command_t();
 
-    SplinterDrive(String id, SimBattery battery)
+    SuperdroidDrive(String id)
     {
         this.driveChannel = DRIVE_CHANNEL_BASE + id;
-        this.battery = battery;
         dc.left_enabled = true;
         dc.right_enabled = true;
     }
@@ -59,7 +55,6 @@ public class SplinterDrive implements Updatable
 
             double effort = Math.abs(dc.left) + Math.abs(dc.right);
             effort /= 2;
-            battery.setMilliAmpCurrent("motors", 5 * effort); // made up number
         }
     }
 

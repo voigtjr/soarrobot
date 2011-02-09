@@ -10,9 +10,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import april.lcmtypes.pose_t;
+import edu.umich.robot.util.PoseProvider;
 import edu.umich.robot.util.Poses;
 
-public class SplinterPose
+public class SplinterPose implements PoseProvider
 {
     private static final Log logger = LogFactory.getLog(Poses.class);
 
@@ -43,7 +44,7 @@ public class SplinterPose
         });
     }
     
-    pose_t getPose()
+    public pose_t getPose()
     {
         pose_t newPose = pose; // grab a reference once
 

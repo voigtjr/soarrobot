@@ -26,16 +26,17 @@ import april.jmat.MathUtil;
 import april.lcmtypes.differential_drive_command_t;
 import april.lcmtypes.pose_t;
 import edu.umich.robot.util.PIDController;
-import edu.umich.robot.util.Updatable;
+import edu.umich.robot.util.PoseProvider;
+import edu.umich.robot.util.VelocitiesController;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class SplinterVelocities implements Updatable
+public class SplinterVelocities implements VelocitiesController
 {
     private final SplinterDrive drive;
 
-    private final SplinterPose pose;
+    private final PoseProvider pose;
 
     private final PIDController apid;
 
@@ -45,7 +46,7 @@ public class SplinterVelocities implements Updatable
 
     private double lv;
 
-    SplinterVelocities(SplinterDrive drive, SplinterPose pose,
+    SplinterVelocities(SplinterDrive drive, PoseProvider pose,
             PIDController apid, PIDController lpid)
     {
         this.drive = drive;
@@ -54,17 +55,17 @@ public class SplinterVelocities implements Updatable
         this.lpid = lpid;
     }
 
-    void setAngular(double av)
+    public void setAngular(double av)
     {
         this.av = av;
     }
 
-    void setLinear(double lv)
+    public void setLinear(double lv)
     {
         this.lv = lv;
     }
 
-    void reset()
+    public void reset()
     {
         apid.clearIntegral();
         lpid.clearIntegral();
