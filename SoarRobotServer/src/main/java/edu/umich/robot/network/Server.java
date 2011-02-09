@@ -5,13 +5,26 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-import javax.swing.JOptionPane;
+import com.google.common.collect.ImmutableList;
 
 import edu.umich.robot.Controller;
+import edu.umich.robot.Robot;
 import edu.umich.robot.TabletLCM;
+import edu.umich.robot.metamap.AbridgedAreaDescription;
+import edu.umich.robot.metamap.AbridgedGateway;
+import edu.umich.robot.metamap.AreaDescription;
+import edu.umich.robot.metamap.Gateway;
+import edu.umich.robot.metamap.SquareArea;
+import edu.umich.robot.metamap.VirtualObject;
+import edu.umich.robot.metamap.VirtualObjectTemplate;
+import edu.umich.robot.splinter.Splinter;
+import edu.umich.robot.util.ImmutablePose;
+import edu.umich.robot.util.Pose;
 
 /**
  * Listens for commands over the network.
@@ -49,6 +62,7 @@ public class Server {
 								String line = scanner.next();
 								System.out.println("Got command from client " + client.getInetAddress() + ":" + client.getPort() + ":\n" + line);
 								String response = handleCommand(line);
+								System.out.println("Returning to client:\n" + response);
 								PrintWriter out = new PrintWriter(client.getOutputStream());
 								out.println(response);
 								out.flush();
@@ -82,10 +96,94 @@ public class Server {
 		if (controller == null) {
 			return "No controller found";
 		}
+		
+		// map
+		// Return map description
+		if (command.equalsIgnoreCase("map")) {
+			StringBuilder sb = new StringBuilder();
+			for (AreaDescription ad : controller.getAreaList()) {
+				if (ad instanceof SquareArea) {
+					AbridgedAreaDescription aad = abridgeAreaDescription((SquareArea)ad);
+					sb.append(aad.toString());
+					sb.append(" ; ");
+				}
+			}
+			return sb.toString();
+		}
+		
+		// classes
+		// Return description of object classes
+		if (command.equalsIgnoreCase("classes")) {
+			StringBuilder sb = new StringBuilder();
+			for (VirtualObjectTemplate vot : controller.getTemplates()) {
+				sb.append(vot.getName());
+				sb.append(" { ");
+				Map<String, String> properties = vot.getProperties();
+				for (String key : properties.keySet()) {
+					sb.append(key);
+					sb.append(" : ");
+					sb.append(properties.get(key));
+					sb.append(" , ");
+				}
+				sb.append("};");
+			}
+			return sb.toString();
+		}
+		
+		// objects
+		// Return objects description
+		if (command.equalsIgnoreCase("objects")) {
+			StringBuilder sb = new StringBuilder();
+			for (VirtualObject obj : controller.getPlacedObjects()) {
+				Pose p = obj.getPose();
+				sb.append(obj.getName() + " " + p.getX() + " " + p.getY() + " " + p.getYaw() + ";");
+			}
+			return sb.toString();
+		}
+		
+		// robots
+		// Return robots description
+		if (command.equalsIgnoreCase("robots")) {
+			StringBuilder sb = new StringBuilder();
+			for (Object obj : controller.getAllRobots()) {
+				if (obj instanceof Splinter) {
+					Splinter s = (Splinter)obj;
+					sb.append(s.getName());
+					sb.append(' ');
+					Pose p = s.getOutput().getPose();
+					sb.append(p.getX());
+					sb.append(' ');
+					sb.append(p.getY());
+					sb.append(' ');
+					sb.append(p.getYaw());
+					sb.append(';');
+				}
+			}
+			return sb.toString();
+		}
+		
+		// pause
+		// Toggle Soar's run state
 		if (command.equalsIgnoreCase("pause")) {
 			return controller.toggleSoarRunState() ? "Soar started" : "Soar paused";
 		}
+		
 		return "Invalid command: " + command;
+	}
+	
+	public static AbridgedAreaDescription abridgeAreaDescription(SquareArea sa) {
+		int[] pr = sa.getPixelRect();
+		ImmutableList<Double> xywh = new ImmutableList.Builder<Double>().add((double)pr[0], (double)pr[1], (double)pr[2], (double)pr[3]).build();
+		ImmutableList.Builder<AbridgedGateway> gatewaysBuilder = new ImmutableList.Builder<AbridgedGateway>();
+		for (Gateway g : sa.getGateways()) {
+			gatewaysBuilder.add(abridgeGateway(g));
+		}
+		return new AbridgedAreaDescription(sa.getId(), xywh, gatewaysBuilder.build());
+	}
+	
+	public static AbridgedGateway abridgeGateway(Gateway g) {
+		ImmutableList<Double> xy = new ImmutableList.Builder<Double>().add(g.getPose().getX(), g.getPose().getY()).build();
+		return new AbridgedGateway(g.getId(), xy);
 	}
 	
 	public void stop() {

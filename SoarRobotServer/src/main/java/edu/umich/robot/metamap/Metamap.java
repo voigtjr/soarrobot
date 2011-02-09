@@ -22,6 +22,7 @@
 package edu.umich.robot.metamap;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -161,6 +162,10 @@ public class Metamap implements RobotEventListener
             return area;
         }
         return null;
+    }
+    
+    public List<AreaDescription> getAreaList() {
+    	return areaList;
     }
 
     public AreaState getAreaState(int id)
@@ -398,6 +403,10 @@ public class Metamap implements RobotEventListener
     public VirtualObject getTemplate(String name)
     {
         return objects.getTemplate(name);
+    }
+    
+    public Collection<VirtualObjectTemplate> getTemplates() {
+    	return objects.getTemplates();
     }
 
     public List<VirtualObject> getPlacedObjects()

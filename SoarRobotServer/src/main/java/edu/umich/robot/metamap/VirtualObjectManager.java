@@ -21,6 +21,7 @@
  */
 package edu.umich.robot.metamap;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -260,6 +261,10 @@ class VirtualObjectManager
     public VirtualObject getTemplate(String name)
     {
         return templates.get(name);
+    }
+    
+    public Collection<VirtualObjectTemplate> getTemplates() {
+    	return templates.values();
     }
 
     public List<VirtualObject> getPlacedObjects()
