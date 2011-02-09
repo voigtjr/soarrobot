@@ -24,6 +24,9 @@ package edu.umich.robot;
 import edu.umich.robot.events.control.AbstractControlEvent;
 
 /**
+ * <p>
+ * Each type of robot in the simulation will implement this interface.
+ * 
  * @author voigtjr@gmail.com
  */
 public interface Robot

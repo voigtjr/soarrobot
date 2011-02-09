@@ -38,12 +38,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import edu.umich.robot.RelativePose;
 import edu.umich.robot.Robot;
 import edu.umich.robot.events.RobotAddedEvent;
 import edu.umich.robot.events.RobotRemovedEvent;
 import edu.umich.robot.metamap.Door.State;
 import edu.umich.robot.util.Pose;
+import edu.umich.robot.util.RelativePose;
 import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventListener;
 

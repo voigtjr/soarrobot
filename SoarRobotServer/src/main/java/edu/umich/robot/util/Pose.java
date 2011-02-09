@@ -30,7 +30,6 @@ import april.lcmtypes.pose_t;
 
 import com.google.common.collect.Lists;
 
-import edu.umich.robot.RelativePose;
 
 /**
  * @author voigtjr@gmail.com

@@ -26,6 +26,9 @@ import java.net.URL;
 import javax.swing.ImageIcon;
 
 /**
+ * <p>
+ * Map image utility class.
+ * 
  * @author voigtjr@gmail.com
  */
 public class Images

@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot.packbot;
+package edu.umich.robot.superdroid;
 
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -32,6 +32,7 @@ import april.util.TimeUtil;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umich.grrc.GrrcSuperdroid;
 import edu.umich.robot.Robot;
 import edu.umich.robot.RobotConfiguration;
 import edu.umich.robot.RobotOutput;
@@ -54,13 +55,15 @@ import edu.umich.robot.util.properties.PropertyManager;
 /**
  * @author voigtjr@gmail.com
  */
-public class PackBot implements Robot
+public class Superdroid implements Robot
 {
     private final String name;
 
-    private final int port;
+    private final GrrcSuperdroid sd;
 
-    private final PackBotInterface velocities;
+    private final SuperdroidPose pose;
+    
+    private final SuperdroidVelocities velocities;
 
     private final ScheduledExecutorService schexec = MoreExecutors.getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1));
 
@@ -68,16 +71,18 @@ public class PackBot implements Robot
 
     private long last;
 
-    public PackBot(String name, String hostname, int port,
+    public Superdroid(String name, String hostname, int port,
             PropertyManager properties) throws UnknownHostException,
             SocketException
     {
         this.name = name;
-        this.port = port == 0 ? properties.get(PackBotProperties.PORT) : port;
+        port = port == 0 ? properties.get(SuperdroidProperties.PORT) : port;
+        sd = new GrrcSuperdroid(hostname, port);
 
-        velocities = new PackBotInterface(hostname, this.port);
+        pose = new SuperdroidPose(sd);
+        velocities = new SuperdroidVelocities(sd);
 
-        long period = properties.get(PackBotProperties.UPDATE_PERIOD);
+        long period = properties.get(SuperdroidProperties.UPDATE_PERIOD);
         schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
     }
 
@@ -87,16 +92,15 @@ public class PackBot implements Robot
         {
             synchronized (this)
             {
-                if (controller != null)
+                long now = TimeUtil.mstime();
+                double dt = (now - last) / (double)TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS);
+                if (last != 0)
                 {
-                    long now = TimeUtil.mstime();
-                    if (last != 0)
-                    {
-                        double dt = (now - last) / (double)TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS);
+                    pose.update(dt);
+                    if (controller != null)
                         controller.update(dt);
-                    }
-                    last = now;
                 }
+                last = now;
             }
         }
     };
@@ -241,7 +245,7 @@ public class PackBot implements Robot
     @Override
     public String toString()
     {
-        return "Packbot: " + getName();
+        return "Superdroid: " + getName();
     }
 
     public void setTimeScale(int multiplier)
@@ -252,7 +256,7 @@ public class PackBot implements Robot
 
     public void shutdown()
     {
-        velocities.shutdown();
+        sd.shutdown();
         schexec.shutdown();
     }
 

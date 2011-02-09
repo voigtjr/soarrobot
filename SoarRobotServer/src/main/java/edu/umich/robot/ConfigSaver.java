@@ -46,18 +46,26 @@ import edu.umich.robot.util.properties.PropertyKey;
 import edu.umich.robot.util.properties.PropertyManager;
 
 /**
- * <p> Utility class to generate a new configuration from the current program
- * state.
- *
- * <p> Also writes out the configuration to a file in a halfway-readable
- * format.
- *
+ * <p>
+ * Utility class to generate a new configuration from the current program state.
+ * 
+ * <p>
+ * Also writes out the configuration to a file in a halfway-readable format.
+ * 
  * @author voigtjr@gmail.com
  */
 public class ConfigSaver
 {
     private final Config config = new Config();
     
+    /**
+     * <p>
+     * Creates the base configuration based on the supplied metamap and
+     * properties.
+     * 
+     * @param metamap
+     * @param soarProperties
+     */
     public ConfigSaver(Metamap metamap, PropertyManager soarProperties)
     {
         config.setString("image_path", metamap.getImagePath());

@@ -19,25 +19,40 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot.packbot;
+package edu.umich.robot.superdroid;
 
-import edu.umich.robot.util.properties.PropertyKey;
+import edu.umich.grrc.GrrcSuperdroid;
+import edu.umich.robot.util.Updatable;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class PackBotProperties
+public class SuperdroidVelocities implements Updatable
 {
-    private static final String PACKBOT_PREFIX = "packbot.";
+    private final GrrcSuperdroid sd;
 
-    private static <T> PropertyKey.Builder<T> key(String name, Class<T> type)
+    private float lv;
+
+    private float av;
+
+    public SuperdroidVelocities(GrrcSuperdroid sd)
     {
-        return PropertyKey.builder(PACKBOT_PREFIX + name, type);
+        this.sd = sd;
     }
 
-    public static PropertyKey<Long> UPDATE_PERIOD = key("update-period",
-            Long.class).defaultValue(33L).build();
+    public void setLinear(float lv)
+    {
+        this.lv = lv;
+    }
 
-    public static PropertyKey<Integer> PORT = key("port", Integer.class)
-            .defaultValue(3192).build();
+    public void setAngular(float av)
+    {
+        this.av = av;
+    }
+
+    public void update(double dt)
+    {
+        sd.setVelocities(lv, av);
+    }
+    
 }

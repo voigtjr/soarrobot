@@ -22,9 +22,9 @@
 package edu.umich.robot.soar;
 
 import sml.Identifier;
-import edu.umich.robot.RelativePose;
 import edu.umich.robot.RobotOutput;
 import edu.umich.robot.util.Pose;
+import edu.umich.robot.util.RelativePose;
 import edu.umich.robot.util.properties.PropertyManager;
 import edu.umich.robot.util.soar.DistanceWme;
 import edu.umich.robot.util.soar.YawWme;

@@ -19,38 +19,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot;
+package edu.umich.robot.superdroid;
+
+import edu.umich.robot.util.properties.PropertyKey;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class RelativePose
+public class SuperdroidProperties
 {
-    private final double distance;
+    private static final String SUPERDROID_PREFIX = "superdroid.";
 
-    private final double yaw;
-
-    private final double relativeYaw;
-
-    public double getDistance()
+    private static <T> PropertyKey.Builder<T> key(String name, Class<T> type)
     {
-        return distance;
+        return PropertyKey.builder(SUPERDROID_PREFIX + name, type);
     }
 
-    public double getYaw()
-    {
-        return yaw;
-    }
+    public static PropertyKey<Long> UPDATE_PERIOD = key("update-period",
+            Long.class).defaultValue(33L).build();
 
-    public double getRelativeYaw()
-    {
-        return relativeYaw;
-    }
-
-    public RelativePose(double distance, double yaw, double relativeYaw)
-    {
-        this.distance = distance;
-        this.yaw = yaw;
-        this.relativeYaw = relativeYaw;
-    }
+    public static PropertyKey<Integer> PORT = key("port", Integer.class)
+            .defaultValue(3192).build();
 }

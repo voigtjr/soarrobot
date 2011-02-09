@@ -30,6 +30,9 @@ import java.util.List;
 import com.google.common.collect.Lists;
 
 /**
+ * <p>
+ * Simple file template generator, not too useful.
+ * 
  * @author voigtjr@gmail.com
  */
 public class MapGen
