@@ -22,16 +22,17 @@ public class AbridgedAreaDescription
         this.gateways = gateways;
     }
     
+    
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder("Area ");
+        StringBuilder builder = new StringBuilder("r ");
         builder.append(id).append(": (")
         .append(xywh.get(0)).append(",").append(xywh.get(1)).append(",")
-        .append(xywh.get(2)).append(",").append(xywh.get(3)).append(")\n");
+        .append(xywh.get(2)).append(",").append(xywh.get(3)).append(") ");
         
         for (AbridgedGateway g : gateways)
-            builder.append("\t").append(g.toString()).append("\n");
+            builder.append("\t").append(g.toString()).append(" ");
         
         return builder.toString();
     }

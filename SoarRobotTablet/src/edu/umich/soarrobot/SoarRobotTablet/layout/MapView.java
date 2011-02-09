@@ -1,8 +1,9 @@
 package edu.umich.soarrobot.SoarRobotTablet.layout;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
-import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
+import java.util.List;
+
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -15,11 +16,16 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 import android.view.SurfaceView;
+import edu.umich.robot.metamap.AbridgedAreaDescription;
+import edu.umich.robot.metamap.AbridgedAreaDescriptions;
+import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 
 public class MapView extends SurfaceView implements Callback {
-
+	
 	public static final String TAG = "MAP_VIEW";
 	public static final int PX_PER_METER = 32;
+	private static final float zoomRate = 1.5f;
 	
 	private DrawThread dt;
 	private SoarRobotTablet activity;
@@ -27,6 +33,8 @@ public class MapView extends SurfaceView implements Callback {
 	private float zoom;
 	private PointF lastTouch;
 	private HashMap<Integer, SimObject> objects;
+	private HashMap<String, SimObject> robots;
+	private ArrayList<Rect> areas;
 	
 	public MapView(Context context) {
 		super(context);
@@ -47,10 +55,12 @@ public class MapView extends SurfaceView implements Callback {
 		SurfaceHolder sh = getHolder();
 		sh.addCallback(this);
 		dt = new DrawThread(sh);
-		camera = new PointF(-2.0f, -2.0f);
+		camera = new PointF(0.0f, 0.0f);
 		zoom = 1.0f;
 		lastTouch = new PointF(-1.0f, -1.0f);
 		objects = new HashMap<Integer, SimObject>();
+		robots = new HashMap<String, SimObject>();
+		areas = new ArrayList<Rect>();
 	}
 	
 	public void setActivity(SoarRobotTablet activity) {
@@ -69,6 +79,22 @@ public class MapView extends SurfaceView implements Callback {
 		return objects.get(objectID);
 	}
 	
+	public void addRobot(SimObject robot) {
+		robots.put(robot.getAttribute("name"), robot);
+	}
+	
+	public void removeRobot(String name) {
+		robots.remove(name);
+	}
+	
+	public void removeRobot(SimObject robot) {
+		robots.remove(robot.getAttribute("name"));
+	}
+	
+	public SimObject getRobot(String name) {
+		return robots.get(name);
+	}
+	
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,	int height) {
 		
@@ -78,6 +104,14 @@ public class MapView extends SurfaceView implements Callback {
 	public void surfaceCreated(SurfaceHolder holder) {
 		dt.setRunning(true);
 		dt.start();
+	}
+	
+	public void draw() {
+		if (dt != null) {
+			synchronized (dt) {
+				dt.notify();
+			}
+		}
 	}
 
 	@Override
@@ -103,18 +137,36 @@ public class MapView extends SurfaceView implements Callback {
 					camera.x -= (touch.x - lastTouch.x) / PX_PER_METER;
 					camera.y -= (touch.y - lastTouch.y) / PX_PER_METER;
 				}
+				draw();
 			}
 			lastTouch = touch;
 		} else if (action == MotionEvent.ACTION_DOWN) {
-			PointF touch = new PointF(event.getX() / PX_PER_METER + camera.x, event.getY() / PX_PER_METER + camera.y);
-			synchronized (objects) {
-				for (int i = objects.size() - 1; i >= 0; --i) {
-					SimObject obj = objects.get(i);
-					if (obj.intersectsPoint(touch)) {
-						activity.setSelectedObject(obj);
-						break;
+			PointF touch = new PointF((event.getX() / (PX_PER_METER) + camera.x) / zoom, (event.getY() / (PX_PER_METER) + camera.y) / zoom);
+			try {
+				boolean selected = false;
+				synchronized (objects) {
+					for (SimObject obj : robots.values()) {
+						if (obj.intersectsPoint(touch)) {
+							activity.setSelectedObject(obj);
+							selected = true;
+							break;
+						}
+					}
+					if (!selected) {
+						for (SimObject obj : objects.values()) {
+							if (obj.intersectsPoint(touch)) {
+								activity.setSelectedObject(obj);
+								selected = true;
+								break;
+							}
+						}
 					}
 				}
+				if (selected) {
+				    draw();
+				}
+			} catch (NullPointerException e) { // Don't know why this is happening
+				e.printStackTrace();
 			}
 			lastTouch.x = (int) event.getX();
 			lastTouch.y = (int) event.getY();
@@ -143,6 +195,7 @@ public class MapView extends SurfaceView implements Callback {
 		
 		@Override
 		public void run() {
+			try {
 			while (running) {
 				Canvas c = null;
 				synchronized (sh) {
@@ -155,11 +208,18 @@ public class MapView extends SurfaceView implements Callback {
 					}
 				}
 				try {
-					sleep(DELAY);
+					synchronized (this) {
+						this.wait();
+					}
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
+			} catch (NullPointerException e) {
+				e.printStackTrace();
+			}
+		}	public void zoomIn() {
+
 		}
 		
 		// Map info
@@ -170,7 +230,7 @@ public class MapView extends SurfaceView implements Callback {
 			Paint p = new Paint();
 			
 			p.setStyle(Style.FILL);
-			p.setColor(Color.WHITE);
+			p.setColor(Color.BLACK);
 			c.drawRect(new Rect(0,0, c.getWidth(), c.getHeight()), p);
 			
 			float cx, cy;
@@ -185,10 +245,12 @@ public class MapView extends SurfaceView implements Callback {
 			c.translate(-cx, -cy);
 			c.scale(zoom, zoom);
 			
-			p.setColor(Color.GRAY);
-			for (int i = 0; i <= mapSize; ++i) {
-				c.drawLine(0, i, mapSize, i, p);
-				c.drawLine(i, 0, i, mapSize, p);
+			p.setColor(Color.WHITE);
+			for (Rect r : areas) {
+				c.save();
+				c.translate(r.left, r.top);
+				c.drawRect(0, 0, r.width(), r.height(), p);
+				c.restore();
 			}
 			
 			for (SimObject object : objects.values()) {
@@ -197,7 +259,38 @@ public class MapView extends SurfaceView implements Callback {
 				c.restore();
 			}
 			
+			for (SimObject robot : robots.values()) {
+				c.save();
+				robot.draw(c, p);
+				c.restore();
+			}
+			
 			c.restore();
 		}
+	}
+
+	public void deserializeMap(String map) {
+		String[] areaList = map.split(";");
+		for (String area : areaList) {
+			if (area.trim().length() == 0) {
+				continue;
+			}
+			System.out.println("Parsing area:\n" + area);
+			AbridgedAreaDescription aad = AbridgedAreaDescriptions.parseArea(area);
+			List<Double> xywh = aad.xywh;
+			int x = (int)(double)xywh.get(0);
+			int y = (int)(double)xywh.get(1);
+			areas.add(new Rect(x, y, x + (int)(double)xywh.get(2), y + (int)(double)xywh.get(3)));
+		}
+	}
+
+	public void zoomIn() {
+		zoom = zoom * zoomRate;
+		draw();
+	}
+	
+	public void zoomOut() {
+		zoom = zoom / zoomRate;
+		draw();
 	}
 }

@@ -9,11 +9,33 @@
 		android:layout_width="fill_parent"
 		android:layout_height="fill_parent"
 		android:background="#fff">
+		<RelativeLayout android:id="@+id/buttonsLayout"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:background="#000"
+			android:layout_alignParentTop="true">
+			<Button android:id="@+id/pauseButton"
+			    android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_alignParentLeft="true"
+				android:text="Toggle\nSoar" />
+			<Button android:id="@+id/zoomIn"
+			    android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_toRightOf="@+id/pauseButton"
+				android:text="Zoom\nIn" />
+			<Button android:id="@+id/zoomOut"
+			    android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_toRightOf="@+id/zoomIn"
+				android:text="Zoom\nOut" />				
+			</RelativeLayout>
 		<edu.umich.soarrobot.SoarRobotTablet.layout.MapView
 			android:id="@+id/mapView"
 			android:layout_width="fill_parent"
 			android:layout_height="fill_parent"
-			android:layout_above="@+id/propertiesLayout" />
+			android:layout_above="@+id/propertiesLayout"
+			android:layout_below="@+id/buttonsLayout" />
 		<RelativeLayout android:id="@+id/propertiesLayout"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
@@ -30,16 +52,22 @@
 			android:layout_height="wrap_content"
 			android:background="#000"
 			android:layout_alignParentBottom="true">
+			<RelativeLayout
+				android:layout_width="fill_parent"
+				android:layout_height="wrap_content"
+				android:background="#000"
+				android:layout_toLeftOf="@+id/commandsButton">
+				<EditText android:id="@+id/commandsEditText"
+					android:layout_width="fill_parent"
+					android:layout_height="wrap_content"
+					android:layout_alignParentLeft="true"
+					android:singleLine="true" />
+			</RelativeLayout>
 			<Button android:id="@+id/commandsButton"
 			    android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_alignParentRight="true"
 				android:text="Send\nCommand" />
-			<EditText android:id="@+id/commandsEditText"
-				android:layout_width="400px"
-				android:layout_height="wrap_content"
-				android:layout_alignParentLeft="true"
-				android:singleLine="true" />
 		</RelativeLayout>
 	</RelativeLayout>
 </edu.umich.soarrobot.SoarRobotTablet.layout.NoTouchScroll>

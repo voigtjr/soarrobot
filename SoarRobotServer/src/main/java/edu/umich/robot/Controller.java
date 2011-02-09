@@ -54,8 +54,11 @@ import edu.umich.robot.events.control.AbstractControlEvent;
 import edu.umich.robot.events.control.AbstractDriveEvent;
 import edu.umich.robot.events.control.DriveEStopEvent;
 import edu.umich.robot.gp.Gamepad;
+import edu.umich.robot.metamap.AreaDescription;
 import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.MetamapFactory;
+import edu.umich.robot.metamap.VirtualObject;
+import edu.umich.robot.metamap.VirtualObjectTemplate;
 import edu.umich.robot.network.Server;
 import edu.umich.robot.radio.Radio;
 import edu.umich.robot.radio.SimRadio;
@@ -72,6 +75,7 @@ import edu.umich.robot.util.Pose;
 import edu.umich.robot.util.events.RobotEventListener;
 import edu.umich.robot.util.events.RobotEventManager;
 import edu.umich.robot.util.properties.PropertyManager;
+
 
 /**
  * <p>
@@ -630,7 +634,12 @@ public class Controller
     {
         return metamap.getObjectNames();
     }
-
+    
+    public List<VirtualObject> getPlacedObjects()
+    {
+        return metamap.getPlacedObjects();
+    }
+    
     /**
      * <p>
      * Add an object instance by name.
@@ -743,6 +752,14 @@ public class Controller
     public boolean hasSoarAgents()
     {
         return soar.hasSoarAgents();
+    }
+    
+    public List<AreaDescription> getAreaList() {
+    	return metamap.getAreaList();
+    }
+    
+    public Collection<VirtualObjectTemplate> getTemplates() {
+    	return metamap.getTemplates();
     }
 
 }
