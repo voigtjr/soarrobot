@@ -19,56 +19,38 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot.packbot;
-
-import java.net.SocketException;
-import java.net.UnknownHostException;
-
-import edu.umich.grrc.GrrcPackBot;
-import edu.umich.robot.util.Updatable;
+package edu.umich.robot.util;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class PackBotInterface implements Updatable
+public class RelativePose
 {
-    private final GrrcPackBot pb;
+    private final double distance;
 
-    private float lv;
+    private final double yaw;
 
-    private float av;
+    private final double relativeYaw;
 
-    /**
-     * "141.212.203.164" "141.212.205.136" 3192
-     * 
-     * @param hostname
-     * @param port
-     * @throws SocketException
-     * @throws UnknownHostException
-     */
-    public PackBotInterface(String hostname, int port)
-            throws UnknownHostException, SocketException
+    public double getDistance()
     {
-        pb = new GrrcPackBot(hostname, port);
+        return distance;
     }
 
-    public void setLinear(float lv)
+    public double getYaw()
     {
-        this.lv = lv;
+        return yaw;
     }
 
-    public void setAngular(float av)
+    public double getRelativeYaw()
     {
-        this.av = av;
+        return relativeYaw;
     }
 
-    public void update(double dt)
+    public RelativePose(double distance, double yaw, double relativeYaw)
     {
-        pb.setVelocities(lv, av);
-    }
-    
-    public void shutdown()
-    {
-        pb.shutdown();
+        this.distance = distance;
+        this.yaw = yaw;
+        this.relativeYaw = relativeYaw;
     }
 }

@@ -23,7 +23,7 @@ public class AbridgedGateway
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder("Gateway ");
+        StringBuilder builder = new StringBuilder("g ");
         builder.append(id).append(": (")
         .append(xy.get(0)).append(",").append(xy.get(1)).append(")");
         

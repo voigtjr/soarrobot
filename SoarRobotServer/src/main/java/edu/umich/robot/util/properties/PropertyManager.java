@@ -19,10 +19,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class PropertyManager
 {
+    // This warning is different on linux vs os x. Same virtual machine/compiler. I don't know.
     @SuppressWarnings({ "rawtypes" })
     private final Map<PropertyKey<?>, PropertyProvider> properties = Collections
             .synchronizedMap(new HashMap<PropertyKey<?>, PropertyProvider>());
 
+    // This warning is different on linux vs os x. Same virtual machine/compiler. I don't know.
     @SuppressWarnings({ "rawtypes" })
     private final Map<PropertyKey<?>, List> listeners = Collections
             .synchronizedMap(new HashMap<PropertyKey<?>, List>());

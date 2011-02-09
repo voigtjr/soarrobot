@@ -233,26 +233,31 @@ class ObstacleBroadcaster
     void addVirtualObject(VirtualObject vo)
     {
         obstacles.put(vo, new ObstacleVO(vo));
+        changed = true;
     }
     
     void removeVirtualObject(VirtualObject vo)
     {
         obstacles.remove(vo);
+        changed = true;
     }
     
     void addDoor(Door door)
     {
         obstacles.put(door, new ObstacleD(door));
+        changed = true;
     }
     
     void removeDoor(Door door)
     {
         obstacles.remove(door);
+        changed = true;
     }
     
     void reset()
     {
         obstacles.clear();
+        changed = true;
     }
     
     public void shutdown()

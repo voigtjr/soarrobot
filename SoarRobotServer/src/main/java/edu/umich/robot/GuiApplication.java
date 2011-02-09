@@ -45,7 +45,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
-import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
@@ -101,33 +100,69 @@ import edu.umich.robot.util.Configs;
 import edu.umich.robot.util.Pose;
 import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventListener;
-import edu.umich.robot.util.properties.PropertyManager;
 
 /**
+ * <p>
+ * Top-level class for applications that start with an interactive GUI. See also
+ * Headless Application.
+ * 
  * @author voigtjr@gmail.com
  */
 public class GuiApplication
 {
     private static final Log logger = LogFactory.getLog(GuiApplication.class);
 
+    /**
+     * <p>
+     * Used primarily for window location and stuff like that.
+     */
     private final Preferences PREFERENCES = Preferences.userRoot().node("edu/umich/robot");
 
     private final JFrame frame = new JFrame();
 
-    private final PropertyManager properties = new PropertyManager();
-
+    /**
+     * <p>
+     * The main hub for the simulation components and events.
+     */
     private final Controller controller;
 
+    /**
+     * <p>
+     * The 3D view in to the simulation.
+     */
     private final Viewer viewer;
     
+    /**
+     * <p>
+     * True forces a reset of the various window settings and such that normally
+     * persist across sessions.
+     */
     private boolean resetPreferencesAtExit = false;
     
+    /**
+     * <p>
+     * Container for the 3D view (viewer).
+     */
     private final ViewerView viewerView;
     
+    /**
+     * <p>
+     * The list of robots and controllers.
+     */
     private final RobotsView robotsView;
 
+    /**
+     * <p>
+     * The console text output for debugging feedback.
+     */
     private final ConsoleView consoleView;
     
+    /**
+     * <p>
+     * Viewer state saved so that robots can be removed from the simulation.
+     * 
+     * @author voigtjr
+     */
     private static class RobotData
     {
         public RobotData(ViewRobot vr, ViewTrajectory vt)
@@ -140,14 +175,42 @@ public class GuiApplication
         final ViewTrajectory vt;
     }
 
+    /**
+     * <p>
+     * Maps robot names to robot data.
+     */
     private final Map<String, RobotData> robotData = Maps.newConcurrentMap();
     
+    /**
+     * <p>
+     * Container for the status bar at the bottom of the window.
+     */
     private final StatusBar status;
     
+    /**
+     * <p>
+     * When adding an object to the simulator, after selecting what object is to
+     * be added, this gets filled in with that object type's name.
+     */
     private String objectToAdd;
     
+    /**
+     * <p>
+     * Manager and sort of container for the actions used in the GUI.
+     */
     private ActionManager actionManager;
-        
+    
+    /**
+     * <p>
+     * Firing up this application requires a configuration file. If no
+     * configuration file is presented on the command line, this is called to
+     * prompt the user to select a configuration file.
+     * 
+     * <p>
+     * Future work should probably include some default instead of doing this.
+     * 
+     * @return The selected, loaded configuration file.
+     */
     private Config promptForConfig()
     {
         JFileChooser fc = new JFileChooser("config");
@@ -171,26 +234,34 @@ public class GuiApplication
     }
     
     /**
-     * @param args
+     * Entry point.
+     * 
+     * @param args Args from command line.
      */
     public GuiApplication(String[] args)
     {
+        // Heavyweight is not desirable but it is the only thing that will
+        // render in front of the Viewer on all platforms. Blame OpenGL
         JPopupMenu.setDefaultLightWeightPopupEnabled(false);
         ToolTipManager.sharedInstance().setLightWeightPopupEnabled(false);
         
+        // must have config
         Config config = (args.length > 0) ? ConfigUtil.getDefaultConfig(args) : promptForConfig();
         if (config == null)
             System.exit(1);
 
+        // Add more stuff to the config file that doesn't change between runs.
         Application.setupSimulatorConfig(config);
         setupViewerConfig(config);
         
         Configs.toLog(logger, config);
-        
+
         controller = new Controller(config, new Gamepad());
         controller.initializeGamepad();
 
         viewer = new Viewer(config);
+        // This puts us in full 3d mode by default. The Viewer GUI doesn't
+        // reflect this in its right click drop-down, a bug.
         viewer.getVisCanvas().getViewManager().setInterfaceMode(3);
 
         controller.addListener(RobotAddedEvent.class, listener);
@@ -218,7 +289,12 @@ public class GuiApplication
                 catch (InterruptedException ignored)
                 {
                 }
-                System.exit(0); // No way to shut down april threads
+                // TODO: Note, this was here before I fixed the april code so
+                // that it could actually be shutdown. Before, it could not be
+                // shut down so it had to be killed. This can probably be
+                // removed, but there might need to be a few more calls made.
+                // See HeadlessApplication, it shuts down things fine.
+                System.exit(0); 
             }
         });
         frame.setLayout(new BorderLayout());
@@ -272,7 +348,7 @@ public class GuiApplication
         frame.add(toolBar, BorderLayout.PAGE_START);
 
         viewerView = new ViewerView(viewer.getVisCanvas());
-        robotsView = new RobotsView(this);
+        robotsView = new RobotsView(this, actionManager);
         
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, 
                 viewerView, robotsView); 
@@ -388,6 +464,11 @@ public class GuiApplication
         
     }
     
+    /**
+     * <p>
+     * Initialize all actions here, together, they all report to the
+     * actionManager which stores them.
+     */
     private void initActions()
     {
         new ResetAction(actionManager);
@@ -408,11 +489,23 @@ public class GuiApplication
         //new ForwardToTabletAction(actionManager);
     }
     
+    /**
+     * <p>
+     * Returns the controller instance so things like actions can use it.
+     * 
+     * @return The controller instance.
+     */
     public Controller getController()
     {
         return controller;
     }
     
+    /**
+     * <p>
+     * Get the selected robot, or null.
+     * 
+     * @return
+     */
     private ViewRobot getRobot()
     {
         String name = controller.getSelectedRobotName();
@@ -422,6 +515,13 @@ public class GuiApplication
         return robotData.get(name).vr;
     }
     
+    /**
+     * <p>
+     * Change the follow mode in the viewer. A robot must currently be selected.
+     * 
+     * @param mode
+     *            New follow mode.
+     */
     public void setFollowMode(FollowMode mode)
     {
         ViewRobot vr = getRobot();
@@ -430,6 +530,14 @@ public class GuiApplication
         vr.setFollowMode(mode, viewer.getVisCanvas());
     }
 
+    /**
+     * <p>
+     * Moves the camera to the robot using the specified mode. See
+     * robot.moveCameraToRobot.
+     * 
+     * @param mode
+     *            See robot.moveCameraToRobot
+     */
     public void snapCamera(int mode)
     {
         ViewRobot robot = getRobot();
@@ -457,16 +565,21 @@ public class GuiApplication
         }
     }
     
+    /**
+     * <p>
+     * Return persistent window preferences.
+     * 
+     * @return Persistent window preferences.
+     */
     public Preferences getWindowPreferences()
     {
         return PREFERENCES.node("window");
     }
-    
-    public PropertyManager getProperties()
-    {
-        return properties;
-    }
 
+    /**
+     * <p>
+     * Pops up a window to create a new splinter robot to add to the simulation.
+     */
     public void createSplinterRobotDialog()
     {
         final Pose pose = new Pose();
@@ -570,6 +683,10 @@ public class GuiApplication
         dialog.setVisible(true);
     }
 
+    /**
+     * <p>
+     * Responds to events coming from the controller.
+     */
     private final RobotEventListener listener = new RobotEventListener()
     {
         public void onEvent(RobotEvent event)
@@ -597,6 +714,14 @@ public class GuiApplication
         }
     };
 
+    /**
+     * <p>
+     * Elaborates unchanging stuff for the viewer. This stuff used to be in the
+     * config files but it doesn't change so it was moved here.
+     * 
+     * @param config
+     *            The config file to elaborate.
+     */
     private void setupViewerConfig(Config config)
     {
         config.setStrings("viewer.viewobjects", new String[] { "obstacles", "walls", "areas" });
@@ -605,6 +730,8 @@ public class GuiApplication
         
         config.setString("viewer.walls.class", "april.viewer.ViewWalls");
         Application.addImageData(config, "viewer.walls.obstacles.");
+        
+        // The following code enables other viewing options.
         
 //        config.setString("viewer.floor.class", "april.viewer.ViewFloor"); // need to add floor to viewobjects list
 //        addImageData(config, "viewer.floor.obstacles.");
@@ -620,6 +747,23 @@ public class GuiApplication
 //        config.setString("viewer.skybox.down_image", "../common/floor.jpg");
     }
     
+    /**
+     * <p>
+     * Adds position information to the config appended to the passed prefix.
+     * Specifically adds prefix.position, prefix.rollpitchyaw_degrees, and
+     * prefix.color.
+     * 
+     * @param config
+     *            The config to elaborate.
+     * @param prefix
+     *            The prefix to add the position to.
+     * @param position
+     *            The position to add.
+     * @param rpy
+     *            Roll pitch yaw to add.
+     * @param color
+     *            Color to add, or null to skip.
+     */
     private void addPositionInfo(Config config, String prefix,
             double[] position, double[] rpy, int[] color)
     {
@@ -629,6 +773,15 @@ public class GuiApplication
             config.setInts(prefix + "color", color);
     }
 
+    /**
+     * <p>
+     * Add a robot to the viewer, by name.
+     * 
+     * @param name
+     *            Robot name to add.
+     * 
+     * @return The viewer object representing the robot.
+     */
     private ViewRobot addViewRobot(String name)
     {
         Config config = new Config();
@@ -640,6 +793,13 @@ public class GuiApplication
         return (ViewRobot)viewer.addObject(name, config);
     }
 
+    /**
+     * <p>
+     * Add lidar sensor feedback to the viewer by robot name.
+     * 
+     * @param name
+     *            Robot name to add sensor for.
+     */
     private void addViewLidars(String name)
     {
         Config config = new Config();
@@ -658,6 +818,13 @@ public class GuiApplication
         viewer.addObject(name + "lidars", config);
     }
 
+    /**
+     * <p>
+     * Add waypoint feedback to viewer by robot name.
+     * 
+     * @param name
+     *            Robot name to add waypoint feedback for.
+     */
     private void addViewWaypoints(String name)
     {
         Config config = new Config();
@@ -668,6 +835,14 @@ public class GuiApplication
         viewer.addObject(name + "waypoints", config);
     }
 
+    /**
+     * <p>
+     * Add view trajectory to viewer by robot name.
+     * 
+     * @param name
+     *            The robot name to add trajectory for.
+     * @return The viewer object representing the trajectory.
+     */
     private ViewTrajectory addViewTrajectory(String name)
     {
         Config config = new Config();
@@ -678,6 +853,14 @@ public class GuiApplication
         return (ViewTrajectory)viewer.addObject(name + "trajectory", config);
     }
 
+    /**
+     * <p>
+     * Sets the object type to add at the location of the next click in the
+     * viewer.
+     * 
+     * @param name
+     *            Object type to add at next click.
+     */
     public void addObjectOnNextClick(String name)
     {
         synchronized (this)
@@ -687,6 +870,13 @@ public class GuiApplication
         status.setMessage("Click on map to place object.");
     }
     
+    /**
+     * <p>
+     * Change the message in the status bar.
+     * 
+     * @param message
+     *            The new message.
+     */
     public void setStatusBarMessage(String message)
     {
         status.setMessage(message);
@@ -697,11 +887,12 @@ public class GuiApplication
         return frame;
     }
 
-    public ActionManager getActionManager()
-    {
-        return actionManager;
-    }
-
+    /**
+     * <p>
+     * Request that window preferences be reset on exit.
+     * 
+     * @param b True to request reset.
+     */
     public void setResetPreferencesAtExit(boolean b)
     {
         resetPreferencesAtExit = b;

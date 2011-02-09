@@ -33,7 +33,7 @@ import edu.umich.robot.util.Updatable;
 public class SplinterDrive implements Updatable
 {
     private static final LCM lcm = LCM.getSingleton();
-    private static final String DRIVE_CHANNEL_BASE = "DIFFERENTIAL_DRIVE_COMMAND_";
+    public static final String DRIVE_CHANNEL_BASE = "DIFFERENTIAL_DRIVE_COMMAND_";
 
     private final String driveChannel;
     

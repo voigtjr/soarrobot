@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Map;
 
 import sml.Kernel;
-import sml.smlSystemEventId;
 import sml.Kernel.SystemEventInterface;
+import sml.smlSystemEventId;
 import april.config.Config;
 import april.sim.SimLaser;
 import april.sim.SimObject;
@@ -52,8 +52,11 @@ import edu.umich.robot.events.control.AbstractControlEvent;
 import edu.umich.robot.events.control.AbstractDriveEvent;
 import edu.umich.robot.events.control.DriveEStopEvent;
 import edu.umich.robot.gp.Gamepad;
+import edu.umich.robot.metamap.AreaDescription;
 import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.MetamapFactory;
+import edu.umich.robot.metamap.VirtualObject;
+import edu.umich.robot.metamap.VirtualObjectTemplate;
 import edu.umich.robot.network.Server;
 import edu.umich.robot.radio.Radio;
 import edu.umich.robot.radio.SimRadio;
@@ -68,17 +71,38 @@ import edu.umich.robot.util.events.RobotEventListener;
 import edu.umich.robot.util.events.RobotEventManager;
 import edu.umich.robot.util.properties.PropertyManager;
 
+
 /**
+ * <p>
+ * Main container and hub for components and events.
+ * 
  * @author voigtjr@gmail.com
  */
 public class Controller
 {
+    /**
+     * <p>
+     * Used to identify controller in controller list.
+     */
     private static final String GAMEPAD_NAME = "gamepad";
 
+    /**
+     * <p>
+     * Event manager producing events extending AbstractProgramEvent
+     */
     private final RobotEventManager events = new RobotEventManager();
 
+    /**
+     * <p>
+     * Manages robots and controllers for the robots. Provides a stack-like
+     * interface for switching controllers.
+     */
     private final RobotManager robots = new RobotManager(events);
 
+    /**
+     * <p>
+     * List of robot controller names, mapped to the controllers.
+     */
     private final Map<String, RobotController> rcmap = new HashMap<String, RobotController>();
 
     private final Gamepad gp;
@@ -91,14 +115,32 @@ public class Controller
 
     private final Metamap metamap;
 
+    /**
+     * <p>
+     * The gamepad device robot controller.
+     */
     private final ScalableRobotController gprc = new ScalableRobotController(GAMEPAD_NAME);
 
+    /**
+     * <p>
+     * True when the gamepad is enabled and overriding whatever robot it is
+     * currently selected to control.
+     */
     private boolean gamepadOverride = false;
 
     private String selectedRobot;
     
     private Server server;
     
+    /**
+     * <p>
+     * Data structure representing a splinter, its initial conditions, and
+     * references to its simulator objects. These simulator objects references
+     * are saved so that they can be removed later.
+     * 
+     * @author voigtjr
+     * 
+     */
     private static class SplinterData
     {
         public SplinterData(String name, Pose pose, boolean collisions)
@@ -115,6 +157,10 @@ public class Controller
         SimLaser sl;
     }
     
+    /**
+     * <p>
+     * Maps names to splinter information.
+     */
     private final Map<String, SplinterData> simSplinters = Maps.newConcurrentMap();
 
     public Controller(Config config, Gamepad gp)
@@ -144,6 +190,10 @@ public class Controller
 		}
     }
     
+    /**
+     * <p>
+     * Causes Soar start and stop events to fire program control events.
+     */
     private final SystemEventInterface soarHandler = new Kernel.SystemEventInterface()
     {
         public void systemEventHandler(int eventId, Object arg1, Kernel arg2)
@@ -161,6 +211,17 @@ public class Controller
             gp.initializeGamepad(this);
     }
 
+    /**
+     * <p>
+     * Creates a robot and adds it to the simulation.
+     * 
+     * @param robotName
+     *            The name of the robot, must be unique among all
+     * @param pose
+     *            Initial starting position
+     * @param collisions
+     *            True to allow collisions with walls.
+     */
     public void createSplinterRobot(String robotName, Pose pose, boolean collisions)
     {
         SplinterData sd = new SplinterData(robotName, pose, collisions);
@@ -170,12 +231,24 @@ public class Controller
         robots.addRobot(splinter);
     }
 
+    /**
+     * <p>
+     * Elaborates a splinter configuration and adds the splinter to the
+     * simulator using that configuration.
+     * 
+     * <p>
+     * Also creates a configuration and uses it to create a simulated laser
+     * sensor for the robot.
+     * 
+     * @param sd
+     */
     private void addSimSplinter(SplinterData sd)
     {
-        
+
         Config rconfig = new Config();
         rconfig.setString("class", "april.sim.SimSplinter");
-        rconfig.setDoubles("initialPosition", Misc.toPrimitiveDoubleArray(sd.initialPose.getPos()));
+        rconfig.setDoubles("initialPosition", Misc
+                .toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
         SimObject ss = sim.addObject(sd.name, rconfig);
         if (ss != null && ss instanceof SimSplinter)
@@ -197,9 +270,27 @@ public class Controller
         SimObject sl = sim.addObject(sd.name + "lidar", lconfig);
         if (sl != null && sl instanceof SimLaser)
             sd.sl = (SimLaser) sl;
-        
+
     }
 
+    /**
+     * <p>
+     * Create a robot controller with a name for a certain robot (by name) using
+     * productions (or not) and with other specified controller/agent
+     * properties.
+     * 
+     * @param rcName
+     *            The name for the new robot controller, must be unique among
+     *            robot controllers but can share names with the robots. Usually
+     *            the same name as the robot it is controlling.
+     * @param robotName
+     *            The robot's name to control.
+     * @param productions
+     *            Productions for the agent, or null for none.
+     * @param properties
+     *            Properties to be passed to the controller, see
+     *            soar.createRobotController
+     */
     public void createSoarController(String rcName, String robotName, String productions, Config properties)
     {
         RobotOutput output = robots.getOutput(robotName);
@@ -233,11 +324,26 @@ public class Controller
         }
     }
 
+    /**
+     * <p>
+     * Tweak dead zone for a gamepad axis. See Gamepad.
+     * 
+     * @param component
+     * @param deadZonePercent
+     */
     public void setDeadZonePercent(String component, float deadZonePercent)
     {
         gp.setDeadZonePercent(component, deadZonePercent);
     }
 
+    /**
+     * <p>
+     * Select a robot by name. Does nothing if the currently selected robot is
+     * selected again. Deactivates gamepad if a new robot is selected.
+     * 
+     * @param name
+     *            Robot to select.
+     */
     public void selectRobot(String name)
     {
         synchronized (rcmap)
@@ -259,6 +365,11 @@ public class Controller
         }
     }
 
+    /**
+     * <p>
+     * Toggle whether or not the gamepad is controlling the currently selected
+     * robot.
+     */
     public void toggleGamepadOverride()
     {
         if (gp == null)
@@ -295,30 +406,55 @@ public class Controller
     }
 
     /**
-     * 
-     * @return <code>True if Soar is now running.
+     * <p>
+     * Toggles the current Soar running state.
+     * @return True if Soar is now running.
      */
     public boolean toggleSoarRunState()
     {
         return soar.toggleRunState();
     }
     
+    /**
+     * <p>
+     * Start Soar, run forever.
+     */
     public void startSoar()
     {
         soar.startSoar(-1);
     }
     
+    /**
+     * <p>
+     * Start Soar and run a limited number of cycles.
+     * 
+     * @param cycleLimit
+     *            Number of cycles to run
+     */
     public void startSoar(int cycleLimit)
     {
         soar.startSoar(cycleLimit);
     }
     
+    /**
+     * <p>
+     * Request to stop Soar.
+     */
     public void stopSoar()
     {
         soar.stopSoar();
     }
     
+    /**
+     * <p>
+     * Time scale rate. 1 = real time, 2 = 2x real time.
+     */
     private int rate = 1;
+    
+    /**
+     * <p>
+     * Cycle the rate 1 to 2 to 4 back to 1.
+     */
     public void toggleRate()
     {
         rate = rate * 2;
@@ -333,11 +469,24 @@ public class Controller
         events.fireEvent(new TimeScaleChangedEvent(rate));
     }
     
+    /**
+     * <p>
+     * Get the current time scale rate.
+     * 
+     * @return 1, 2, or 4
+     */
     public int getRate()
     {
         return rate;
     }
 
+    /**
+     * <p>
+     * Used to fire gamepad control events.
+     * 
+     * @param event
+     *            The event instance to fire.
+     */
     public void fireGamepadControlEvent(AbstractControlEvent event)
     {
         if (event instanceof AbstractDriveEvent)
@@ -346,18 +495,46 @@ public class Controller
             gprc.fireEvent(event, event.getClass());
     }
 
+    /**
+     * <p>
+     * Add a listener for an event type.
+     * 
+     * @param <T>
+     *            The event type.
+     * @param klass
+     *            The event type.
+     * @param listener
+     *            The listener callback.
+     */
     public <T extends AbstractProgramEvent> void addListener(Class<T> klass,
             RobotEventListener listener)
     {
         events.addListener(klass, listener);
     }
 
+    /**
+     * <p>
+     * Remove a previously registered listener by reference id.
+     * 
+     * @param <T>
+     *            The event type.
+     * @param klass
+     *            The event type.
+     * @param listener
+     *            The listener to remove.
+     */
     public <T extends AbstractProgramEvent> void removeListener(Class<T> klass,
             RobotEventListener listener)
     {
         events.removeListener(klass, listener);
     }
 
+    /**
+     * <p>
+     * Return an unmodifiable collection of all robots.
+     * 
+     * @return Unmodifiable collection of robots.
+     */
     public Collection<? extends Robot> getAllRobots()
     {
         return robots.getAll();
@@ -373,21 +550,50 @@ public class Controller
         metamap.shutdown();
     }
 
+    /**
+     * <p>
+     * Returns the name of the currently selected robot, or null.
+     * 
+     * @return The name of the currently selected robot, or null.
+     */
     public String getSelectedRobotName()
     {
-	return selectedRobot;
+        return selectedRobot;
     }
 
+    /**
+     * <p>
+     * Returns a list of all currently registered object prototypes.
+     * 
+     * @return A list of all currently registered object prototypes.
+     */
     public List<String> getObjectNames()
     {
         return metamap.getObjectNames();
     }
-
+    
+    public List<VirtualObject> getPlacedObjects()
+    {
+        return metamap.getPlacedObjects();
+    }
+    
+    /**
+     * <p>
+     * Add an object instance by name.
+     * 
+     * @param name The object type, see getObjectNames
+     * @param pos Where to put the new object.
+     */
     public void addObject(String name, double[] pos)
     {
         metamap.addObject(name, pos);
     }
 
+    /**
+     * <p>
+     * Deletes splinters and recreates them in their initial locations and fires
+     * reset events.
+     */
     public void reset()
     {
         events.fireEvent(new BeforeResetEvent());
@@ -406,6 +612,13 @@ public class Controller
         events.fireEvent(new AfterResetEvent());
     }
 
+    /**
+     * <p>
+     * Take the currently configured map and write it out to a file.
+     * 
+     * @param selectedFile The file to overwrite if it exists.
+     * @throws IOException If there was some file error.
+     */
     public void saveMap(File selectedFile) throws IOException
     {
         ConfigSaver cs = new ConfigSaver(metamap, soar.getProperties());
@@ -425,29 +638,57 @@ public class Controller
         cs.write(selectedFile);
     }
 
-    public void soarStep()
-    {
-        soar.step();
-    }
-
+    /**
+     * <p>
+     * Retrieve a Soar agent's properties.
+     * 
+     * @param name
+     *            The agent to retrieve.
+     * @return The property manager for the agent.
+     */
     public PropertyManager getSoarAgentProperties(String name)
     {
         return soar.getAgentProperties(name);
     }
-    
+
+    /**
+     * <p>
+     * Retrieve Soar (kernel-level) properties.
+     * 
+     * @return The property manager for the Soar instance.
+     */
     public PropertyManager getSoarProperties()
     {
         return soar.getProperties();
     }
     
+    /**
+     * <p>
+     * Retrieve the data collector class for Soar.
+     * 
+     * @return The data collector class.
+     */
     public SoarDataCollector getSoarDataCollector()
     {
         return soar.getSoarDataCollector();
     }
 
+    /**
+     * Check to see if there are Soar agents.
+     * 
+     * @return true if there are Soar agents.
+     */
     public boolean hasSoarAgents()
     {
         return soar.hasSoarAgents();
+    }
+    
+    public List<AreaDescription> getAreaList() {
+    	return metamap.getAreaList();
+    }
+    
+    public Collection<VirtualObjectTemplate> getTemplates() {
+    	return metamap.getTemplates();
     }
 
 }

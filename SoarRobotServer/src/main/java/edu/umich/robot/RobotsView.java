@@ -54,6 +54,7 @@ import april.viewer.Viewer.RobotSelectionChangedListener;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
+import edu.umich.robot.actions.ActionManager;
 import edu.umich.robot.actions.CreateSplinterRobotAction;
 
 /**
@@ -69,7 +70,7 @@ public class RobotsView extends JPanel implements RobotSelectionChangedListener
 
     private final JXTable table;
     
-    public RobotsView(GuiApplication app)
+    public RobotsView(GuiApplication app, ActionManager manager)
     {
         super(new BorderLayout());
         this.app = app;
@@ -79,7 +80,7 @@ public class RobotsView extends JPanel implements RobotSelectionChangedListener
         final JPopupMenu popup = new JPopupMenu();
 
         popup.add(associateSoarAgent);
-        popup.add(app.getActionManager().getAction(CreateSplinterRobotAction.class));
+        popup.add(manager.getAction(CreateSplinterRobotAction.class));
         table.add(popup);
         table.addMouseListener(new MouseAdapter()
         {

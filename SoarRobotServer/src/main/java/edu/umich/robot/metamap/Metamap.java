@@ -22,6 +22,7 @@
 package edu.umich.robot.metamap;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -37,12 +38,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import edu.umich.robot.RelativePose;
 import edu.umich.robot.Robot;
 import edu.umich.robot.events.RobotAddedEvent;
 import edu.umich.robot.events.RobotRemovedEvent;
 import edu.umich.robot.metamap.Door.State;
 import edu.umich.robot.util.Pose;
+import edu.umich.robot.util.RelativePose;
 import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventListener;
 
@@ -161,6 +162,10 @@ public class Metamap implements RobotEventListener
             return area;
         }
         return null;
+    }
+    
+    public List<AreaDescription> getAreaList() {
+    	return areaList;
     }
 
     public AreaState getAreaState(int id)
@@ -398,6 +403,10 @@ public class Metamap implements RobotEventListener
     public VirtualObject getTemplate(String name)
     {
         return objects.getTemplate(name);
+    }
+    
+    public Collection<VirtualObjectTemplate> getTemplates() {
+    	return objects.getTemplates();
     }
 
     public List<VirtualObject> getPlacedObjects()

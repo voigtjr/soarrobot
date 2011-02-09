@@ -8,14 +8,15 @@
 package edu.umich.soarrobot.SoarRobotTablet.objects;
 
 import java.util.HashMap;
-
-import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
+import java.util.Scanner;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.PointF;
 import android.graphics.Paint.Style;
+import android.graphics.Path;
+import android.graphics.PointF;
+import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 
 public class SimObject {
 	
@@ -27,13 +28,31 @@ public class SimObject {
 	// Second key is the name of the property.
 	// Value is of type String or Float, or an array
 	// of one of those types.
-	private static HashMap<String, HashMap<String, Object>> classes;
+	private static HashMap<String, HashMap<String, String>> classes;
 	
 	// The highest id value that's been assigned so far.
 	private static int maxID;
 	
-	public static void init(HashMap<String, HashMap<String, Object>> classes) {
-		SimObject.classes = classes;
+	public static void init(String classesString) {
+		SimObject.classes = new HashMap<String, HashMap<String,String>>();
+		for (String classString : classesString.split(";")) {
+			Scanner s = new Scanner(classString);
+			s.useDelimiter(" ");
+			String name = s.next();
+			s.next("\\{");
+			HashMap<String, String> properties = new HashMap<String, String>();
+			while(true) {
+				String key = s.next();
+				if (key.equals("}")) {
+					break;
+				}
+				s.next(":");
+				String value = s.next();
+				s.next(",");
+				properties.put(key, value);
+			}
+			classes.put(name, properties);
+		}
 		maxID = 0;
 	}
 	
@@ -42,9 +61,9 @@ public class SimObject {
 	 */
 	
 	private String type;
-	private HashMap<String, Object> attributes;
+	private HashMap<String, String> attributes;
 	private PointF location;
-	private double[] orientation;
+	private float theta;
 	private PointF size;
 	private int color;
 	private int id;
@@ -64,7 +83,7 @@ public class SimObject {
 		this.type = type;
 		this.attributes = classes.get(type);
 		this.location = location;
-		this.orientation = new double[3]; // Stored as Roll, Pitch, and Yaw
+		this.theta = 0.0f;
 		this.id = maxID;
 		++maxID;
 		selected = false;
@@ -82,10 +101,7 @@ public class SimObject {
 				e.printStackTrace();
 			}
 		}
-		if (attributes.containsKey("size")) {
-			float[] sizes = (float[]) attributes.get("size");
-			size = new PointF(sizes[0], sizes[1]);
-		}
+		size = new PointF(1.0f, 1.0f);
 	}
 	
 	/**
@@ -95,14 +111,25 @@ public class SimObject {
 	 */
 	public void draw(Canvas c, Paint p) {
 		c.translate(location.x, location.y);
-		c.rotate((float)getOrientation()[2]);
+		c.rotate(-theta);
 		p.setStrokeWidth(selected ? 3.0f / MapView.PX_PER_METER : 1.0f / MapView.PX_PER_METER);
 		p.setColor(color);
 		p.setStyle(Style.FILL);
-		c.drawRect(0.0f, 0.0f, size.x, size.y, p);
-		p.setColor(selected ? Color.RED : Color.BLACK);
-		p.setStyle(Style.STROKE);
-		c.drawRect(0.0f, 0.0f, size.x, size.y, p);
+		if (type.equals("splinter")) {
+			Path path = new Path();
+			path.lineTo(-1.0f, 0.4f);
+			path.lineTo(-1.0f, -0.4f);
+			path.lineTo(0.0f, 0.0f);
+			c.drawPath(path, p);
+			p.setColor(selected ? Color.RED : Color.BLACK);
+			p.setStyle(Style.STROKE);
+			c.drawPath(path, p);
+		} else {
+			c.drawRect(0.0f, 0.0f, size.x, size.y, p);
+			p.setColor(selected ? Color.RED : Color.BLACK);
+			p.setStyle(Style.STROKE);
+			c.drawRect(0.0f, 0.0f, size.x, size.y, p);
+		}
 	}
 	
 	/*
@@ -120,6 +147,16 @@ public class SimObject {
 				&& p.y >= location.y && p.y < location.y + size.y;
 	}
 	
+    public String getPropertiesString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("x:" + location.x + "  y:" + location.y + " ");
+        for (String str : attributes.keySet()) {
+            sb.append(str + ":" + attributes.get(str) + "  ");
+        }
+        return sb.toString();
+          
+    }	
+	
 	/*
 	 * Accessor methods.
 	 */
@@ -132,8 +169,14 @@ public class SimObject {
 		return this.type.equals(type);
 	}
 	
-	public Object getAttribute(String attribute) {
+	public String getAttribute(String attribute) {
 		return attributes.get(attribute);
+	}
+	
+	
+	
+	public void setAttribute(String attribute, String value) {
+		attributes.put(attribute, value);
 	}
 	
 	public PointF getLocation() {
@@ -144,13 +187,8 @@ public class SimObject {
 		this.location = location;
 	}
 	
-	public double[] getOrientation() {
-	    return orientation;
-	}
-	
-	public void setOrientation(double[] orientation) {
-	    assert(orientation.length==3);
-	    this.orientation = orientation;
+	public void setTheta(float theta) {
+		this.theta = theta;
 	}
 	
 	public void setSelected(boolean selected) {

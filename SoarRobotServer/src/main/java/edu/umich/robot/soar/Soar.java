@@ -271,23 +271,6 @@ public class Soar implements RobotEventListener
         }
     }
     
-    public void step()
-    {
-        synchronized (exec)
-        {
-            logger.debug("Step Soar requested");
-            if (soarTask != null)
-                soarTask.cancel(true);
-            soarTask = exec.submit(new Runnable()
-            {
-                public void run()
-                {
-                    kernel.RunAllAgents(1);
-                }
-            });
-        }
-    }
-
     public void shutdown()
     {
         stopSoar();

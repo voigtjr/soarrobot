@@ -44,18 +44,49 @@ import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventListener;
 
 /**
+ * <p>
+ * Top-level class for batch runs of the simulator without a GUI.
+ * 
  * @author voigtjr@gmail.com
  */
 public class HeadlessApplication
 {
     private static final Log logger = LogFactory.getLog(HeadlessApplication.class);
 
+    /**
+     * <p>
+     * Max number of cycles.
+     */
     private final int cycles;
+    
+    /**
+     * <p>
+     * Timeout.
+     */
     private final int seconds;
+    
+    /**
+     * <p>
+     * Set to true when the shutdown handler (usually control-c) is used to stop
+     * the simulation. Helps callers tell if they should run again.
+     */
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
+    
+    /**
+     * <p>
+     * Current configuration.
+     */
     private final Config config;
 
-    public HeadlessApplication(String[] args, int cycles, int seconds, Application app)
+    /**
+     * <p>
+     * Constructor. 
+     * 
+     * @param args Configuration file from the command line. Should probably just pass the config instead of command line args.
+     * @param cycles Maximum number of decision cycles before aborting, use negative to ignore.
+     * @param seconds Maximum number of seconds before aborting, use <= 0 to ignore.
+     */
+    public HeadlessApplication(String[] args, int cycles, int seconds)
     {
         this.cycles = cycles;
         this.seconds = seconds;
@@ -70,9 +101,16 @@ public class HeadlessApplication
         Application.setupSimulatorConfig(config);
         
         Configs.toLog(logger, config);
-        
     }
-    
+
+    /**
+     * <p>
+     * Start the simulation. Creates a contorller, adds stuff, calls run (see
+     * also).
+     * 
+     * @return True if JVM shutdown was the cause for the run stopping, so that
+     *         caller can break.
+     */
     public boolean go()
     {
         Controller controller = new Controller(config, null);
@@ -131,6 +169,15 @@ public class HeadlessApplication
         return shutdown.get();
     }
     
+    /**
+     * <p>
+     * Start Soar, wait for timeout or Soar to stop.
+     * 
+     * @param controller
+     *            Simulation controller initialized.
+     * @throws InterruptedException
+     *             Thrown on thread interrupt.
+     */
     private void run(Controller controller) throws InterruptedException
     {
         final CountDownLatch doneSignal = new CountDownLatch(1);

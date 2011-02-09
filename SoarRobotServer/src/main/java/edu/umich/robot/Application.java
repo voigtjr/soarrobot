@@ -91,7 +91,7 @@ public class Application
         for (int i = 0; i < configs.length; ++i)
         {
             logger.info("Running " + configs[i] + " for " + cycles + " cycles, timeout " + seconds + " seconds.");
-            HeadlessApplication h = new HeadlessApplication(toArgs(configs[i]), cycles, seconds, this);
+            HeadlessApplication h = new HeadlessApplication(toArgs(configs[i]), cycles, seconds);
             if (h.go())
                 break;
             logger.info("Done, garbage collect and 5 second sleep.");

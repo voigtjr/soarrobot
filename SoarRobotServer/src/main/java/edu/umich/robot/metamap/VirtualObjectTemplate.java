@@ -36,7 +36,7 @@ import edu.umich.robot.util.Pose;
 /**
  * @author voigtjr@gmail.com
  */
-class VirtualObjectTemplate implements VirtualObject
+public class VirtualObjectTemplate implements VirtualObject
 {
     private final String name;
     

@@ -21,7 +21,6 @@
  */
 package edu.umich.robot.soar;
 
-import java.io.IOException;
 import java.util.List;
 
 import lcm.lcm.LCM;
