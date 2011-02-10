@@ -5,7 +5,6 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -13,8 +12,8 @@ import java.util.Scanner;
 import com.google.common.collect.ImmutableList;
 
 import edu.umich.robot.Controller;
-import edu.umich.robot.Robot;
 import edu.umich.robot.TabletLCM;
+import edu.umich.robot.events.ObjectAddedEvent;
 import edu.umich.robot.metamap.AbridgedAreaDescription;
 import edu.umich.robot.metamap.AbridgedGateway;
 import edu.umich.robot.metamap.AreaDescription;
@@ -23,8 +22,9 @@ import edu.umich.robot.metamap.SquareArea;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.metamap.VirtualObjectTemplate;
 import edu.umich.robot.splinter.Splinter;
-import edu.umich.robot.util.ImmutablePose;
 import edu.umich.robot.util.Pose;
+import edu.umich.robot.util.events.RobotEvent;
+import edu.umich.robot.util.events.RobotEventListener;
 
 /**
  * Listens for commands over the network.
@@ -32,17 +32,19 @@ import edu.umich.robot.util.Pose;
  * @author miller
  *
  */
-public class Server {
+public class Server implements RobotEventListener {
 	
 	ServerSocket socket;
 	boolean running;
 	Controller controller;
+	PrintWriter out;
 	
 	TabletLCM lcm;
 	
 	public Server(int port) throws IOException {
 		socket = new ServerSocket(port);
 		running = true;
+		out = null;
 	}
 	
 	public void start() {
@@ -55,6 +57,7 @@ public class Server {
 						startLCM(client.getInetAddress(), client.getPort());
 						Scanner scanner = new Scanner(client.getInputStream()).useDelimiter("\n");
 						boolean scanning = true;
+                        out = new PrintWriter(client.getOutputStream());
 						try {
 							while (scanning) {
 								// Read a command from the client and respond
@@ -63,20 +66,17 @@ public class Server {
 								System.out.println("Got command from client " + client.getInetAddress() + ":" + client.getPort() + ":\n" + line);
 								String response = handleCommand(line);
 								System.out.println("Returning to client:\n" + response);
-								PrintWriter out = new PrintWriter(client.getOutputStream());
-								out.println(response);
-								out.flush();
+								sendMessage(response);
 								if (line.trim().equalsIgnoreCase("quit")) {
 									scanning = false;
 								}
 							}
-						} catch (IOException e) {
-							e.printStackTrace();
 						} catch (NoSuchElementException e) {
 							e.printStackTrace();
 						} finally {
 							client.close();
 						}
+						out = null;
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -91,6 +91,13 @@ public class Server {
 			}
 		}.start();
 	}
+	
+	private synchronized void sendMessage(String message) {
+	    if (out != null) {
+	        out.println(message);
+            out.flush();
+	    }
+    }
 	
 	private String handleCommand(String command) {
 		if (controller == null) {
@@ -108,7 +115,7 @@ public class Server {
 					sb.append(" ; ");
 				}
 			}
-			return sb.toString();
+			return "map " + sb.toString();
 		}
 		
 		// classes
@@ -127,7 +134,7 @@ public class Server {
 				}
 				sb.append("};");
 			}
-			return sb.toString();
+			return "classes " + sb.toString();
 		}
 		
 		// objects
@@ -135,8 +142,7 @@ public class Server {
 		if (command.equalsIgnoreCase("objects")) {
 			StringBuilder sb = new StringBuilder();
 			for (VirtualObject obj : controller.getPlacedObjects()) {
-				Pose p = obj.getPose();
-				sb.append(obj.getName() + " " + p.getX() + " " + p.getY() + " " + p.getYaw() + ";");
+				sb.append(stringForVirtualObject(obj));
 			}
 			return sb.toString();
 		}
@@ -159,16 +165,21 @@ public class Server {
 					sb.append(';');
 				}
 			}
-			return sb.toString();
+			return "robots " + sb.toString();
 		}
 		
 		// pause
 		// Toggle Soar's run state
 		if (command.equalsIgnoreCase("pause")) {
-			return controller.toggleSoarRunState() ? "Soar started" : "Soar paused";
+			return "text " + (controller.toggleSoarRunState() ? "Soar started" : "Soar paused");
 		}
 		
-		return "Invalid command: " + command;
+		return "text Invalid command: " + command;
+	}
+	
+	private static String stringForVirtualObject(VirtualObject obj) {
+        Pose p = obj.getPose();
+	    return obj.getName() + " " + p.getX() + " " + p.getY() + " " + p.getYaw() + ";";
 	}
 	
 	public static AbridgedAreaDescription abridgeAreaDescription(SquareArea sa) {
@@ -237,6 +248,16 @@ public class Server {
         {
             lcm.close();
             lcm = null;
+        }
+    }
+
+    @Override
+    public void onEvent(RobotEvent event)
+    {
+        if (event instanceof ObjectAddedEvent) {
+            ObjectAddedEvent oae = (ObjectAddedEvent) event;
+            VirtualObject vo = oae.getObject();
+            sendMessage("objects " + stringForVirtualObject(vo));
         }
     }
 	

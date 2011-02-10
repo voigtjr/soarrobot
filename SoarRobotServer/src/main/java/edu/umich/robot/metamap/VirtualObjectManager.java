@@ -123,13 +123,13 @@ class VirtualObjectManager
         }
     }
     
-    void placeNew(String name, Pose pose)
+    VirtualObject placeNew(String name, Pose pose)
     {
         VirtualObjectTemplate template = templates.get(name);
         if (template == null)
         {
             logger.error("No template for " + name);
-            return;
+            return null;
         }
         
         VirtualObjectImpl vo = new VirtualObjectImpl(name, template, idg.getId());
@@ -137,6 +137,7 @@ class VirtualObjectManager
         
         instances.put(vo.getId(), vo);
         addPlaced(vo);
+        return vo;
     }
     
     private void addPlaced(VirtualObjectImpl voi)

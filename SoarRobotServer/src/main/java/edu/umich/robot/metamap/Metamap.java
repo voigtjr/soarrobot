@@ -355,9 +355,10 @@ public class Metamap implements RobotEventListener
         return objects.getObjectNames();
     }
 
-    public void addObject(String name, double[] pos)
+    public VirtualObject addObject(String name, double[] pos)
     {
-        objects.placeNew(name, new Pose(pos));
+        VirtualObject obj = objects.placeNew(name, new Pose(pos));
+        return obj;
     }
 
     public void onEvent(RobotEvent event)
