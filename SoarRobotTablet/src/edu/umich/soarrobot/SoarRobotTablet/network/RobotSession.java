@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2011, Regents of the University of Michigan
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package edu.umich.soarrobot.SoarRobotTablet.network;
 
 import java.io.IOException;
@@ -16,7 +37,6 @@ import android.util.Log;
 import android.widget.Toast;
 import april.jmat.LinAlg;
 import april.lcmtypes.pose_t;
-import april.jmat.LinAlg;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
@@ -58,51 +78,13 @@ public class RobotSession extends Thread implements LCMSubscriber {
 		if (tcpClient == null) {
 			return;
 		}
-		
-		String map = sendMessage("map");
-		String classStrings = sendMessage("classes");
-		String robotStrings = sendMessage("robots");
-		String objectStrings = sendMessage("objects");
+
 		robotNames = new ArrayList<String>();
-		
-		// Initialize class definitions
-		SimObject.init(classStrings + " splinter { }");
-		
-		// Add map to the map
-		activity.getMapView().deserializeMap(map);
-		
-		// Add robots to the map
-		for (String robotString : robotStrings.split(";")) {
-			if (robotString.length() == 0) {
-				continue;
-			}
-			Scanner s = new Scanner(robotString).useDelimiter(" ");
-			String name = s.next();
-			float x = s.nextFloat();
-			float y = -s.nextFloat();
-			float theta = s.nextFloat();
-			SimObject robot = new SimObject("splinter", new PointF(x, y));
-			robot.setTheta(theta);
-			robot.setAttribute("name", name);
-			activity.getMapView().addRobot(robot);
-			robotNames.add(name);
-		}
-		
-		// Add objects to the map
-		for (String objString : objectStrings.split(";")) {
-			if (objectStrings.length() == 0) {
-				continue;
-			}
-			Scanner s = new Scanner(objString).useDelimiter(" ");
-			String name = s.next();
-			float x = s.nextFloat();
-			float y = -s.nextFloat();
-			float theta = s.nextFloat();
-			SimObject sim = new SimObject(name, new PointF(x, y));
-			sim.setTheta(theta);
-			activity.getMapView().addObject(sim);
-		}
-		
+		tcpListener.start();
+        sendMessage("map");
+        sendMessage("classes");
+        sendMessage("robots");
+        sendMessage("objects");
 		try {
 			// This needs to be the client address.
 			String clientHost;
@@ -126,13 +108,66 @@ public class RobotSession extends Thread implements LCMSubscriber {
 		activity.getMapView().draw();
 	}
 	
-	public String sendMessage(String message) {
+	public void sendMessage(String message) {
 		tcpWriter.println(message);
 		tcpWriter.flush();
-		String response = tcpScanner.next();
-		return response;
 	}
 	
+	// Handles a TCP message that was sent from the server.
+	private void handleMessage(String message) {
+	    int space = message.indexOf(' ');
+	    if (space == -1) {
+	        return;
+	    }
+	    String command = message.substring(0, space);
+	    if (command.equals("map")) {
+	        activity.getMapView().deserializeMap(message.substring(space));
+	    }
+	    else if (command.equals("classes")) {
+	        SimObject.init(message.substring(space) + " splinter { }");
+	    }
+	    else if (command.equals("robots")) {
+	        for (String robotString : message.substring(space).split(";")) {
+	            if (robotString.length() == 0) {
+	                continue;
+	            }
+	            Scanner s = new Scanner(robotString).useDelimiter(" ");
+	            String name = s.next();
+	            float x = s.nextFloat();
+	            float y = -s.nextFloat();
+	            float theta = s.nextFloat();
+	            SimObject robot = new SimObject("splinter", new PointF(x, y));
+	            robot.setTheta(theta);
+	            robot.setAttribute("name", name);
+	            activity.getMapView().addRobot(robot);
+	            robotNames.add(name);
+	        }
+	    }
+	    else if (command.equals("objects")) {
+	        for (String objString : message.substring(space).split(";")) {
+	            if (objString.length() == 0) {
+	                continue;
+	            }
+	            Scanner s = new Scanner(objString).useDelimiter(" ");
+	            String name = s.next();
+	            float x = s.nextFloat();
+	            float y = -s.nextFloat();
+	            float theta = s.nextFloat();
+	            SimObject sim = new SimObject(name, new PointF(x, y));
+	            sim.setTheta(theta);
+	            activity.getMapView().addObject(sim);
+	        }
+	    }
+	    else if (command.equals("text")) {
+	        activity.setPropertiesText(message.substring(space));
+	    }
+        MapView mv = activity.getMapView();
+        if (mv != null) {
+            mv.draw();
+        }
+    }
+	
+	// Handles a UDP message that was sent from the server.
 	@Override
 	public void messageReceived(LCM lcm, String channel, LCMDataInputStream ins) {
 		try {
@@ -173,7 +208,16 @@ public class RobotSession extends Thread implements LCMSubscriber {
 				lcm.subscribe("POSE_" + robotName, this);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+            e.printStackTrace();
+        }
+    }
+	
+	public Thread tcpListener = new Thread() {
+	    public void run() {
+	        while(true) {
+	            String message = tcpScanner.next();
+	            RobotSession.this.handleMessage(message);
+	        }
+	    };
+	};
 }

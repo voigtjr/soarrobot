@@ -45,6 +45,7 @@ import com.google.common.collect.Maps;
 import edu.umich.robot.events.AbstractProgramEvent;
 import edu.umich.robot.events.AfterResetEvent;
 import edu.umich.robot.events.BeforeResetEvent;
+import edu.umich.robot.events.ObjectAddedEvent;
 import edu.umich.robot.events.RobotAddedEvent;
 import edu.umich.robot.events.RobotRemovedEvent;
 import edu.umich.robot.events.SoarStartedEvent;
@@ -198,6 +199,8 @@ public class Controller
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+        events.addListener(ObjectAddedEvent.class, server);
     }
     
     /**
@@ -651,7 +654,10 @@ public class Controller
      */
     public void addObject(String name, double[] pos)
     {
-        metamap.addObject(name, pos);
+        VirtualObject obj = metamap.addObject(name, pos);
+        if (obj != null) {
+            events.fireEvent(new ObjectAddedEvent(obj));
+        }
     }
 
     /**
