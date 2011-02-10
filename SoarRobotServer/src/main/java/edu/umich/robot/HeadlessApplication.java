@@ -139,6 +139,7 @@ public class HeadlessApplication
                 boolean collisions = config.getBoolean(s + ".wallCollisions", true);
 
                 controller.createSplinterRobot(s, pose, collisions);
+                controller.createSimSplinter(s);
                 if (prods == null)
                 {
                     logger.error("Splinter needs productions: " + s);

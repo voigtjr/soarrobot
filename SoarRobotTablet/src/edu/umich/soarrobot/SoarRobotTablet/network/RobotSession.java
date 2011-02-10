@@ -16,6 +16,7 @@ import android.util.Log;
 import android.widget.Toast;
 import april.jmat.LinAlg;
 import april.lcmtypes.pose_t;
+import april.jmat.LinAlg;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
@@ -137,6 +138,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 		try {
 			pose_t p = new pose_t(ins);
 			PointF robotLocation = new PointF((float)p.pos[0], -(float)p.pos[1]);
+
 			float theta = (float) (LinAlg.quatToRollPitchYaw(p.orientation)[2] * 180.0f / Math.PI);
 			SimObject robot = activity.getMapView().getRobot(channel.split("_")[1]);
 			if (robot != null) {

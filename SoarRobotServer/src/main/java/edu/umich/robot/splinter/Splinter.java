@@ -67,9 +67,13 @@ import edu.umich.robot.metamap.AreaState;
 import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.radio.Radio;
+import edu.umich.robot.util.HeadingController;
 import edu.umich.robot.util.PIDController;
 import edu.umich.robot.util.Pose;
+import edu.umich.robot.util.PoseProvider;
+import edu.umich.robot.util.SimBattery;
 import edu.umich.robot.util.Updatable;
+import edu.umich.robot.util.VelocitiesController;
 import edu.umich.robot.util.events.RobotEventListener;
 import edu.umich.robot.util.events.RobotEventManager;
 import edu.umich.robot.util.properties.PropertyChangeEvent;
@@ -85,7 +89,7 @@ public class Splinter implements Robot
 
     private final PropertyManager properties = new PropertyManager();
 
-    private final SplinterPose pose;
+    private final PoseProvider pose;
 
     private final PIDController apid = new PIDController();
 
@@ -95,9 +99,9 @@ public class Splinter implements Robot
 
     private final SplinterDrive drive;
 
-    private final SplinterVelocities velocities;
+    private final VelocitiesController velocities;
 
-    private final SplinterHeading heading;
+    private final HeadingController heading;
 
     private final ScheduledExecutorService schexec = MoreExecutors.getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1));
 
@@ -111,7 +115,7 @@ public class Splinter implements Robot
     
     private final RobotEventManager events = new RobotEventManager();
 
-    private final SplinterBattery battery = new SplinterBattery(10, 0.7);
+    private final SimBattery battery = new SimBattery(10, 0.7);
     
     private final AtomicBoolean headlightOn = new AtomicBoolean(false);
     
@@ -134,7 +138,7 @@ public class Splinter implements Robot
 
         drive = new SplinterDrive(name, battery);
         velocities = new SplinterVelocities(drive, pose, apid, lpid);
-        heading = new SplinterHeading(velocities, pose, hpid);
+        heading = new HeadingController(velocities, pose, hpid);
 
         commandTask = schexec.scheduleAtFixedRate(command, 0, PERIOD, TimeUnit.MILLISECONDS);
     }

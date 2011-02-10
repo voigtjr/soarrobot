@@ -38,6 +38,28 @@ public class SuperdroidProperties
     public static PropertyKey<Long> UPDATE_PERIOD = key("update-period",
             Long.class).defaultValue(33L).build();
 
+    public static PropertyKey<String> HOSTNAME = 
+        key("hostname", String.class)
+        .defaultValue("TODO").build(); // TODO
+
     public static PropertyKey<Integer> PORT = key("port", Integer.class)
-            .defaultValue(3192).build();
+    .defaultValue(3192).build();
+
+    public static PropertyKey<double[]> ANGULAR_PID_GAINS = 
+        key("angular-pid-gains", double[].class)
+        //.defaultValue( new double[] { 0.0238, 0, 0.0025 })
+        .defaultValue( new double[] { 0.15, 0, 0.01 })
+        .build();
+
+    public static PropertyKey<double[]> LINEAR_PID_GAINS = 
+        key("linear-pid-gains", double[].class)
+        .defaultValue( new double[] { 0.12, 0, 0.025 })
+        .build();
+
+    public static PropertyKey<double[]> HEADING_PID_GAINS = 
+        key("heading-pid-gains", double[].class)
+        //.defaultValue( new double[] { 0.6, 0, 0.125 })
+        .defaultValue( new double[] { 1.8, 0, 0.125 })
+        .build();
+
 }

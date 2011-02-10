@@ -147,6 +147,16 @@ public class SimObject {
 				&& p.y >= location.y && p.y < location.y + size.y;
 	}
 	
+    public String getPropertiesString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("x:" + location.x + "  y:" + location.y + " ");
+        for (String str : attributes.keySet()) {
+            sb.append(str + ":" + attributes.get(str) + "  ");
+        }
+        return sb.toString();
+          
+    }	
+	
 	/*
 	 * Accessor methods.
 	 */
@@ -162,6 +172,8 @@ public class SimObject {
 	public String getAttribute(String attribute) {
 		return attributes.get(attribute);
 	}
+	
+	
 	
 	public void setAttribute(String attribute, String value) {
 		attributes.put(attribute, value);

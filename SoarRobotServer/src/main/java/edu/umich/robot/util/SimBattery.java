@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot.splinter;
+package edu.umich.robot.util;
 
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,14 +37,14 @@ import com.google.common.util.concurrent.MoreExecutors;
 /**
  * Super simple battery model for splinter system. Not intended model reality.
  * 
- * Threadsafe.
+ * Thread-safe.
  * 
  * @author voigtjr
  *
  */
-public class SplinterBattery
+public class SimBattery
 {
-    private static final Log logger = LogFactory.getLog(SplinterBattery.class);
+    private static final Log logger = LogFactory.getLog(SimBattery.class);
     
     private final double mAh_max;
     private final AtomicReference<Double> mAh;
@@ -54,7 +54,11 @@ public class SplinterBattery
     private final Map<String, Double> current = Maps.newConcurrentMap();
     private final AtomicReference<ScheduledFuture<?>> updateTask = new AtomicReference<ScheduledFuture<?>>();
     
-    public SplinterBattery(double mAh_max, double doc)
+    /**
+     * @param mAh_max
+     * @param doc depth of charge
+     */
+    public SimBattery(double mAh_max, double doc)
     {
         if (doc > 1.0 || doc < 0.1)
             doc = 1.0;

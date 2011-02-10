@@ -23,6 +23,8 @@ package edu.umich.robot;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -32,12 +34,12 @@ import sml.Kernel;
 import sml.Kernel.SystemEventInterface;
 import sml.smlSystemEventId;
 import april.config.Config;
-import april.sim.SimLaser;
 import april.sim.SimObject;
-import april.sim.SimSplinter;
 import april.sim.Simulator;
+import april.sim.TimeScalable;
 import april.util.TimeUtil;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import edu.umich.robot.events.AbstractProgramEvent;
@@ -65,6 +67,9 @@ import edu.umich.robot.soar.SoarAgent;
 import edu.umich.robot.soar.SoarDataCollector;
 import edu.umich.robot.soar.SoarException;
 import edu.umich.robot.splinter.Splinter;
+import edu.umich.robot.splinter.SplinterHardware;
+import edu.umich.robot.superdroid.Superdroid;
+import edu.umich.robot.superdroid.SuperdroidHardware;
 import edu.umich.robot.util.Misc;
 import edu.umich.robot.util.Pose;
 import edu.umich.robot.util.events.RobotEventListener;
@@ -115,6 +120,10 @@ public class Controller
 
     private final Metamap metamap;
 
+    private final List<SplinterHardware> splinters = Lists.newArrayList();
+    
+    private final List<SuperdroidHardware> superdroids = Lists.newArrayList();
+    
     /**
      * <p>
      * The gamepad device robot controller.
@@ -134,34 +143,37 @@ public class Controller
     
     /**
      * <p>
-     * Data structure representing a splinter, its initial conditions, and
+     * Data structure representing a robot, its initial conditions, and
      * references to its simulator objects. These simulator objects references
      * are saved so that they can be removed later.
      * 
      * @author voigtjr
      * 
      */
-    private static class SplinterData
+    private static class RobotData
     {
-        public SplinterData(String name, Pose pose, boolean collisions)
+        enum Type { SPLINTER, SUPERDROID }
+        
+        public RobotData(Type type, String name, Pose pose, boolean collisions)
         {
+            this.type = type;
             this.name = name;
             this.initialPose = pose;
             this.collisions = collisions;
         }
         
+        final Type type;
         final String name;
         final Pose initialPose;
         final boolean collisions;
-        SimSplinter ss;
-        SimLaser sl;
+        List<SimObject> simObjs = Lists.newArrayList();
     }
     
     /**
      * <p>
      * Maps names to splinter information.
      */
-    private final Map<String, SplinterData> simSplinters = Maps.newConcurrentMap();
+    private final Map<String, RobotData> simRobots = Maps.newConcurrentMap();
 
     public Controller(Config config, Gamepad gp)
     {
@@ -211,48 +223,29 @@ public class Controller
             gp.initializeGamepad(this);
     }
 
-    /**
-     * <p>
-     * Creates a robot and adds it to the simulation.
-     * 
-     * @param robotName
-     *            The name of the robot, must be unique among all
-     * @param pose
-     *            Initial starting position
-     * @param collisions
-     *            True to allow collisions with walls.
-     */
     public void createSplinterRobot(String robotName, Pose pose, boolean collisions)
     {
-        SplinterData sd = new SplinterData(robotName, pose, collisions);
-        addSimSplinter(sd);
-        simSplinters.put(robotName, sd);
+        RobotData sd = new RobotData(RobotData.Type.SPLINTER, robotName, pose, collisions);
+        simRobots.put(robotName, sd);
         Robot splinter = new Splinter(robotName, radio, metamap);
         robots.addRobot(splinter);
     }
-
-    /**
-     * <p>
-     * Elaborates a splinter configuration and adds the splinter to the
-     * simulator using that configuration.
-     * 
-     * <p>
-     * Also creates a configuration and uses it to create a simulated laser
-     * sensor for the robot.
-     * 
-     * @param sd
-     */
-    private void addSimSplinter(SplinterData sd)
+    
+    public void createSimSplinter(String robotName)
     {
-
+        RobotData sd = simRobots.get(robotName);
+        if (sd == null)
+            return; // TODO warn
+        
         Config rconfig = new Config();
         rconfig.setString("class", "april.sim.SimSplinter");
         rconfig.setDoubles("initialPosition", Misc
                 .toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
         SimObject ss = sim.addObject(sd.name, rconfig);
-        if (ss != null && ss instanceof SimSplinter)
-            sd.ss = (SimSplinter) ss;
+        if (ss != null)
+            sd.simObjs.add(ss);
+                 
 
         Config lconfig = new Config();
         lconfig.setString("class", "april.sim.SimLaser");
@@ -268,9 +261,66 @@ public class Controller
         lconfig.setInt("max_range_m", 30);
         lconfig.setInt("hz", 7);
         SimObject sl = sim.addObject(sd.name + "lidar", lconfig);
-        if (sl != null && sl instanceof SimLaser)
-            sd.sl = (SimLaser) sl;
+        if (sl != null)
+            sd.simObjs.add(sl);
 
+    }
+    
+    public void createRealSplinter(String robotName)
+    {
+        SplinterHardware.Builder b = new SplinterHardware.Builder(robotName);
+        //b.hostname();
+        SplinterHardware splinter = b.build();
+        splinters.add(splinter);
+    }
+
+    public void createSuperdroidRobot(String robotName, Pose pose, boolean collisions) throws UnknownHostException, SocketException
+    {
+        RobotData sd = new RobotData(RobotData.Type.SUPERDROID, robotName, pose, collisions);
+        simRobots.put(robotName, sd);
+        Robot superdroid = new Superdroid(robotName, radio, metamap);
+        robots.addRobot(superdroid);
+    }
+
+    public void createSimSuperdroid(String robotName)
+    {
+        // TODO: change to new class instead of just using splinter
+
+        RobotData sd = simRobots.get(robotName);
+        if (sd == null)
+            return; // TODO warn
+
+        Config rconfig = new Config();
+        rconfig.setString("class", "april.sim.SimSplinter");
+        rconfig.setDoubles("initialPosition", Misc
+                .toPrimitiveDoubleArray(sd.initialPose.getPos()));
+        rconfig.setBoolean("wallCollisions", sd.collisions);
+        SimObject ss = sim.addObject(sd.name, rconfig);
+        if (ss != null)
+            sd.simObjs.add(ss);
+
+        Config lconfig = new Config();
+        lconfig.setString("class", "april.sim.SimLaser");
+        lconfig.setString("pose", sd.name);
+        lconfig.setDoubles("position", new double[] { 0, 0, 0.4 });
+        lconfig.setDoubles("rollpitchyaw_degrees", new double[] { 0, 0, 0 });
+        lconfig.setInts("color", new int[] { 1, 0, 0 });
+        lconfig.setInt("degree0", -90);
+        lconfig.setInt("degree_step", 1);
+        lconfig.setInt("nranges", 180);
+        lconfig.setDouble("range_noise_m", 0.01);
+        lconfig.setDouble("theta_noise_degrees", 0.25);
+        lconfig.setInt("max_range_m", 30);
+        lconfig.setInt("hz", 7);
+        SimObject sl = sim.addObject(sd.name + "lidar", lconfig);
+        if (sl != null)
+            sd.simObjs.add(sl);
+    }
+    
+    public void createRealSuperdroid(String name, String hostname, int port) throws UnknownHostException, SocketException
+    {
+        SuperdroidHardware sd = new SuperdroidHardware(name, hostname, port);
+        superdroids.add(sd);
     }
 
     /**
@@ -462,8 +512,17 @@ public class Controller
             rate = 1;
         
         TimeUtil.setTimeScale(rate);
-        for(SplinterData sd : simSplinters.values())
-            sd.ss.setTimeScale(rate);
+        for(RobotData sd : simRobots.values())
+        {
+            for (SimObject so : sd.simObjs)
+            {
+                if (so instanceof TimeScalable)
+                {
+                    TimeScalable t = (TimeScalable)so;
+                    t.setTimeScale(rate);
+                }
+            }
+        }
         for (Robot r : robots.getAll())
             r.setTimeScale(rate);
         events.fireEvent(new TimeScaleChangedEvent(rate));
@@ -545,6 +604,10 @@ public class Controller
         soar.shutdown();
         if (gp != null)
             gp.shutdown();
+        for (SuperdroidHardware s : superdroids)
+            s.shutdown();
+        for (SplinterHardware s : splinters)
+            s.shutdown();
         robots.shutdown();
         sim.shutdown();
         metamap.shutdown();
@@ -598,14 +661,22 @@ public class Controller
     {
         events.fireEvent(new BeforeResetEvent());
         
-        for (SplinterData sd : simSplinters.values())
+        for (RobotData sd : simRobots.values())
         {
-            sim.removeObject(sd.ss);
-            sim.removeObject(sd.sl);
+            for (SimObject so : sd.simObjs)
+                sim.removeObject(so);
+            sd.simObjs.clear();
         }
 
-        for (SplinterData sd : simSplinters.values())
-            addSimSplinter(sd);
+        for (RobotData sd : simRobots.values())
+        {
+            if (sd.type == RobotData.Type.SPLINTER)
+                createSimSplinter(sd.name);
+            else if (sd.type == RobotData.Type.SUPERDROID)
+                createSimSuperdroid(sd.name);
+            else
+                throw new UnsupportedOperationException("Type not implemented: " + sd.type);
+        }
         
         metamap.reset();
 

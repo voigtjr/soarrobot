@@ -33,6 +33,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
@@ -76,6 +78,7 @@ import com.jgoodies.forms.layout.FormLayout;
 import edu.umich.robot.actions.ActionManager;
 import edu.umich.robot.actions.AddObjectAction;
 import edu.umich.robot.actions.CreateSplinterRobotAction;
+import edu.umich.robot.actions.CreateSuperdroidRobotAction;
 import edu.umich.robot.actions.DisableFollowAction;
 import edu.umich.robot.actions.ExitAction;
 import edu.umich.robot.actions.FollowPositionAction;
@@ -302,6 +305,7 @@ public class GuiApplication
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
         fileMenu.add(actionManager.getAction(CreateSplinterRobotAction.class));
+        fileMenu.add(actionManager.getAction(CreateSuperdroidRobotAction.class));
         fileMenu.add(actionManager.getAction(ResetPreferencesAction.class));
 
         //fileMenu.add(new JSeparator());
@@ -440,8 +444,7 @@ public class GuiApplication
         
         frame.setVisible(true);
 
-        String[] splinters = config.getStrings("splinters", new String[0]);
-        for (String s : splinters)
+        for (String s : config.getStrings("splinters", new String[0]))
         {
             double[] pos = config.getDoubles(s + ".position");
             if (pos == null)
@@ -455,6 +458,43 @@ public class GuiApplication
             boolean collisions = config.getBoolean(s + ".wallCollisions", true);
             
             controller.createSplinterRobot(s, pose, collisions);
+            controller.createSimSplinter(s);
+            if (prods != null)
+            {
+                controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
+                PREFERENCES.put("lastProductions", prods);
+            }
+        }
+        
+
+        for (String s : config.getStrings("superdroids", new String[0]))
+        {
+            double[] pos = config.getDoubles(s + ".position");
+            if (pos == null)
+            {
+                logger.error("Superdroid indexed in config file but no position defined: " + s);
+                continue;
+            }
+            
+            Pose pose = new Pose(pos);
+            String prods = config.getString(s + ".productions");
+            boolean collisions = config.getBoolean(s + ".wallCollisions", true);
+            
+            try
+            {
+                controller.createSuperdroidRobot(s, pose, collisions);
+                controller.createSimSuperdroid(s);
+            }
+            catch (UnknownHostException e1)
+            {
+                e1.printStackTrace();
+                logger.error("Error creating superdroid: " + e1);
+            }
+            catch (SocketException e1)
+            {
+                e1.printStackTrace();
+                logger.error("Error creating superdroid: " + e1);
+            }
             if (prods != null)
             {
                 controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
@@ -478,6 +518,7 @@ public class GuiApplication
         new SoarToggleAction(actionManager);
         new SoarStepAction(actionManager);
         new CreateSplinterRobotAction(actionManager);
+        new CreateSuperdroidRobotAction(actionManager);
         new ResetPreferencesAction(actionManager);
         new ExitAction(actionManager);
         new DisableFollowAction(actionManager);
@@ -658,6 +699,124 @@ public class GuiApplication
                     }
 
                 controller.createSplinterRobot(robotName, pose, true);
+                controller.createSimSplinter(robotName);
+                dialog.dispose();
+            }
+        };
+        name.addActionListener(okListener);
+        x.addActionListener(okListener);
+        y.addActionListener(okListener);
+        ok.addActionListener(okListener);
+
+        ActionListener cancelAction = new ActionListener()
+        {
+            public void actionPerformed(ActionEvent e)
+            {
+                dialog.dispose();
+            }
+        };
+        cancel.addActionListener(cancelAction);
+        dialog.getRootPane().registerKeyboardAction(cancelAction, 
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), 
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
+        
+        dialog.setLocationRelativeTo(frame);
+        dialog.pack();
+        dialog.setVisible(true);
+    }
+
+    public void createSuperdroidRobotDialog()
+    {
+        final Pose pose = new Pose();
+        
+        FormLayout layout = new FormLayout(
+                "right:pref, 4dlu, 30dlu, 4dlu, right:pref, 4dlu, 30dlu",
+                "pref, 2dlu, pref, 2dlu, pref");
+
+        layout.setRowGroups(new int[][] {{1, 3}});
+        
+        final JDialog dialog = new JDialog(frame, "Create Superdroid Robot", true);
+        dialog.setLayout(layout);
+        final JTextField name = new JTextField();
+        final JTextField x = new JTextField(Double.toString((pose.getX())));
+        final JTextField y = new JTextField(Double.toString((pose.getY())));
+        final JButton cancel = new JButton("Cancel");
+        final JButton ok = new JButton("OK");
+
+        CellConstraints cc = new CellConstraints();
+        dialog.add(new JLabel("Name"), cc.xy(1, 1));
+        dialog.add(name, cc.xyw(3, 1, 5));
+        dialog.add(new JLabel("x"), cc.xy(1, 3));
+        dialog.add(x, cc.xy(3, 3));
+        dialog.add(new JLabel("y"), cc.xy(5, 3));
+        dialog.add(y, cc.xy(7, 3));
+        dialog.add(cancel, cc.xyw(1, 5, 3));
+        dialog.add(ok, cc.xyw(5, 5, 3));
+
+        x.addFocusListener(new FocusAdapter()
+        {
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                try
+                {
+                    pose.setX(Double.parseDouble(x.getText()));
+                }
+                catch (NumberFormatException ex)
+                {
+                    x.setText(Double.toString(pose.getX()));
+                }
+            }
+        });
+        
+        y.addFocusListener(new FocusAdapter()
+        {
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                try
+                {
+                    pose.setY(Double.parseDouble(y.getText()));
+                }
+                catch (NumberFormatException ex)
+                {
+                    y.setText(Double.toString(pose.getX()));
+                }
+            }
+        });
+        
+        final ActionListener okListener = new ActionListener()
+        {
+            public void actionPerformed(ActionEvent e)
+            {
+                String robotName = name.getText().trim();
+                if (robotName.isEmpty())
+                {
+                    logger.error("Create Superdroid: robot name empty");
+                    return;
+                }
+                for (char c : robotName.toCharArray())
+                    if (!Character.isDigit(c) && !Character.isLetter(c))
+                    {
+                        logger.error("Create Superdroid: illegal robot name");
+                        return;
+                    }
+
+                try
+                {
+                    controller.createSuperdroidRobot(robotName, pose, true);
+                    controller.createSimSuperdroid(robotName);
+                }
+                catch (UnknownHostException e1)
+                {
+                    e1.printStackTrace();
+                    logger.error("Create Superdroid: " + e1);
+                }
+                catch (SocketException e1)
+                {
+                    e1.printStackTrace();
+                    logger.error("Create Superdroid: " + e1);
+                }
                 dialog.dispose();
             }
         };

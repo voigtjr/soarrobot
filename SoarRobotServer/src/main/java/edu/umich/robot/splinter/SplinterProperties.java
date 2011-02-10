@@ -39,30 +39,15 @@ public class SplinterProperties
         key("name", String.class)
         .build();
 
-    public static PropertyKey<String> ANGULAR_PID_NAME = 
-        key("angular-pid-name", String.class)
-        .defaultValue("angular")
-        .build();
-
     public static PropertyKey<double[]> ANGULAR_PID_GAINS = 
         key("angular-pid-gains", double[].class)
         //.defaultValue( new double[] { 0.0238, 0, 0.0025 })
         .defaultValue( new double[] { 0.15, 0, 0.01 })
         .build();
 
-    public static PropertyKey<String> LINEAR_PID_NAME = 
-        key("linear-pid-name", String.class)
-        .defaultValue("linear")
-        .build();
-
     public static PropertyKey<double[]> LINEAR_PID_GAINS = 
         key("linear-pid-gains", double[].class)
         .defaultValue( new double[] { 0.12, 0, 0.025 })
-        .build();
-
-    public static PropertyKey<String> HEADING_PID_NAME = 
-        key("heading-pid-name", String.class)
-        .defaultValue("heading")
         .build();
 
     public static PropertyKey<double[]> HEADING_PID_GAINS = 

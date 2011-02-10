@@ -19,22 +19,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot.splinter;
+package edu.umich.robot.util;
 
 import april.jmat.LinAlg;
 import april.jmat.MathUtil;
 import april.lcmtypes.pose_t;
-import edu.umich.robot.util.PIDController;
-import edu.umich.robot.util.Updatable;
 
 /**
  * @author voigtjr@gmail.com
  */
-public class SplinterHeading implements Updatable
+public class HeadingController implements Updatable
 {
-    private final SplinterVelocities velocities;
+    private final VelocitiesController velocities;
 
-    private final SplinterPose pose;
+    private final PoseProvider pose;
 
     private final PIDController pid;
 
@@ -42,7 +40,7 @@ public class SplinterHeading implements Updatable
 
     private double lv;
 
-    SplinterHeading(SplinterVelocities velocities, SplinterPose pose,
+    public HeadingController(VelocitiesController velocities, PoseProvider pose,
             PIDController pid)
     {
         this.velocities = velocities;
@@ -50,19 +48,19 @@ public class SplinterHeading implements Updatable
         this.pid = pid;
     }
 
-    void setHeading(double radians)
+    public void setHeading(double radians)
     {
         this.radians = radians;
         this.lv = 0;
     }
 
-    void reset()
+    public void reset()
     {
         pid.clearIntegral();
         velocities.reset();
     }
 
-    void setHeadingAndLinear(double radians, double lv)
+    public void setHeadingAndLinear(double radians, double lv)
     {
         this.radians = radians;
         this.lv = lv;
