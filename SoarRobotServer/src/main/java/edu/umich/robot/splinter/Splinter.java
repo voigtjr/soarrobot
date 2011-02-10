@@ -35,6 +35,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import edu.umich.robot.Robot;
 import edu.umich.robot.RobotConfiguration;
 import edu.umich.robot.RobotOutput;
+import edu.umich.robot.RobotType;
 import edu.umich.robot.events.control.AbstractControlEvent;
 import edu.umich.robot.events.control.AbstractDriveEvent;
 import edu.umich.robot.events.control.AbstractEffectorEvent;
@@ -201,7 +202,12 @@ public class Splinter implements Robot
             }
         }
     };
-
+    
+    public RobotType getType()
+    {
+        return RobotType.SPLINTER;
+    }
+    
     public RobotOutput getOutput()
     {
         return output;

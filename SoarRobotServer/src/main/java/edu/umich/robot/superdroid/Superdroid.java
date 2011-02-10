@@ -21,8 +21,6 @@
  */
 package edu.umich.robot.superdroid;
 
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -37,6 +35,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import edu.umich.robot.Robot;
 import edu.umich.robot.RobotConfiguration;
 import edu.umich.robot.RobotOutput;
+import edu.umich.robot.RobotType;
 import edu.umich.robot.events.control.AbstractControlEvent;
 import edu.umich.robot.events.control.AbstractDriveEvent;
 import edu.umich.robot.events.control.AbstractEffectorEvent;
@@ -124,9 +123,7 @@ public class Superdroid implements Robot
 
     private final int PERIOD = 33;
     
-    public Superdroid(String name, 
-            Radio radio, Metamap metamap) throws UnknownHostException,
-            SocketException
+    public Superdroid(String name, Radio radio, Metamap metamap) 
     {
         this.name = name;
         this.radio = radio;
@@ -146,6 +143,11 @@ public class Superdroid implements Robot
         commandTask = schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
     }
 
+    public RobotType getType()
+    {
+        return RobotType.SUPERDROID;
+    }
+    
     private void initGains()
     {
         properties.addListener(SuperdroidProperties.HEADING_PID_GAINS,
