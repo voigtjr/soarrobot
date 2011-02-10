@@ -19,27 +19,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package edu.umich.robot;
+package edu.umich.robot.actions;
 
-import edu.umich.robot.events.control.AbstractControlEvent;
+import java.awt.event.ActionEvent;
 
 /**
- * <p>
- * Each type of robot in the simulation will implement this interface.
- * 
  * @author voigtjr@gmail.com
  */
-public interface Robot
+public class ConnectSuperdroidAction extends AbstractRobotAction
 {
-    public RobotOutput getOutput();
+    private static final long serialVersionUID = 965394314738509475L;
 
-    public String getName();
+    public ConnectSuperdroidAction(ActionManager manager)
+    {
+        super(manager, "Connect Superdroid");
+    }
 
-    public void handleControlEvent(AbstractControlEvent event);
-    
-    public void setTimeScale(int multiplier);
-    
-    public void shutdown();
-    
-    public RobotType getType();
+    public void actionPerformed(ActionEvent e)
+    {
+        getApplication().connectSuperdroidRobotDialog();
+    }
+
+    @Override
+    public void update()
+    {
+    }
+
 }

@@ -152,9 +152,7 @@ public class Controller
      */
     private static class RobotData
     {
-        enum Type { SPLINTER, SUPERDROID }
-        
-        public RobotData(Type type, String name, Pose pose, boolean collisions)
+        public RobotData(RobotType type, String name, Pose pose, boolean collisions)
         {
             this.type = type;
             this.name = name;
@@ -162,7 +160,7 @@ public class Controller
             this.collisions = collisions;
         }
         
-        final Type type;
+        final RobotType type;
         final String name;
         final Pose initialPose;
         final boolean collisions;
@@ -225,7 +223,7 @@ public class Controller
 
     public void createSplinterRobot(String robotName, Pose pose, boolean collisions)
     {
-        RobotData sd = new RobotData(RobotData.Type.SPLINTER, robotName, pose, collisions);
+        RobotData sd = new RobotData(RobotType.SPLINTER, robotName, pose, collisions);
         simRobots.put(robotName, sd);
         Robot splinter = new Splinter(robotName, radio, metamap);
         robots.addRobot(splinter);
@@ -274,9 +272,9 @@ public class Controller
         splinters.add(splinter);
     }
 
-    public void createSuperdroidRobot(String robotName, Pose pose, boolean collisions) throws UnknownHostException, SocketException
+    public void createSuperdroidRobot(String robotName, Pose pose, boolean collisions)
     {
-        RobotData sd = new RobotData(RobotData.Type.SUPERDROID, robotName, pose, collisions);
+        RobotData sd = new RobotData(RobotType.SUPERDROID, robotName, pose, collisions);
         simRobots.put(robotName, sd);
         Robot superdroid = new Superdroid(robotName, radio, metamap);
         robots.addRobot(superdroid);
@@ -599,8 +597,11 @@ public class Controller
         return robots.getAll();
     }
 
+    boolean down = false;
     public void shutdown()
     {
+        if (down)
+            return;
         soar.shutdown();
         if (gp != null)
             gp.shutdown();
@@ -611,6 +612,7 @@ public class Controller
         robots.shutdown();
         sim.shutdown();
         metamap.shutdown();
+        down = true;
     }
 
     /**
@@ -670,9 +672,9 @@ public class Controller
 
         for (RobotData sd : simRobots.values())
         {
-            if (sd.type == RobotData.Type.SPLINTER)
+            if (sd.type == RobotType.SPLINTER)
                 createSimSplinter(sd.name);
-            else if (sd.type == RobotData.Type.SUPERDROID)
+            else if (sd.type == RobotType.SUPERDROID)
                 createSimSuperdroid(sd.name);
             else
                 throw new UnsupportedOperationException("Type not implemented: " + sd.type);

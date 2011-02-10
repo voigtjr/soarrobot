@@ -5,7 +5,6 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -13,7 +12,6 @@ import java.util.Scanner;
 import com.google.common.collect.ImmutableList;
 
 import edu.umich.robot.Controller;
-import edu.umich.robot.Robot;
 import edu.umich.robot.TabletLCM;
 import edu.umich.robot.metamap.AbridgedAreaDescription;
 import edu.umich.robot.metamap.AbridgedGateway;
@@ -23,7 +21,6 @@ import edu.umich.robot.metamap.SquareArea;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.metamap.VirtualObjectTemplate;
 import edu.umich.robot.splinter.Splinter;
-import edu.umich.robot.util.ImmutablePose;
 import edu.umich.robot.util.Pose;
 
 /**

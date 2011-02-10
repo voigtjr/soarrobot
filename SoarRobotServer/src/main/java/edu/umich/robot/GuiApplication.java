@@ -65,9 +65,9 @@ import april.config.ConfigFile;
 import april.config.ConfigUtil;
 import april.jmat.geom.GRay3D;
 import april.viewer.ViewRobot;
+import april.viewer.ViewRobot.FollowMode;
 import april.viewer.ViewTrajectory;
 import april.viewer.Viewer;
-import april.viewer.ViewRobot.FollowMode;
 import april.vis.VisCanvas;
 import april.vis.VisCanvasEventAdapter;
 
@@ -77,6 +77,7 @@ import com.jgoodies.forms.layout.FormLayout;
 
 import edu.umich.robot.actions.ActionManager;
 import edu.umich.robot.actions.AddObjectAction;
+import edu.umich.robot.actions.ConnectSuperdroidAction;
 import edu.umich.robot.actions.CreateSplinterRobotAction;
 import edu.umich.robot.actions.CreateSuperdroidRobotAction;
 import edu.umich.robot.actions.DisableFollowAction;
@@ -283,21 +284,7 @@ public class GuiApplication
             public void windowClosed(WindowEvent e)
             {
                 controller.shutdown();
-                frame.dispose();
-
-                try
-                {
-                    Thread.sleep(500);
-                }
-                catch (InterruptedException ignored)
-                {
-                }
-                // TODO: Note, this was here before I fixed the april code so
-                // that it could actually be shutdown. Before, it could not be
-                // shut down so it had to be killed. This can probably be
-                // removed, but there might need to be a few more calls made.
-                // See HeadlessApplication, it shuts down things fine.
-                System.exit(0); 
+                System.exit(0);
             }
         });
         frame.setLayout(new BorderLayout());
@@ -306,6 +293,9 @@ public class GuiApplication
         JMenu fileMenu = new JMenu("File");
         fileMenu.add(actionManager.getAction(CreateSplinterRobotAction.class));
         fileMenu.add(actionManager.getAction(CreateSuperdroidRobotAction.class));
+        fileMenu.add(new JSeparator());
+        fileMenu.add(actionManager.getAction(ConnectSuperdroidAction.class));
+        fileMenu.add(new JSeparator());
         fileMenu.add(actionManager.getAction(ResetPreferencesAction.class));
 
         //fileMenu.add(new JSeparator());
@@ -480,21 +470,8 @@ public class GuiApplication
             String prods = config.getString(s + ".productions");
             boolean collisions = config.getBoolean(s + ".wallCollisions", true);
             
-            try
-            {
-                controller.createSuperdroidRobot(s, pose, collisions);
-                controller.createSimSuperdroid(s);
-            }
-            catch (UnknownHostException e1)
-            {
-                e1.printStackTrace();
-                logger.error("Error creating superdroid: " + e1);
-            }
-            catch (SocketException e1)
-            {
-                e1.printStackTrace();
-                logger.error("Error creating superdroid: " + e1);
-            }
+            controller.createSuperdroidRobot(s, pose, collisions);
+            controller.createSimSuperdroid(s);
             if (prods != null)
             {
                 controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
@@ -519,6 +496,7 @@ public class GuiApplication
         new SoarStepAction(actionManager);
         new CreateSplinterRobotAction(actionManager);
         new CreateSuperdroidRobotAction(actionManager);
+        new ConnectSuperdroidAction(actionManager);
         new ResetPreferencesAction(actionManager);
         new ExitAction(actionManager);
         new DisableFollowAction(actionManager);
@@ -802,21 +780,8 @@ public class GuiApplication
                         return;
                     }
 
-                try
-                {
-                    controller.createSuperdroidRobot(robotName, pose, true);
-                    controller.createSimSuperdroid(robotName);
-                }
-                catch (UnknownHostException e1)
-                {
-                    e1.printStackTrace();
-                    logger.error("Create Superdroid: " + e1);
-                }
-                catch (SocketException e1)
-                {
-                    e1.printStackTrace();
-                    logger.error("Create Superdroid: " + e1);
-                }
+                controller.createSuperdroidRobot(robotName, pose, true);
+                controller.createSimSuperdroid(robotName);
                 dialog.dispose();
             }
         };
@@ -854,7 +819,7 @@ public class GuiApplication
             {
                 RobotAddedEvent e = (RobotAddedEvent) event;
 
-                ViewRobot vr = addViewRobot(e.getRobot().getName());
+                ViewRobot vr = addViewRobot(e.getRobot().getName(), e.getRobot().getType());
                 addViewLidars(e.getRobot().getName());
                 addViewWaypoints(e.getRobot().getName());
                 ViewTrajectory vt = addViewTrajectory(e.getRobot().getName());
@@ -941,13 +906,16 @@ public class GuiApplication
      * 
      * @return The viewer object representing the robot.
      */
-    private ViewRobot addViewRobot(String name)
+    private ViewRobot addViewRobot(String name, RobotType type)
     {
         Config config = new Config();
         config.setString("class", "april.viewer.ViewRobot");
         addPositionInfo(config, "avatar.", new double[] { 0, 0, 0 },
                 new double[] { 0, 0, 0 }, null);
 
+        if (type == RobotType.SUPERDROID)
+            config.setBoolean("model4", true);
+        
         Configs.toLog(logger, config);
         return (ViewRobot)viewer.addObject(name, config);
     }
@@ -1060,6 +1028,114 @@ public class GuiApplication
     public Preferences getPreferences()
     {
         return PREFERENCES;
+    }
+
+    public void connectSuperdroidRobotDialog()
+    {
+        final int defaultPort = 3192;
+        
+        FormLayout layout = new FormLayout(
+                "right:pref, 4dlu, 35dlu, 4dlu, 35dlu",
+                "pref, 2dlu, pref, 2dlu, pref, 2dlu, pref");
+
+        final JDialog dialog = new JDialog(frame, "Connect to Superdroid", true);
+        dialog.setLayout(layout);
+        final JTextField namefield = new JTextField("charlie");
+        final JTextField hostfield = new JTextField("192.168.1.115");
+        final JTextField portfield = new JTextField(Integer.toString(defaultPort));
+        final JButton cancel = new JButton("Cancel");
+        final JButton ok = new JButton("OK");
+
+        CellConstraints cc = new CellConstraints();
+        dialog.add(new JLabel("Name"), cc.xy(1, 1));
+        dialog.add(namefield, cc.xyw(3, 1, 3));
+        dialog.add(new JLabel("Host"), cc.xy(1, 3));
+        dialog.add(hostfield, cc.xyw(3, 3, 3));
+        dialog.add(new JLabel("Port"), cc.xy(1, 5));
+        dialog.add(portfield, cc.xyw(3, 5, 3));
+        dialog.add(cancel, cc.xy(3, 7));
+        dialog.add(ok, cc.xy(5, 7));
+
+        portfield.addFocusListener(new FocusAdapter()
+        {
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                int p = defaultPort;
+                try
+                {
+                    p = Integer.parseInt(portfield.getText());
+                    if (p < 1)
+                        p = 1;
+                    if (p > 65535)
+                        p = 65535;
+                }
+                catch (NumberFormatException ex)
+                {
+                }
+                portfield.setText(Integer.toString(p));
+            }
+        });
+        
+        final ActionListener okListener = new ActionListener()
+        {
+            public void actionPerformed(ActionEvent e)
+            {
+                String robotName = namefield.getText().trim();
+                if (robotName.isEmpty())
+                {
+                    logger.error("Connect Superdroid: robot name empty");
+                    return;
+                }
+                
+                for (char c : robotName.toCharArray())
+                {
+                    if (!Character.isDigit(c) && !Character.isLetter(c))
+                    {
+                        logger.error("Create Superdroid: illegal robot name");
+                        return;
+                    }
+                }
+                
+                try
+                {
+                    controller.createRealSuperdroid(robotName, hostfield.getText(), Integer.valueOf(portfield.getText()));
+                }
+                catch (UnknownHostException ex)
+                {
+                    ex.printStackTrace();
+                    logger.error("Connect Superdroid: " + ex);
+                }
+                catch (SocketException ex)
+                {
+                    ex.printStackTrace();
+                    logger.error("Connect Superdroid: " + ex);
+                }
+                dialog.dispose();
+            }
+        };
+        
+        namefield.addActionListener(okListener);
+        hostfield.addActionListener(okListener);
+        portfield.addActionListener(okListener);
+        ok.addActionListener(okListener);
+
+        ActionListener cancelAction = new ActionListener()
+        {
+            public void actionPerformed(ActionEvent e)
+            {
+                dialog.dispose();
+            }
+        };
+        cancel.addActionListener(cancelAction);
+        
+        dialog.getRootPane().registerKeyboardAction(cancelAction, 
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), 
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
+        
+        dialog.setLocationRelativeTo(frame);
+        dialog.pack();
+        dialog.setVisible(true);
     }
 
 }
