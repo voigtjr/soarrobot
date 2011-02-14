@@ -55,6 +55,7 @@ public class Server implements RobotEventListener {
 					try {
 						Socket client = socket.accept();
 						startLCM(client.getInetAddress(), client.getPort());
+						//startLCM(InetAddress.getByName("10.0.2.15"), client.getPort());
 						Scanner scanner = new Scanner(client.getInputStream()).useDelimiter("\n");
 						boolean scanning = true;
                         out = new PrintWriter(client.getOutputStream());

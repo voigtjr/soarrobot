@@ -21,7 +21,7 @@
  */
 
 /**
- * This class handles the representation of objects in the simulation.
+ * a=This class handles the representation of objects in the simulation.
  * Because the definitions for the different types of objects are sent
  * to us over the network when the simulation begins, we can't hard-code
  * those definitions into this class -- we need to be more flexible.
