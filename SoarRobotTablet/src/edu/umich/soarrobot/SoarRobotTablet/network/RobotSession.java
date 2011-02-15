@@ -26,6 +26,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import lcm.lcm.LCM;
@@ -37,6 +38,7 @@ import android.util.Log;
 import android.widget.Toast;
 import april.jmat.LinAlg;
 import april.lcmtypes.pose_t;
+import april.lcmtypes.laser_t;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
@@ -63,10 +65,12 @@ public class RobotSession extends Thread implements LCMSubscriber
     String lcmConnectionString;
 
     ArrayList<String> robotNames;
+    
+    Object lock = new Object();
 
     public RobotSession(SoarRobotTablet activity, String server, int port)
     {
-        synchronized (this)
+        synchronized (lock)
         {
             this.activity = activity;
             this.server = server;
@@ -124,6 +128,7 @@ public class RobotSession extends Thread implements LCMSubscriber
                 for (String robotName : robotNames)
                 {
                     lcm.subscribe("POSE_" + robotName, this);
+                    lcm.subscribe("SIM_LIDAR_FRONT_" + robotName, this);
                 }
             }
             catch (IOException e)
@@ -180,6 +185,7 @@ public class RobotSession extends Thread implements LCMSubscriber
                 if (lcm != null)
                 {
                     lcm.subscribe("POSE_" + name, this);
+                    lcm.subscribe("SIM_LIDAR_FRONT_" + name, this);
                 }
             }
         }
@@ -216,24 +222,45 @@ public class RobotSession extends Thread implements LCMSubscriber
     @Override
     public void messageReceived(LCM lcm, String channel, LCMDataInputStream ins)
     {
-        try
+        if (channel.equals("POSE_seek"))
         {
-            pose_t p = new pose_t(ins);
-            PointF robotLocation = new PointF((float) p.pos[0],
-                    -(float) p.pos[1]);
-
-            float theta = (float) (LinAlg.quatToRollPitchYaw(p.orientation)[2] * 180.0f / Math.PI);
-            SimObject robot = activity.getMapView().getRobot(
-                    channel.split("_")[1]);
-            if (robot != null)
+            try
             {
-                robot.setLocation(robotLocation);
-                robot.setTheta(theta);
+                pose_t p = new pose_t(ins);
+                PointF robotLocation = new PointF((float) p.pos[0],
+                        -(float) p.pos[1]);
+
+                float theta = (float) (LinAlg.quatToRollPitchYaw(p.orientation)[2] * 180.0f / Math.PI);
+                SimObject robot = activity.getMapView().getRobot(
+                        channel.split("_")[1]);
+                if (robot != null)
+                {
+                    robot.setLocation(robotLocation);
+                    robot.setTheta(theta);
+                }
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
             }
         }
-        catch (IOException e)
+        else if (channel.equals("SIM_LIDAR_FRONT_seek"))
         {
-            e.printStackTrace();
+            try
+            {
+                laser_t l = new laser_t(ins);
+                SimObject robot = activity.getMapView().getRobot(
+                        channel.split("_")[3]);
+                robot.setLidar(l);
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        else
+        {
+            System.out.println("unknown channel: " + channel);
         }
         MapView mv = activity.getMapView();
         if (mv != null)
@@ -265,6 +292,7 @@ public class RobotSession extends Thread implements LCMSubscriber
             for (String robotName : robotNames)
             {
                 lcm.subscribe("POSE_" + robotName, this);
+                lcm.subscribe("SIM_LIDAR_FRONT_" + robotName, this);
             }
         }
         catch (IOException e)
@@ -279,10 +307,17 @@ public class RobotSession extends Thread implements LCMSubscriber
         {
             while (true)
             {
-                synchronized (RobotSession.this)
+                try
                 {
-                    String message = tcpScanner.next();
-                    RobotSession.this.handleMessage(message);
+                    synchronized (RobotSession.this.lock)
+                    {
+                        String message = tcpScanner.next();
+                        RobotSession.this.handleMessage(message);
+                    }
+                }
+                catch (NoSuchElementException e)
+                {
+                    e.printStackTrace();
                 }
             }
         };

@@ -164,7 +164,7 @@ public class SoarRobotTablet extends Activity
         {
             obj.setSelected(true);
             propertiesTextView
-                    .setText("" + obj.getID() + ": " + obj.toString());
+                    .setText("" + obj.getID() + ": " + obj.getPropertiesString());
         }
         else
         {

@@ -201,8 +201,13 @@ public class MapView extends SurfaceView implements Callback
         }
         else if (action == MotionEvent.ACTION_DOWN)
         {
-            PointF touch = new PointF(event.getX() / (PX_PER_METER * zoom)
-                    + camera.x, event.getY() / (PX_PER_METER * zoom) + camera.y);
+            PointF touch = new PointF(event.getX(), event.getY());
+            // Transform the touch into meter coordinates
+            touch.x /= PX_PER_METER * zoom;
+            touch.y /= PX_PER_METER * zoom;
+            // Translate the touch according to the camera
+            touch.x += camera.x;
+            touch.y += camera.y;
             try
             {
                 boolean selected = false;

@@ -38,6 +38,7 @@ import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.Path;
 import android.graphics.PointF;
+import april.lcmtypes.laser_t;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 
 public class SimObject {
@@ -91,6 +92,10 @@ public class SimObject {
 	private int id;
 	private boolean selected;
 	
+	private laser_t lidar;
+	private float lidarTheta;
+	private PointF lidarLocation;
+	
 	/*
 	 * Instance methods
 	 */
@@ -109,6 +114,7 @@ public class SimObject {
 		this.id = maxID;
 		++maxID;
 		selected = false;
+		lidar = null;
 		
 		// Set default values
 		color = Color.BLACK;
@@ -132,9 +138,13 @@ public class SimObject {
 	 * @param c
 	 */
 	public void draw(Canvas c, Paint p) {
-		c.translate(location.x, location.y);
-		c.rotate(-theta);
-		p.setStrokeWidth(selected ? 3.0f / MapView.PX_PER_METER : 1.0f / MapView.PX_PER_METER);
+        if (lidar != null)
+        {
+            drawLidar(c, p);
+        }
+        c.translate(location.x, location.y);
+        c.rotate(-theta);
+        p.setStrokeWidth(selected ? 3.0f / MapView.PX_PER_METER : 1.0f / MapView.PX_PER_METER);
 		p.setColor(color);
 		p.setStyle(Style.FILL);
 		if (type.equals("splinter")) {
@@ -177,7 +187,26 @@ public class SimObject {
         }
         return sb.toString();
           
-    }	
+    }
+    
+    private void drawLidar(Canvas c, Paint p) {
+        c.save();
+        c.translate(lidarLocation.x, lidarLocation.y);
+        c.rotate(-lidarTheta);
+        p.setColor(Color.RED);
+        p.setStyle(Style.FILL);
+        for (int i = 0; i < lidar.nranges; ++i) {
+            float range = lidar.ranges[i];
+            float angle = lidar.rad0 + lidar.radstep * i;
+            float dx = (float)Math.cos(-angle) * range;
+            float dy = (float)Math.sin(-angle) * range;
+            c.save();
+            c.translate(dx, dy);
+            c.drawCircle(0.0f, 0.0f, 0.1f, p);
+            c.restore();
+        }
+        c.restore();
+    }
 	
 	/*
 	 * Accessor methods.
@@ -224,4 +253,11 @@ public class SimObject {
 	public int getID() {
 		return id;
 	}
+
+    public void setLidar(laser_t lidar)
+    {
+       this.lidar = lidar;
+       lidarTheta = theta;
+       lidarLocation = location;
+    }
 }

@@ -145,7 +145,7 @@ public class Server implements RobotEventListener {
 			for (VirtualObject obj : controller.getPlacedObjects()) {
 				sb.append(stringForVirtualObject(obj));
 			}
-			return sb.toString();
+			return "objects " + sb.toString();
 		}
 		
 		// robots
