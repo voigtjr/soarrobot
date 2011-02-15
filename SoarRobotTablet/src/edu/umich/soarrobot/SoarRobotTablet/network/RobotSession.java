@@ -39,6 +39,7 @@ import android.widget.Toast;
 import april.jmat.LinAlg;
 import april.lcmtypes.pose_t;
 import april.lcmtypes.laser_t;
+import april.lcmtypes.waypoint_list_t;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
@@ -127,8 +128,7 @@ public class RobotSession extends Thread implements LCMSubscriber
                 lcm = new LCM(lcmConnectionString);
                 for (String robotName : robotNames)
                 {
-                    lcm.subscribe("POSE_" + robotName, this);
-                    lcm.subscribe("SIM_LIDAR_FRONT_" + robotName, this);
+                    subscribeRobotLCM(robotName);
                 }
             }
             catch (IOException e)
@@ -139,6 +139,13 @@ public class RobotSession extends Thread implements LCMSubscriber
                     Toast.LENGTH_LONG);
             activity.getMapView().draw();
         }
+    }
+    
+    private void subscribeRobotLCM(String robot) {
+        lcm.subscribe("POSE_" + robot, this);
+        lcm.subscribe("SIM_LIDAR_FRONT_" + robot, this);
+        lcm.subscribe("LIDAR_LOWRES_" + robot, this);
+        lcm.subscribe("WAYPOINTS_" + robot, this);
     }
 
     public void sendMessage(String message)
@@ -184,8 +191,7 @@ public class RobotSession extends Thread implements LCMSubscriber
                 robotNames.add(name);
                 if (lcm != null)
                 {
-                    lcm.subscribe("POSE_" + name, this);
-                    lcm.subscribe("SIM_LIDAR_FRONT_" + name, this);
+                    subscribeRobotLCM(name);
                 }
             }
         }
@@ -222,7 +228,7 @@ public class RobotSession extends Thread implements LCMSubscriber
     @Override
     public void messageReceived(LCM lcm, String channel, LCMDataInputStream ins)
     {
-        if (channel.equals("POSE_seek"))
+        if (channel.startsWith("POSE_seek"))
         {
             try
             {
@@ -244,7 +250,7 @@ public class RobotSession extends Thread implements LCMSubscriber
                 e.printStackTrace();
             }
         }
-        else if (channel.equals("SIM_LIDAR_FRONT_seek"))
+        else if (channel.startsWith("SIM_LIDAR_FRONT_seek"))
         {
             try
             {
@@ -252,6 +258,34 @@ public class RobotSession extends Thread implements LCMSubscriber
                 SimObject robot = activity.getMapView().getRobot(
                         channel.split("_")[3]);
                 robot.setLidar(l);
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        else if (channel.startsWith("LIDAR_LOWRES_seek"))
+        {
+            try
+            {
+                laser_t l = new laser_t(ins);
+                SimObject robot = activity.getMapView().getRobot(
+                        channel.split("_")[2]);
+                robot.setLowresLidar(l);
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        else if (channel.startsWith("WAYPOINTS_seek"))
+        {
+            try
+            {
+                waypoint_list_t w = new waypoint_list_t(ins);
+                SimObject robot = activity.getMapView().getRobot(
+                        channel.split("_")[1]);
+                robot.setWaypoints(w);
             }
             catch (IOException e)
             {
@@ -291,8 +325,7 @@ public class RobotSession extends Thread implements LCMSubscriber
             lcm = new LCM(lcmConnectionString);
             for (String robotName : robotNames)
             {
-                lcm.subscribe("POSE_" + robotName, this);
-                lcm.subscribe("SIM_LIDAR_FRONT_" + robotName, this);
+                subscribeRobotLCM(robotName);
             }
         }
         catch (IOException e)

@@ -17,6 +17,8 @@ public class TabletLCM
         input = LCM.getSingleton();
         input.subscribe("POSE_seek", subscriber);
         input.subscribe("SIM_LIDAR_FRONT_seek", subscriber);
+        input.subscribe("LIDAR_LOWRES_seek", subscriber);
+        input.subscribe("WAYPOINTS_seek", subscriber);
     }
     
     private final LCMSubscriber subscriber = new LCMSubscriber() 
@@ -39,6 +41,8 @@ public class TabletLCM
     {
         input.unsubscribe("POSE_seek", subscriber);
         input.unsubscribe("SIM_LIDAR_FRONT_seek", subscriber);
+        input.unsubscribe("LIDAR_LOWRES_seek", subscriber);
+        input.unsubscribe("WAYPOINTS_seek", subscriber);
         output.close();
     }
 }

@@ -94,7 +94,7 @@ public class Server implements RobotEventListener {
 	}
 	
 	private synchronized void sendMessage(String message) {
-	    if (out != null) {
+	    if (out != null && message != null) {
 	        out.println(message);
             out.flush();
 	    }
@@ -173,6 +173,12 @@ public class Server implements RobotEventListener {
 		// Toggle Soar's run state
 		if (command.equalsIgnoreCase("pause")) {
 			return "text " + (controller.toggleSoarRunState() ? "Soar started" : "Soar paused");
+		}
+		
+		String[] tokens = command.split(" ");
+		if (tokens[0].equalsIgnoreCase("object") && tokens.length >= 4) {
+		    controller.addObject(tokens[1], new double[] {Double.parseDouble(tokens[2]), -Double.parseDouble(tokens[3])});
+		    return "Created " + tokens[1] + " at (" + tokens[2] + ", " + tokens[3] + ")";
 		}
 		
 		return "text Invalid command: " + command;

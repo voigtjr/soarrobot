@@ -14,14 +14,15 @@ public final class R {
         public static final int icon=0x7f020000;
     }
     public static final class id {
+        public static final int addObject=0x7f050004;
         public static final int buttonsLayout=0x7f050000;
-        public static final int commandsButton=0x7f050008;
-        public static final int commandsEditText=0x7f050009;
-        public static final int commandsLayout=0x7f050006;
-        public static final int mapView=0x7f050004;
+        public static final int commandsButton=0x7f050009;
+        public static final int commandsEditText=0x7f05000a;
+        public static final int commandsLayout=0x7f050007;
+        public static final int mapView=0x7f050005;
         public static final int pauseButton=0x7f050001;
-        public static final int propertiesLayout=0x7f050005;
-        public static final int propertiesTextView=0x7f050007;
+        public static final int propertiesLayout=0x7f050006;
+        public static final int propertiesTextView=0x7f050008;
         public static final int zoomIn=0x7f050002;
         public static final int zoomOut=0x7f050003;
     }

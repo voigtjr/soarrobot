@@ -27,6 +27,7 @@ import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -68,6 +69,29 @@ public class SoarRobotTablet extends Activity
         public void onClick(View v)
         {
             robotSession.sendMessage("pause");
+        }
+    };
+    
+    private OnClickListener addObject = new OnClickListener()
+    {
+        
+        @Override
+        public void onClick(View v)
+        {
+            final CharSequence[] items = SimObject.getClassNames();
+            //final CharSequence[] items = {"one", "two"};
+            AlertDialog.Builder builder = new AlertDialog.Builder(SoarRobotTablet.this)
+                    .setTitle("Add Object")
+                    .setItems(items, new DialogInterface.OnClickListener()
+                    {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which)
+                        {
+                            SoarRobotTablet.this.mapView
+                                    .setNextClass(items[which]);
+                        }
+                    });
+            builder.show();
         }
     };
 
@@ -120,6 +144,7 @@ public class SoarRobotTablet extends Activity
                     .setOnClickListener(pauseListener);
             ((Button) findViewById(R.id.zoomIn)).setOnClickListener(zoomIn);
             ((Button) findViewById(R.id.zoomOut)).setOnClickListener(zoomOut);
+            ((Button) findViewById(R.id.addObject)).setOnClickListener(addObject);
         }
         catch (RuntimeException e)
         {
