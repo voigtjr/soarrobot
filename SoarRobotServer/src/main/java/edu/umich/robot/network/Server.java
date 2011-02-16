@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -54,7 +55,6 @@ public class Server implements RobotEventListener {
 				while (running) {
 					try {
 						Socket client = socket.accept();
-						startLCM(client.getInetAddress(), client.getPort());
 						Scanner scanner = new Scanner(client.getInputStream()).useDelimiter("\n");
 						boolean scanning = true;
                         out = new PrintWriter(client.getOutputStream());
@@ -64,7 +64,7 @@ public class Server implements RobotEventListener {
 								// Print something to the command line for debugging
 								String line = scanner.next();
 								System.out.println("Got command from client " + client.getInetAddress() + ":" + client.getPort() + ":\n" + line);
-								String response = handleCommand(line);
+								String response = handleCommand(line, client);
 								System.out.println("Returning to client:\n" + response);
 								sendMessage(response);
 								if (line.trim().equalsIgnoreCase("quit")) {
@@ -93,13 +93,13 @@ public class Server implements RobotEventListener {
 	}
 	
 	private synchronized void sendMessage(String message) {
-	    if (out != null) {
+	    if (out != null && message != null) {
 	        out.println(message);
             out.flush();
 	    }
     }
 	
-	private String handleCommand(String command) {
+	private String handleCommand(String command, Socket client) {
 		if (controller == null) {
 			return "No controller found";
 		}
@@ -144,7 +144,7 @@ public class Server implements RobotEventListener {
 			for (VirtualObject obj : controller.getPlacedObjects()) {
 				sb.append(stringForVirtualObject(obj));
 			}
-			return sb.toString();
+			return "objects " + sb.toString();
 		}
 		
 		// robots
@@ -174,6 +174,30 @@ public class Server implements RobotEventListener {
 			return "text " + (controller.toggleSoarRunState() ? "Soar started" : "Soar paused");
 		}
 		
+		if (command.equalsIgnoreCase("emulator")) {
+            try
+            {
+                startLCM(InetAddress.getByName("127.0.0.1"), 12122);
+                return "Started LCM forwarding to emulator";
+            }
+            catch (UnknownHostException e)
+            {
+                e.printStackTrace();
+                return "Error forwarding LCM to emulator";
+            }
+		}
+		
+		if (command.equalsIgnoreCase("device")) {
+            startLCM(client.getInetAddress(), 12122);
+            return "Started LCM forwarding to device";
+		}
+		
+		String[] tokens = command.split(" ");
+		if (tokens[0].equalsIgnoreCase("object") && tokens.length >= 4) {
+		    controller.addObject(tokens[1], new double[] {Double.parseDouble(tokens[2]), -Double.parseDouble(tokens[3])});
+		    return "Created " + tokens[1] + " at (" + tokens[2] + ", " + tokens[3] + ")";
+		}
+		
 		return "text Invalid command: " + command;
 	}
 	
@@ -199,27 +223,6 @@ public class Server implements RobotEventListener {
 	
 	public void stop() {
 		running = false;
-	}
-	
-	/**
-	 * Tests functionality.
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		Socket client = null;
-		try {
-			new Server(12122).start();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (client != null) {
-				try {
-					client.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
 	}
 
 	public void setController(Controller controller) {
@@ -251,7 +254,6 @@ public class Server implements RobotEventListener {
         }
     }
 
-    @Override
     public void onEvent(RobotEvent event)
     {
         if (event instanceof ObjectAddedEvent) {

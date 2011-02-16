@@ -46,27 +46,18 @@ public class MapView extends SurfaceView implements Callback
 {
 
     public static final String TAG = "MAP_VIEW";
-
     public static final int PX_PER_METER = 32;
-
     private static final float zoomRate = 1.5f;
-
     private DrawThread dt;
-
     private SoarRobotTablet activity;
-
     private PointF camera;
-
     private float zoom;
-
     private PointF lastTouch;
-
     private HashMap<Integer, SimObject> objects;
-
     private HashMap<String, SimObject> robots;
-
     private ArrayList<Rect> areas;
-
+    private String nextObjectClass;
+    
     public MapView(Context context)
     {
         super(context);
@@ -96,6 +87,7 @@ public class MapView extends SurfaceView implements Callback
         objects = new HashMap<Integer, SimObject>();
         robots = new HashMap<String, SimObject>();
         areas = new ArrayList<Rect>();
+        nextObjectClass = null;
     }
 
     public void setActivity(SoarRobotTablet activity)
@@ -201,25 +193,29 @@ public class MapView extends SurfaceView implements Callback
         }
         else if (action == MotionEvent.ACTION_DOWN)
         {
-            PointF touch = new PointF(event.getX() / (PX_PER_METER * zoom)
-                    + camera.x, event.getY() / (PX_PER_METER * zoom) + camera.y);
-            try
+            PointF touch = new PointF(event.getX(), event.getY());
+            // Transform the touch into meter coordinates
+            touch.x /= PX_PER_METER;
+            touch.y /= PX_PER_METER;
+            // Translate the touch according to the camera
+            touch.x += camera.x;
+            touch.y += camera.y;
+            // Taking the zoom factor into account
+            touch.x /= zoom;
+            touch.y /= zoom;
+            if (nextObjectClass != null)
             {
-                boolean selected = false;
-                synchronized (objects)
+                activity.getRobotSession().sendMessage("object " + nextObjectClass + " " + touch.x + " " + touch.y);
+                nextObjectClass = null;
+            }
+            else
+            {
+                try
                 {
-                    for (SimObject obj : robots.values())
+                    boolean selected = false;
+                    synchronized (objects)
                     {
-                        if (obj.intersectsPoint(touch))
-                        {
-                            activity.setSelectedObject(obj);
-                            selected = true;
-                            break;
-                        }
-                    }
-                    if (!selected)
-                    {
-                        for (SimObject obj : objects.values())
+                        for (SimObject obj : robots.values())
                         {
                             if (obj.intersectsPoint(touch))
                             {
@@ -228,12 +224,25 @@ public class MapView extends SurfaceView implements Callback
                                 break;
                             }
                         }
+                        if (!selected)
+                        {
+                            for (SimObject obj : objects.values())
+                            {
+                                if (obj.intersectsPoint(touch))
+                                {
+                                    activity.setSelectedObject(obj);
+                                    selected = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
+                    draw();
                 }
-            }
-            catch (NullPointerException e)
-            { // Don't know why this is happening
-                e.printStackTrace();
+                catch (NullPointerException e)
+                { // Don't know why this is happening
+                    e.printStackTrace();
+                }
             }
             lastTouch.x = (int) event.getX();
             lastTouch.y = (int) event.getY();
@@ -388,10 +397,17 @@ public class MapView extends SurfaceView implements Callback
     public void zoomIn()
     {
         zoom = zoom * zoomRate;
+        draw();
     }
 
     public void zoomOut()
     {
         zoom = zoom / zoomRate;
+        draw();
+    }
+
+    public void setNextClass(CharSequence nextClass)
+    {
+        nextObjectClass = nextClass.toString();
     }
 }

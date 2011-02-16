@@ -28,7 +28,12 @@
 			    android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_toRightOf="@+id/zoomIn"
-				android:text="Zoom\nOut" />				
+				android:text="Zoom\nOut" />
+			<Button android:id="@+id/addObject"
+			    android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_toRightOf="@+id/zoomOut"
+				android:text="Add\nObject" />				
 			</RelativeLayout>
 		<edu.umich.soarrobot.SoarRobotTablet.layout.MapView
 			android:id="@+id/mapView"

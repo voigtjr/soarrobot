@@ -21,7 +21,7 @@
  */
 
 /**
- * This class handles the representation of objects in the simulation.
+ * a=This class handles the representation of objects in the simulation.
  * Because the definitions for the different types of objects are sent
  * to us over the network when the simulation begins, we can't hard-code
  * those definitions into this class -- we need to be more flexible.
@@ -38,6 +38,9 @@ import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.Path;
 import android.graphics.PointF;
+import april.lcmtypes.laser_t;
+import april.lcmtypes.waypoint_list_t;
+import april.lcmtypes.waypoint_t;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 
 public class SimObject {
@@ -78,6 +81,10 @@ public class SimObject {
 		maxID = 0;
 	}
 	
+	public static String[] getClassNames() {
+	    return classes.keySet().toArray(new String[] {});
+	}
+	
 	/*
 	 * Instance variables
 	 */
@@ -90,6 +97,16 @@ public class SimObject {
 	private int color;
 	private int id;
 	private boolean selected;
+	
+	private laser_t lidar;
+	private float lidarTheta;
+	private PointF lidarLocation;
+
+    private laser_t lowresLidar;
+    private float lowresLidarTheta;
+    private PointF lowresLidarLocation;
+    
+    private waypoint_list_t waypoints;
 	
 	/*
 	 * Instance methods
@@ -109,10 +126,12 @@ public class SimObject {
 		this.id = maxID;
 		++maxID;
 		selected = false;
+		lidar = null;
+		lowresLidar = null;
+		waypoints = null;
 		
 		// Set default values
 		color = Color.BLACK;
-		size = new PointF(1.0f, 1.0f);
 		if (attributes.containsKey("color")) {
 			try {
 				String colorString = (String) attributes.get("color");
@@ -123,18 +142,25 @@ public class SimObject {
 				e.printStackTrace();
 			}
 		}
-		size = new PointF(1.0f, 1.0f);
+		size = new PointF(0.5f, 0.5f);
 	}
-	
-	/**
-	 * Draws the object to the canvas.
-	 * Needs to be implemented.
-	 * @param c
-	 */
-	public void draw(Canvas c, Paint p) {
-		c.translate(location.x, location.y);
-		c.rotate(-theta);
-		p.setStrokeWidth(selected ? 3.0f / MapView.PX_PER_METER : 1.0f / MapView.PX_PER_METER);
+
+    /**
+     * Draws the object to the canvas. Needs to be implemented.
+     * 
+     * @param c
+     */
+    public void draw(Canvas c, Paint p)
+    {
+        p.setColor(Color.RED);
+        drawLidar(lidar, lidarLocation, lidarTheta, c, p);
+        p.setColor(Color.BLUE);
+        drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, c, p);
+        p.setColor(Color.YELLOW);
+        drawWaypoints(c, p);
+        c.translate(location.x, location.y);
+        c.rotate(-theta);
+        p.setStrokeWidth(selected ? 3.0f / MapView.PX_PER_METER : 1.0f / MapView.PX_PER_METER);
 		p.setColor(color);
 		p.setStyle(Style.FILL);
 		if (type.equals("splinter")) {
@@ -147,10 +173,10 @@ public class SimObject {
 			p.setStyle(Style.STROKE);
 			c.drawPath(path, p);
 		} else {
-			c.drawRect(0.0f, 0.0f, size.x, size.y, p);
+			c.drawRect(-size.x / 2.0f, -size.y / 2.0f, size.x / 2.0f, size.y / 2.0f, p);
 			p.setColor(selected ? Color.RED : Color.BLACK);
 			p.setStyle(Style.STROKE);
-			c.drawRect(0.0f, 0.0f, size.x, size.y, p);
+            c.drawRect(-size.x / 2.0f, -size.y / 2.0f, size.x / 2.0f, size.y / 2.0f, p);
 		}
 	}
 	
@@ -177,7 +203,40 @@ public class SimObject {
         }
         return sb.toString();
           
-    }	
+    }
+    
+    private static void drawLidar(laser_t lidar, PointF lidarLocation, float lidarTheta, Canvas c, Paint p) {
+        if (lidar == null) {
+            return;
+        }
+        c.save();
+        c.translate(lidarLocation.x, lidarLocation.y);
+        c.rotate(-lidarTheta);
+        p.setStyle(Style.FILL);
+        for (int i = 0; i < lidar.nranges; ++i) {
+            float range = lidar.ranges[i];
+            float angle = lidar.rad0 + lidar.radstep * i;
+            float dx = (float)Math.cos(-angle) * range;
+            float dy = (float)Math.sin(-angle) * range;
+            c.save();
+            c.translate(dx, dy);
+            c.drawCircle(0.0f, 0.0f, 0.1f, p);
+            c.restore();
+        }
+        c.restore();
+    }
+    
+    private void drawWaypoints(Canvas c, Paint p) {
+        if (waypoints == null) {
+            return;
+        }
+        for (waypoint_t w : waypoints.waypoints) {
+            c.save();
+            c.translate((float)w.xLocal, (float)-w.yLocal);
+            c.drawCircle(0.0f, 0.0f, 0.1f, p);
+            c.restore();
+        }
+    }
 	
 	/*
 	 * Accessor methods.
@@ -224,4 +283,23 @@ public class SimObject {
 	public int getID() {
 		return id;
 	}
+
+    public void setLidar(laser_t lidar)
+    {
+       this.lidar = lidar;
+       lidarTheta = theta;
+       lidarLocation = location;
+    }
+    
+    public void setLowresLidar(laser_t lidar)
+    {
+       this.lowresLidar = lidar;
+       lowresLidarTheta = theta;
+       lowresLidarLocation = location;
+    }
+
+    public void setWaypoints(waypoint_list_t w)
+    {
+        waypoints = w;
+    }
 }
