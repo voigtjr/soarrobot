@@ -37,7 +37,7 @@ void ex_program(int sig){
 }
 
 int urg_connect_any(){
-        int ret = urg_connect(&urg, "/dev/tty.usbmodem1d21", 115200);
+        int ret = urg_connect(&urg, "/dev/tty.usbmodemfa141", 115200);
 		if (ret >= 0) return ret;
 	return -1;
 
