@@ -2,19 +2,20 @@ package edu.umich.robot.laser;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 import lcm.lcm.LCM;
 import lcm.lcm.LCMDataInputStream;
 import lcm.lcm.LCMSubscriber;
+import april.lcmtypes.laser_t;
 import april.lcmtypes.urg_range_t;
+import april.util.TimeUtil;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 public class UrgBinner
 {
-    private static final String channel = "TODO"; // TODO
+    private static final String channel = "URG_RANGE";
 
     private final LCM lcm = LCM.getSingleton();
     
@@ -29,8 +30,6 @@ public class UrgBinner
     private final double fov0;
     
     private final double fovstep;
-    
-    private final ReentrantLock lock = new ReentrantLock();
     
     public UrgBinner(int bins, double fov)
     {
@@ -80,6 +79,7 @@ public class UrgBinner
         
         if (last >= urg.utime)
             return;
+        last = urg.utime;
         
         double theta = urg.rad0;
         double nextbin = fov0;
@@ -92,15 +92,8 @@ public class UrgBinner
             {
                 if (bin >= 0)
                 {
-                    lock.lock();
-                    try 
-                    {
-                        binned.set(bin, value);
-                    }
-                    finally
-                    {
-                        lock.unlock();
-                    }
+                    binned.set(bin, value);
+                    value = Float.MAX_VALUE;
                 }
                 
                 nextbin += fovstep;
@@ -119,22 +112,51 @@ public class UrgBinner
         }
         
         if (bin >= 0 && bin < nbins)
-        {
-            lock.lock();
-            try
-            {
-                binned.set(bin, value);
-            }
-            finally
-            {
-                lock.unlock();
-            }
-        }
+            binned.set(bin, value);
     }
     
     public List<Float> getBinned()
     {
         return new ImmutableList.Builder<Float>().addAll(binned).build();
+    }
+    
+    public static void main(String[] args)
+    {
+        final int bins = 5;
+        UrgBinner ub = new UrgBinner(bins, Math.PI);
+
+        LCM lcm = LCM.getSingleton();
+        
+        boolean go = true;
+        laser_t lowres = new laser_t();
+        lowres.intensities = new float[0];
+        lowres.nintensities = 0;
+        lowres.nranges = bins;
+        lowres.ranges = new float[bins];
+        lowres.radstep = (float)(Math.PI / bins);
+        lowres.rad0 = (float)(Math.PI / -2) + (lowres.radstep / 2);
+        
+        while (go)
+        {
+            ub.update();
+            List<Float> binned = ub.getBinned();
+            for (int i = 0; i < bins; ++i)
+                lowres.ranges[i] = binned.get(i);
+            
+            lowres.utime = TimeUtil.utime();
+            lcm.publish("LIDAR_LOWRES_", lowres);
+            
+            try
+            {
+                Thread.sleep(100);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+                go = false;
+            }
+        }
+        
     }
     
 }
