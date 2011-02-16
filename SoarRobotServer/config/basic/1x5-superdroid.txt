@@ -2,7 +2,7 @@ superdroids = [charlie];
 charlie 
 {
 	position = [2, -2];
-	productions = "agents/robot3/clean-house-new.soar";
+	#productions = "agents/robot3/clean-house-new.soar";
 }
 
 image_path = "../common/1x5.png";
