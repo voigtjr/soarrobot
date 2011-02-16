@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -54,8 +55,6 @@ public class Server implements RobotEventListener {
 				while (running) {
 					try {
 						Socket client = socket.accept();
-						startLCM(client.getInetAddress(), client.getPort());
-						//startLCM(InetAddress.getByName("10.0.2.15"), client.getPort());
 						Scanner scanner = new Scanner(client.getInputStream()).useDelimiter("\n");
 						boolean scanning = true;
                         out = new PrintWriter(client.getOutputStream());
@@ -65,7 +64,7 @@ public class Server implements RobotEventListener {
 								// Print something to the command line for debugging
 								String line = scanner.next();
 								System.out.println("Got command from client " + client.getInetAddress() + ":" + client.getPort() + ":\n" + line);
-								String response = handleCommand(line);
+								String response = handleCommand(line, client);
 								System.out.println("Returning to client:\n" + response);
 								sendMessage(response);
 								if (line.trim().equalsIgnoreCase("quit")) {
@@ -100,7 +99,7 @@ public class Server implements RobotEventListener {
 	    }
     }
 	
-	private String handleCommand(String command) {
+	private String handleCommand(String command, Socket client) {
 		if (controller == null) {
 			return "No controller found";
 		}
@@ -175,6 +174,24 @@ public class Server implements RobotEventListener {
 			return "text " + (controller.toggleSoarRunState() ? "Soar started" : "Soar paused");
 		}
 		
+		if (command.equalsIgnoreCase("emulator")) {
+            try
+            {
+                startLCM(InetAddress.getByName("127.0.0.1"), 12122);
+                return "Started LCM forwarding to emulator";
+            }
+            catch (UnknownHostException e)
+            {
+                e.printStackTrace();
+                return "Error forwarding LCM to emulator";
+            }
+		}
+		
+		if (command.equalsIgnoreCase("device")) {
+            startLCM(client.getInetAddress(), 12122);
+            return "Started LCM forwarding to device";
+		}
+		
 		String[] tokens = command.split(" ");
 		if (tokens[0].equalsIgnoreCase("object") && tokens.length >= 4) {
 		    controller.addObject(tokens[1], new double[] {Double.parseDouble(tokens[2]), -Double.parseDouble(tokens[3])});
@@ -206,27 +223,6 @@ public class Server implements RobotEventListener {
 	
 	public void stop() {
 		running = false;
-	}
-	
-	/**
-	 * Tests functionality.
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		Socket client = null;
-		try {
-			new Server(12122).start();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (client != null) {
-				try {
-					client.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
 	}
 
 	public void setController(Controller controller) {

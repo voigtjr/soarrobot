@@ -105,25 +105,25 @@ public class RobotSession extends Thread implements LCMSubscriber
 
             robotNames = new ArrayList<String>();
             tcpListener.start();
-            sendMessage("map");
-            sendMessage("classes");
-            sendMessage("robots");
-            sendMessage("objects");
             try
             {
                 // This needs to be the client address.
                 String clientHost;
                 Log.d("BLAH", "deviceName is " + deviceName);
+                String clientPort = null;
                 if (deviceName.equals("generic"))
                 {
                     clientHost = "/10.0.2.15";
+                    clientPort = "12122";
+                    sendMessage("emulator");
                 }
                 else
                 {
                     clientHost = tcpClient.getLocalAddress().toString();
+                    clientPort = "" + tcpClient.getLocalPort();
+                    sendMessage("device");
                 }
 
-                String clientPort = "" + tcpClient.getLocalPort();
                 lcmConnectionString = "udp:/" + clientHost + ":" + clientPort;
                 lcm = new LCM(lcmConnectionString);
                 for (String robotName : robotNames)
@@ -135,6 +135,10 @@ public class RobotSession extends Thread implements LCMSubscriber
             {
                 e.printStackTrace();
             }
+            sendMessage("map");
+            sendMessage("classes");
+            sendMessage("robots");
+            sendMessage("objects");
             activity.showAlert("Connected to server at " + server + ":" + port,
                     Toast.LENGTH_LONG);
             activity.getMapView().draw();
