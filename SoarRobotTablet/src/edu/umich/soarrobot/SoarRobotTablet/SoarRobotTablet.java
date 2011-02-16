@@ -130,7 +130,7 @@ public class SoarRobotTablet extends Activity
             setSelectedObject(null);
             try
             {
-                robotSession = new RobotSession(this, "141.212.109.131", 12122);
+                robotSession = new RobotSession(this, "141.212.109.194", 12122);
                 robotSession.start();
             }
             catch (Exception e)

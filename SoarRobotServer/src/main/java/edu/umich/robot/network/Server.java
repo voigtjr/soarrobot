@@ -258,7 +258,6 @@ public class Server implements RobotEventListener {
         }
     }
 
-    @Override
     public void onEvent(RobotEvent event)
     {
         if (event instanceof ObjectAddedEvent) {

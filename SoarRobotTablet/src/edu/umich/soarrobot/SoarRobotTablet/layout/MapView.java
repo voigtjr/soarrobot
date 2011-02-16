@@ -195,11 +195,14 @@ public class MapView extends SurfaceView implements Callback
         {
             PointF touch = new PointF(event.getX(), event.getY());
             // Transform the touch into meter coordinates
-            touch.x /= PX_PER_METER * zoom;
-            touch.y /= PX_PER_METER * zoom;
+            touch.x /= PX_PER_METER;
+            touch.y /= PX_PER_METER;
             // Translate the touch according to the camera
             touch.x += camera.x;
             touch.y += camera.y;
+            // Taking the zoom factor into account
+            touch.x /= zoom;
+            touch.y /= zoom;
             if (nextObjectClass != null)
             {
                 activity.getRobotSession().sendMessage("object " + nextObjectClass + " " + touch.x + " " + touch.y);
@@ -234,6 +237,7 @@ public class MapView extends SurfaceView implements Callback
                             }
                         }
                     }
+                    draw();
                 }
                 catch (NullPointerException e)
                 { // Don't know why this is happening
@@ -393,11 +397,13 @@ public class MapView extends SurfaceView implements Callback
     public void zoomIn()
     {
         zoom = zoom * zoomRate;
+        draw();
     }
 
     public void zoomOut()
     {
         zoom = zoom / zoomRate;
+        draw();
     }
 
     public void setNextClass(CharSequence nextClass)
