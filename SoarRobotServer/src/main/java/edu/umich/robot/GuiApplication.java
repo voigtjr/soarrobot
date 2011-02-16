@@ -471,7 +471,7 @@ public class GuiApplication
             boolean collisions = config.getBoolean(s + ".wallCollisions", true);
             
             controller.createSuperdroidRobot(s, pose, collisions);
-            controller.createSimSuperdroid(s);
+            //controller.createSimSuperdroid(s);
             if (prods != null)
             {
                 controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
@@ -1041,7 +1041,7 @@ public class GuiApplication
         final JDialog dialog = new JDialog(frame, "Connect to Superdroid", true);
         dialog.setLayout(layout);
         final JTextField namefield = new JTextField("charlie");
-        final JTextField hostfield = new JTextField("192.168.1.115");
+        final JTextField hostfield = new JTextField("192.168.1.165");
         final JTextField portfield = new JTextField(Integer.toString(defaultPort));
         final JButton cancel = new JButton("Cancel");
         final JButton ok = new JButton("OK");
