@@ -315,8 +315,7 @@ public class Superdroid implements Robot
                 DriveHeadingEvent d = (DriveHeadingEvent)event;
                 setHeading(d.getHeadingRadians());
             }
-            else 
-                throw new UnsupportedOperationException("Superdroid does not support " + event);
+            System.out.println("Superdroid does not support " + event);
         } 
         else if (event instanceof AbstractEffectorEvent)
         {
