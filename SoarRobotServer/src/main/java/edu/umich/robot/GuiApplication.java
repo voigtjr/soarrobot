@@ -451,6 +451,8 @@ public class GuiApplication
             boolean simulated = config.getBoolean(s + ".simulated", true);
             if (simulated)
                 controller.createSimSplinter(s);
+            else
+                controller.createRealSplinter(s);
             controller.createSimLaser(s);
             if (prods != null)
             {
@@ -474,13 +476,35 @@ public class GuiApplication
             boolean collisions = config.getBoolean(s + ".wallCollisions", true);
             
             controller.createSuperdroidRobot(s, pose, collisions);
-            controller.createSimSuperdroid(s);
             boolean simulated = config.getBoolean(s + ".simulated", true);
             if (simulated)
                 controller.createSimSuperdroid(s);
+            else
+            {
+                try
+                {
+                    controller.createRealSuperdroid(s, "192.168.1.165", 3192);
+                }
+                catch (UnknownHostException e1)
+                {
+                    e1.printStackTrace();
+                }
+                catch (SocketException e1)
+                {
+                    e1.printStackTrace();
+                }
+            }
             controller.createSimLaser(s);
             if (prods != null)
             {
+                // wait a sec
+                try
+                {
+                    Thread.sleep(1000);
+                }
+                catch (InterruptedException ex)
+                {
+                }
                 controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
                 PREFERENCES.put("lastProductions", prods);
             }

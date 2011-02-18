@@ -143,11 +143,6 @@ public class Splinter implements Robot
 
         commandTask = schexec.scheduleAtFixedRate(command, 0, PERIOD, TimeUnit.MILLISECONDS);
     }
-    
-    public void setOffset(double[] offset)
-    {
-        throw new UnsupportedOperationException();
-    }
 
     private void initGains()
     {

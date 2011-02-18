@@ -143,11 +143,6 @@ public class Superdroid implements Robot
         commandTask = schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
     }
     
-    public void setOffset(double[] offset)
-    {
-        pose.setOffset(offset);
-    }
-
     public RobotType getType()
     {
         return RobotType.SUPERDROID;
@@ -315,7 +310,10 @@ public class Superdroid implements Robot
                 DriveHeadingEvent d = (DriveHeadingEvent)event;
                 setHeading(d.getHeadingRadians());
             }
-            System.out.println("Superdroid does not support " + event);
+            else
+            {
+                System.out.println("Superdroid does not support " + event);
+            }
         } 
         else if (event instanceof AbstractEffectorEvent)
         {
