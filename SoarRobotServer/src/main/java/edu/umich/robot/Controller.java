@@ -165,6 +165,7 @@ public class Controller
         final String name;
         final Pose initialPose;
         final boolean collisions;
+        boolean simulated = false;
         List<SimObject> simObjs = Lists.newArrayList();
     }
     
@@ -237,6 +238,7 @@ public class Controller
         RobotData sd = simRobots.get(robotName);
         if (sd == null)
             return; // TODO warn
+        sd.simulated = true;
         
         Config rconfig = new Config();
         rconfig.setString("class", "april.sim.SimSplinter");
@@ -246,24 +248,6 @@ public class Controller
         SimObject ss = sim.addObject(sd.name, rconfig);
         if (ss != null)
             sd.simObjs.add(ss);
-                 
-
-        Config lconfig = new Config();
-        lconfig.setString("class", "april.sim.SimLaser");
-        lconfig.setString("pose", sd.name);
-        lconfig.setDoubles("position", new double[] { 0, 0, 0.4 });
-        lconfig.setDoubles("rollpitchyaw_degrees", new double[] { 0, 0, 0 });
-        lconfig.setInts("color", new int[] { 1, 0, 0 });
-        lconfig.setInt("degree0", -90);
-        lconfig.setInt("degree_step", 1);
-        lconfig.setInt("nranges", 180);
-        lconfig.setDouble("range_noise_m", 0.01);
-        lconfig.setDouble("theta_noise_degrees", 0.25);
-        lconfig.setInt("max_range_m", 30);
-        lconfig.setInt("hz", 7);
-        SimObject sl = sim.addObject(sd.name + "lidar", lconfig);
-        if (sl != null)
-            sd.simObjs.add(sl);
     }
     
     public void createRealSplinter(String robotName)
@@ -284,20 +268,26 @@ public class Controller
 
     public void createSimSuperdroid(String robotName)
     {
-        // TODO: change to new class instead of just using splinter
-
         RobotData sd = simRobots.get(robotName);
         if (sd == null)
             return; // TODO warn
+        sd.simulated = true;
 
         Config rconfig = new Config();
-        rconfig.setString("class", "april.sim.SimSplinter");
+        rconfig.setString("class", "april.sim.SimSplinter"); // TODO: still using SimSplinter for superdroid
         rconfig.setDoubles("initialPosition", Misc
                 .toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
         SimObject ss = sim.addObject(sd.name, rconfig);
         if (ss != null)
             sd.simObjs.add(ss);
+    }
+    
+    public void createSimLaser(String robotName)
+    {
+        RobotData sd = simRobots.get(robotName);
+        if (sd == null)
+            return; // TODO warn
 
         Config lconfig = new Config();
         lconfig.setString("class", "april.sim.SimLaser");
@@ -677,12 +667,16 @@ public class Controller
 
         for (RobotData sd : simRobots.values())
         {
-            if (sd.type == RobotType.SPLINTER)
-                createSimSplinter(sd.name);
-            else if (sd.type == RobotType.SUPERDROID)
-                createSimSuperdroid(sd.name);
-            else
-                throw new UnsupportedOperationException("Type not implemented: " + sd.type);
+            if (sd.simulated)
+            {
+                if (sd.type == RobotType.SPLINTER)
+                    createSimSplinter(sd.name);
+                else if (sd.type == RobotType.SUPERDROID)
+                    createSimSuperdroid(sd.name);
+                else
+                    throw new UnsupportedOperationException("Type not implemented: " + sd.type);
+            }
+            createSimLaser(sd.name);
         }
         
         metamap.reset();

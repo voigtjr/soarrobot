@@ -448,7 +448,10 @@ public class GuiApplication
             boolean collisions = config.getBoolean(s + ".wallCollisions", true);
             
             controller.createSplinterRobot(s, pose, collisions);
-            controller.createSimSplinter(s);
+            boolean simulated = config.getBoolean(s + ".simulated", true);
+            if (simulated)
+                controller.createSimSplinter(s);
+            controller.createSimLaser(s);
             if (prods != null)
             {
                 controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
@@ -471,7 +474,11 @@ public class GuiApplication
             boolean collisions = config.getBoolean(s + ".wallCollisions", true);
             
             controller.createSuperdroidRobot(s, pose, collisions);
-            //controller.createSimSuperdroid(s);
+            controller.createSimSuperdroid(s);
+            boolean simulated = config.getBoolean(s + ".simulated", true);
+            if (simulated)
+                controller.createSimSuperdroid(s);
+            controller.createSimLaser(s);
             if (prods != null)
             {
                 controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
@@ -678,6 +685,7 @@ public class GuiApplication
 
                 controller.createSplinterRobot(robotName, pose, true);
                 controller.createSimSplinter(robotName);
+                controller.createSimLaser(robotName);
                 dialog.dispose();
             }
         };
