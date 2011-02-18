@@ -309,6 +309,7 @@ public class Controller
     
     public void createRealSuperdroid(String name, String hostname, int port) throws UnknownHostException, SocketException
     {
+        robots.get(name).setOffset(simRobots.get(name).initialPose.asLcmType().pos);
         SuperdroidHardware sd = new SuperdroidHardware(name, hostname, port);
         superdroids.add(sd);
     }

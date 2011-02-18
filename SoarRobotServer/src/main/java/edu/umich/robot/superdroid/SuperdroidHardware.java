@@ -33,6 +33,7 @@ public class SuperdroidHardware
     {
         poseChannel = SuperdroidPose.POSE_CHANNEL_BASE + name;
         final String velChannel = SuperdroidVelocities.VELOCITIES_CHANNEL_BASE + name;
+        
         lcm.subscribe(velChannel, new LCMSubscriber()
         {
             public void messageReceived(LCM lcm, String channel,

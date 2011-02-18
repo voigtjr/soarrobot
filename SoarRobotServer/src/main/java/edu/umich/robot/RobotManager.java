@@ -83,6 +83,11 @@ public class RobotManager
     {
         return Collections.unmodifiableCollection(robots.values());
     }
+    
+    Robot get(String name)
+    {
+        return robots.get(name);
+    }
 
     RobotOutput getOutput(String name)
     {

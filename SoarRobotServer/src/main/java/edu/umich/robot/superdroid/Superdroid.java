@@ -142,6 +142,11 @@ public class Superdroid implements Robot
         long period = properties.get(SuperdroidProperties.UPDATE_PERIOD);
         commandTask = schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
     }
+    
+    public void setOffset(double[] offset)
+    {
+        pose.setOffset(offset);
+    }
 
     public RobotType getType()
     {

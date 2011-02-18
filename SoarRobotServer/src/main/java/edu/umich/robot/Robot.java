@@ -42,4 +42,6 @@ public interface Robot
     public void shutdown();
     
     public RobotType getType();
+
+    public void setOffset(double[] offset);
 }
