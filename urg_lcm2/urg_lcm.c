@@ -15,6 +15,7 @@
 urg_t urg;
 long * data;
 lcm_t * lcm;
+char * CHANNEL = "URG_RANGE";
 
 static void urg_exit(urg_t *urg, const char *message)
 {
@@ -57,6 +58,9 @@ int main(int argc, char *argv[])
   int n;
   int i;
 
+  if (argc == 2) {
+        CHANNEL = argv[1];
+  }
 
   /* Connection */  
   ret = urg_connect_any();
@@ -192,7 +196,7 @@ int main(int argc, char *argv[])
 		urg_data.radstep	= (2.0 * M_PI) / (float)parameter.area_total_;
 
 
-		urg_range_t_publish(lcm, "URG_RANGE", &urg_data);	
+		urg_range_t_publish(lcm, CHANNEL, &urg_data);	
 
 		printf("\r t = %llu [usec]",urg_data.utime);
     }
