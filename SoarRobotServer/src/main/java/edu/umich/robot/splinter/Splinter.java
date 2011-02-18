@@ -128,7 +128,7 @@ public class Splinter implements Robot
     {
         this.radio = radio;
         this.metamap = metamap;
-        this.lidar = new Lidar(name);
+        this.lidar = new Lidar(name, false, 5, Math.PI);
 
         battery.setMilliAmpCurrent("control board", 1); // made up number
         

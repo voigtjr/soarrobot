@@ -264,7 +264,6 @@ public class Controller
         SimObject sl = sim.addObject(sd.name + "lidar", lconfig);
         if (sl != null)
             sd.simObjs.add(sl);
-
     }
     
     public void createRealSplinter(String robotName)

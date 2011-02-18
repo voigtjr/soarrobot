@@ -7,13 +7,18 @@ import lcm.lcm.LCM;
 import lcm.lcm.LCMDataInputStream;
 import lcm.lcm.LCMSubscriber;
 import april.lcmtypes.laser_t;
-import april.lcmtypes.urg_range_t;
 import april.util.TimeUtil;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-public class UrgBinner
+/**
+ * TODO refactor this and UrgBinner -- they share a lot of code.
+ * 
+ * @author voigtjr
+ *
+ */
+public class SickBinner
 {
     private final LCM lcm = LCM.getSingleton();
     
@@ -21,7 +26,7 @@ public class UrgBinner
     
     private final List<Float> binned = Lists.newArrayList();
     
-    private urg_range_t urg;
+    private laser_t laser;
     
     private long last = -1;
     
@@ -29,7 +34,7 @@ public class UrgBinner
     
     private final double fovstep;
     
-    public UrgBinner(String channel, int bins, double fov)
+    public SickBinner(String channel, int bins, double fov)
     {
         if (bins <= 0 || fov <= 0)
             throw new IllegalArgumentException("bins or fov less than zero");
@@ -54,7 +59,7 @@ public class UrgBinner
         {
             try 
             {
-                urg = new urg_range_t(ins);
+                laser = new laser_t(ins);
             }
             catch (IOException e)
             {
@@ -65,26 +70,26 @@ public class UrgBinner
     
     public void update()
     {
-        update(urg);
+        update(laser);
     }
     
-    void update(urg_range_t urg)
+    void update(laser_t laser)
     {
         // shadowed this.urg on purpose
 
-        if (urg == null)
+        if (laser == null)
             return;
         
-        if (last >= urg.utime)
+        if (last >= laser.utime)
             return;
-        last = urg.utime;
+        last = laser.utime;
         
-        double theta = urg.rad0;
+        double theta = laser.rad0;
         double nextbin = fov0;
         int bin = -1;
         float value = Float.MAX_VALUE;
         
-        for (int i = 0; i < urg.num_ranges; ++i, theta += urg.radstep)
+        for (int i = 0; i < laser.nranges; ++i, theta += laser.radstep)
         {
             if (theta >= nextbin)
             {
@@ -103,10 +108,10 @@ public class UrgBinner
             if (bin < 0)
                 continue;
             
-            if (urg.ranges[i] < 0)
+            if (laser.ranges[i] < 0)
                 continue;
             
-            value = Math.min(value, urg.ranges[i]);
+            value = Math.min(value, laser.ranges[i]);
         }
         
         if (bin >= 0 && bin < nbins)
@@ -123,7 +128,7 @@ public class UrgBinner
     public static void main(String[] args)
     {
         final int bins = 5;
-        UrgBinner ub = new UrgBinner("URG_RANGE", bins, Math.PI);
+        SickBinner ub = new SickBinner("SIM_LIDAR_FRONT_seek", bins, Math.PI);
 
         LCM lcm = LCM.getSingleton();
         

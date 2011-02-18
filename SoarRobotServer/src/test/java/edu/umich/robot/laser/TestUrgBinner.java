@@ -9,19 +9,19 @@ public class TestUrgBinner
     @Test(expected=IllegalArgumentException.class)
     public void testCtor1() throws Exception
     {
-        new UrgBinner(-1, 0);
+        new UrgBinner("URG_RANGE", -1, 0);
     }
     
     @Test(expected=IllegalArgumentException.class)
     public void testCtor2() throws Exception
     {
-        new UrgBinner(0, 0);
+        new UrgBinner("URG_RANGE", 0, 0);
     }
     
     @Test(expected=IllegalArgumentException.class)
     public void testCtor3() throws Exception
     {
-        new UrgBinner(0, -1);
+        new UrgBinner("URG_RANGE", 0, -1);
     }
     
     @Test
@@ -29,7 +29,7 @@ public class TestUrgBinner
     {
         for (int i = 1; i < 10; ++i)
         {
-            UrgBinner ub1 = new UrgBinner(i, Math.PI);
+            UrgBinner ub1 = new UrgBinner("URG_RANGE", i, Math.PI);
             assertEquals(ub1.getBinned().size(), i);
         }
     }
@@ -37,19 +37,19 @@ public class TestUrgBinner
     @Test
     public void testCtor5()
     {
-        new UrgBinner(1, Math.PI);
+        new UrgBinner("URG_RANGE", 1, Math.PI);
     }
     
     @Test
     public void testCtor6()
     {
-        new UrgBinner(1, Math.PI * 2);
+        new UrgBinner("URG_RANGE", 1, Math.PI * 2);
     }
     
     @Test(expected=IllegalArgumentException.class)
     public void testCtor7() throws Exception
     {
-        new UrgBinner(1, Math.PI * 2.01);
+        new UrgBinner("URG_RANGE", 1, Math.PI * 2.01);
     }
     
 }

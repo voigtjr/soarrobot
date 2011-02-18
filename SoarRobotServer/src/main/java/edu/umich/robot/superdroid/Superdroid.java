@@ -128,7 +128,7 @@ public class Superdroid implements Robot
         this.name = name;
         this.radio = radio;
         this.metamap = metamap;
-        this.lidar = new Lidar(name);
+        this.lidar = new Lidar(name, false, 5, Math.PI);
         
         pose = new SuperdroidPose(name);
         initGains();

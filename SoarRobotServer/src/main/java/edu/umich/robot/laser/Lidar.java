@@ -21,19 +21,12 @@
  */
 package edu.umich.robot.laser;
 
-import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import lcm.lcm.LCM;
-import lcm.lcm.LCMDataInputStream;
-import lcm.lcm.LCMSubscriber;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import april.lcmtypes.laser_t;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -49,7 +42,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 public class Lidar
 {
-    private static final Log logger = LogFactory.getLog(Lidar.class);
+    //private static final Log logger = LogFactory.getLog(Lidar.class);
 
     private static final LCM lcm = LCM.getSingleton();
 
@@ -57,94 +50,103 @@ public class Lidar
 
     private static final String SICK_LASER_CHANNEL_BASE = "SICK_LIDAR_FRONT_";
 
+    private static final String URG_CHANNEL_BASE = "URG_RANGE_";
+
     private static final String LASER_LOWRES_CHANNEL_BASE = "LIDAR_LOWRES_";
 
-    private static final int RANGE_COUNT = 5; // TODO: make configurable
+    private final SickBinner sim;
 
-    private final String simChannel;
+    private final SickBinner sick;
 
-    private final String sickChannel;
+    private final UrgBinner urg;
 
     private final String lowresChannel;
     
     private final ScheduledExecutorService schexec = MoreExecutors.getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1));
-
-    private final LaserMerger merger = new LaserMerger(TimeUnit.NANOSECONDS
-            .convert(1, TimeUnit.SECONDS));
-
-    private Laser cached;
     
-    public Lidar(String name)
+    private final float radstep;
+    
+    private final float rad0;
+    
+    private Laser cached;
+
+    public Lidar(String name, boolean useSick, int bins, double fov)
     {
-        simChannel = SIM_LASER_CHANNEL_BASE + name;
-        sickChannel = SICK_LASER_CHANNEL_BASE + name;
+        sim = new SickBinner(SIM_LASER_CHANNEL_BASE + name, bins, fov);
+        if (useSick)  
+        {
+            sick = new SickBinner(SICK_LASER_CHANNEL_BASE + name, bins, fov);
+            urg = null;
+        }
+        else
+        {
+            sick = null;
+            urg = new UrgBinner(URG_CHANNEL_BASE + name, bins, fov);
+        }
         lowresChannel = LASER_LOWRES_CHANNEL_BASE + name;
-
-        lcm.subscribe(simChannel, subscriber);
-        lcm.subscribe(sickChannel, subscriber);
-
-        schexec.scheduleAtFixedRate(broadcast, 0, 100, TimeUnit.MILLISECONDS);
+        
+        radstep = (float)(Math.PI / bins);
+        rad0 = (float)(Math.PI / -2) + (radstep / 2);
+        Laser.Builder lb = new Laser.Builder(rad0, radstep);
+        cached = lb.addRanges(new float[] { 0, 0, 0, 0, 0 }).build();
+        
+        schexec.scheduleAtFixedRate(update, 0, 100, TimeUnit.MILLISECONDS);
     }
 
-    private final Runnable broadcast = new Runnable()
+    private final Runnable update = new Runnable()
     {
         public void run()
         {
-            if (merger.isChanged())
-                updateCached();
-            if (cached == null)
-                return;
+            List<Float> simBins = null;
+            List<Float> sickBins = null;
+            List<Float> urgBins = null;
+            if (sim != null)
+            {
+                sim.update();
+                simBins = sim.getBinned();
+            }
+            if (sick != null)
+            {
+                sick.update();
+                sickBins = sick.getBinned();
+            }
+            if (urg != null)
+            {
+                urg.update();
+                urgBins = urg.getBinned();
+            }
+            
+            int bins = simBins != null ? simBins.size() : 0;
+            if (bins == 0)
+            {
+                bins = sickBins != null ? sickBins.size() : 0;
+                if (bins == 0)
+                {
+                     bins = urgBins != null ? urgBins.size() : 0;
+                     if (bins == 0)
+                         return;
+                }
+            }
+            
+            Laser.Builder lb = new Laser.Builder(rad0, radstep);
+            for (int i = 0; i < bins; ++i)
+            {
+                float value = Float.MAX_VALUE;
+                value = min(value, simBins, i);
+                value = min(value, sickBins, i);
+                value = min(value, urgBins, i);
+                lb.add(value);
+            }
+            cached = lb.build();
             lcm.publish(lowresChannel, cached.toLcm());
         }
     };
-
-    private final LCMSubscriber subscriber = new LCMSubscriber()
+    
+    private final float min(float value, List<Float> bins, int i)
     {
-        public void messageReceived(LCM lcm, String channel,
-                LCMDataInputStream ins)
-        {
-            try
-            {
-                if (channel.equals(simChannel))
-                    merger.newSim(new laser_t(ins));
-                else if (channel.equals(sickChannel))
-                    merger.newSick(new laser_t(ins));
-                else
-                    logger.error("Unknown message channel: " + channel);
-            }
-            catch (IOException e)
-            {
-                logger.error("Error decoding " + channel + ": "
-                        + e.getMessage());
-            }
-        }
-    };
-
-    private void updateCached()
-    {
-        Laser ml = merger.getLaser();
-        if (ml == null)
-            return;
-
-        int chunkRanges = ml.getRanges().size() / RANGE_COUNT;
-        float rad0 = ml.getRad0() + ml.getRadStep() * (chunkRanges / 2.0f);
-        float radstep = ml.getRanges().size() * ml.getRadStep() / RANGE_COUNT;
-
-        Laser.Builder lowres = new Laser.Builder(rad0, radstep);
-        for (int slice = 0, index = 0; slice < RANGE_COUNT; ++slice)
-        {
-            float distance = Float.MAX_VALUE;
-
-            for (; index < (chunkRanges * slice) + chunkRanges; ++index)
-                distance = Math.min(ml.getRanges().get(index), distance);
-
-            if (logger.isTraceEnabled())
-                logger.trace(String.format("%d: %1.3f", slice, distance));
-
-            lowres.add(distance);
-        }
-
-        cached = lowres.build();
+        if (bins == null)
+            return value;
+        return Math.min(value, bins.get(i));
     }
 
     public Laser getLaserLowRes()

@@ -933,13 +933,15 @@ public class GuiApplication
         config.setString("class", "april.viewer.ViewLaser");
         config.setString("pose", name);
         config.setStrings("channels", new String[] { "SIM_LIDAR_FRONT",
-                "SICK_LIDAR_FRONT", "LIDAR_LOWRES", });
+                "SICK_LIDAR_FRONT", "LIDAR_LOWRES", "URG_RANGE" });
         addPositionInfo(config, "SIM_LIDAR_FRONT_" + name + ".", new double[] {
                 0, 0, 0.4 }, new double[] { 0, 0, 0 }, new int[] { 1, 0, 0 });
         addPositionInfo(config, "SICK_LIDAR_FRONT_" + name + ".", new double[] {
                 0, 0, 0.4 }, new double[] { 0, 0, 0 }, new int[] { 0, 1, 0 });
         addPositionInfo(config, "LIDAR_LOWRES_" + name + ".", new double[] { 0,
                 0, 0.4 }, new double[] { 0, 0, 0 }, new int[] { 0, 0, 1 });
+        addPositionInfo(config, "URG_RANGE_" + name + ".", new double[] { 0,
+                0, 0.4 }, new double[] { 0, 0, 0 }, new int[] { 0, 1, 0 });
 
         Configs.toLog(logger, config);
         viewer.addObject(name + "lidars", config);
