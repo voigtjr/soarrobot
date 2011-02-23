@@ -894,13 +894,13 @@ public class GuiApplication
 
         config.setString("viewer.areas.class", "april.viewer.ViewAreaDescriptions");
 
-//        config.setString("viewer.skybox.class", "april.viewer.ViewSkybox"); // need to add skybox to viewobjects list
-//        config.setString("viewer.skybox.north_image", "../common/north.jpg");
-//        config.setString("viewer.skybox.south_image", "../common/south.jpg");
-//        config.setString("viewer.skybox.east_image", "../common/east.jpg");
-//        config.setString("viewer.skybox.west_image", "../common/west.jpg");
-//        config.setString("viewer.skybox.up_image", "../common/top.jpg");
-//        config.setString("viewer.skybox.down_image", "../common/floor.jpg");
+        config.setString("viewer.skybox.class", "april.viewer.ViewSkybox"); // need to add skybox to viewobjects list
+        config.setString("viewer.skybox.north_image", "../common/north.jpg");
+        config.setString("viewer.skybox.south_image", "../common/south.jpg");
+        config.setString("viewer.skybox.east_image", "../common/east.jpg");
+        config.setString("viewer.skybox.west_image", "../common/west.jpg");
+        config.setString("viewer.skybox.up_image", "../common/top.jpg");
+        config.setString("viewer.skybox.down_image", "../common/floor.jpg");
     }
     
     /**
