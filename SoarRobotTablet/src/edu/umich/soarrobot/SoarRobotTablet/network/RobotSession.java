@@ -37,326 +37,257 @@ import android.os.Build;
 import android.util.Log;
 import android.widget.Toast;
 import april.jmat.LinAlg;
-import april.lcmtypes.pose_t;
 import april.lcmtypes.laser_t;
+import april.lcmtypes.pose_t;
 import april.lcmtypes.waypoint_list_t;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
+import edu.umich.soarrobot.SoarRobotTablet.layout.IMapView;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 
-public class RobotSession extends Thread implements LCMSubscriber
-{
+public class RobotSession extends Thread implements LCMSubscriber {
 
-    SoarRobotTablet activity;
+	SoarRobotTablet activity;
 
-    String server;
+	String server;
 
-    int port;
+	int port;
 
-    boolean paused;
+	boolean paused;
 
-    Socket tcpClient;
+	Socket tcpClient;
 
-    PrintWriter tcpWriter;
+	PrintWriter tcpWriter;
 
-    Scanner tcpScanner;
+	Scanner tcpScanner;
 
-    LCM lcm;
+	LCM lcm;
 
-    String lcmConnectionString;
+	String lcmConnectionString;
 
-    ArrayList<String> robotNames;
-    
-    Object lock = new Object();
+	ArrayList<String> robotNames;
 
-    public RobotSession(SoarRobotTablet activity, String server, int port)
-    {
-        synchronized (lock)
-        {
-            this.activity = activity;
-            this.server = server;
-            this.port = port;
-            paused = false;
+	Object lock = new Object();
 
-            String deviceName = Build.DEVICE;
+	public RobotSession(SoarRobotTablet activity, String server, int port) {
+		synchronized (lock) {
+			this.activity = activity;
+			this.server = server;
+			this.port = port;
+			paused = false;
 
-            try
-            {
-                tcpClient = new Socket(server, port);
-                tcpWriter = new PrintWriter(tcpClient.getOutputStream());
-                tcpScanner = new Scanner(tcpClient.getInputStream())
-                        .useDelimiter("\n");
-                System.out.println("connected to server, local port: "
-                        + tcpClient.getLocalPort());
-            }
-            catch (UnknownHostException e)
-            {
-                e.printStackTrace();
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
+			String deviceName = Build.DEVICE;
 
-            if (tcpClient == null)
-            {
-                return;
-            }
+			try {
+				tcpClient = new Socket(server, port);
+				tcpWriter = new PrintWriter(tcpClient.getOutputStream());
+				tcpScanner = new Scanner(tcpClient.getInputStream())
+						.useDelimiter("\n");
+				System.out.println("connected to server, local port: "
+						+ tcpClient.getLocalPort());
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 
-            robotNames = new ArrayList<String>();
-            tcpListener.start();
-            try
-            {
-                // This needs to be the client address.
-                String clientHost;
-                Log.d("BLAH", "deviceName is " + deviceName);
-                String clientPort = null;
-                if (deviceName.equals("generic"))
-                {
-                    clientHost = "/10.0.2.15";
-                    clientPort = "12122";
-                    sendMessage("emulator");
-                }
-                else
-                {
-                    clientHost = tcpClient.getLocalAddress().toString();
-                    clientPort = "" + tcpClient.getLocalPort();
-                    sendMessage("device");
-                }
+			if (tcpClient == null) {
+				return;
+			}
 
-                lcmConnectionString = "udp:/" + clientHost + ":" + clientPort;
-                lcm = new LCM(lcmConnectionString);
-                for (String robotName : robotNames)
-                {
-                    subscribeRobotLCM(robotName);
-                }
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-            sendMessage("map");
-            sendMessage("classes");
-            sendMessage("robots");
-            sendMessage("objects");
-            activity.showAlert("Connected to server at " + server + ":" + port,
-                    Toast.LENGTH_LONG);
-            activity.getMapView().draw();
-        }
-    }
-    
-    private void subscribeRobotLCM(String robot) {
-        lcm.subscribe("POSE_" + robot, this);
-        lcm.subscribe("SIM_LIDAR_FRONT_" + robot, this);
-        lcm.subscribe("LIDAR_LOWRES_" + robot, this);
-        lcm.subscribe("WAYPOINTS_" + robot, this);
-    }
+			robotNames = new ArrayList<String>();
+			tcpListener.start();
+			try {
+				// This needs to be the client address.
+				String clientHost;
+				Log.d("BLAH", "deviceName is " + deviceName);
+				String clientPort = null;
+				if (deviceName.equals("generic")) {
+					clientHost = "/10.0.2.15";
+					clientPort = "12122";
+					sendMessage("emulator");
+				} else {
+					clientHost = tcpClient.getLocalAddress().toString();
+					clientPort = "12122"; // clientPort = "" +
+											// tcpClient.getLocalPort();
+					sendMessage("device");
+				}
 
-    public void sendMessage(String message)
-    {
-        tcpWriter.println(message);
-        tcpWriter.flush();
-    }
+				lcmConnectionString = "udp:/" + clientHost + ":" + clientPort;
+				lcm = new LCM(lcmConnectionString);
+				for (String robotName : robotNames) {
+					subscribeRobotLCM(robotName);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			sendMessage("map");
+			sendMessage("classes");
+			sendMessage("robots");
+			sendMessage("objects");
+			activity.showAlert("Connected to server at " + server + ":" + port,
+					Toast.LENGTH_LONG);
+			activity.getMapView().draw();
+		}
+	}
 
-    // Handles a TCP message that was sent from the server.
-    private void handleMessage(String message)
-    {
-        int space = message.indexOf(' ');
-        if (space == -1)
-        {
-            return;
-        }
-        String command = message.substring(0, space);
-        if (command.equals("map"))
-        {
-            activity.getMapView().deserializeMap(message.substring(space));
-        }
-        else if (command.equals("classes"))
-        {
-            SimObject.init(message.substring(space) + " splinter { }");
-        }
-        else if (command.equals("robots"))
-        {
-            for (String robotString : message.substring(space).split(";"))
-            {
-                if (robotString.length() == 0)
-                {
-                    continue;
-                }
-                Scanner s = new Scanner(robotString).useDelimiter(" ");
-                String name = s.next();
-                float x = s.nextFloat();
-                float y = -s.nextFloat();
-                float theta = s.nextFloat();
-                SimObject robot = new SimObject("splinter", new PointF(x, y));
-                robot.setTheta(theta);
-                robot.setAttribute("name", name);
-                activity.getMapView().addRobot(robot);
-                robotNames.add(name);
-                if (lcm != null)
-                {
-                    subscribeRobotLCM(name);
-                }
-            }
-        }
-        else if (command.equals("objects"))
-        {
-            for (String objString : message.substring(space).split(";"))
-            {
-                if (objString.length() == 0)
-                {
-                    continue;
-                }
-                Scanner s = new Scanner(objString).useDelimiter(" ");
-                String name = s.next();
-                float x = s.nextFloat();
-                float y = -s.nextFloat();
-                float theta = s.nextFloat();
-                SimObject sim = new SimObject(name, new PointF(x, y));
-                sim.setTheta(theta);
-                activity.getMapView().addObject(sim);
-            }
-        }
-        else if (command.equals("text"))
-        {
-            activity.setPropertiesText(message.substring(space));
-        }
-        MapView mv = activity.getMapView();
-        if (mv != null)
-        {
-            mv.draw();
-        }
-    }
+	private void subscribeRobotLCM(String robot) {
+		lcm.subscribe("POSE_" + robot, this);
+		lcm.subscribe("SIM_LIDAR_FRONT_" + robot, this);
+		lcm.subscribe("LIDAR_LOWRES_" + robot, this);
+		lcm.subscribe("WAYPOINTS_" + robot, this);
+	}
 
-    // Handles a UDP message that was sent from the server.
-    @Override
-    public void messageReceived(LCM lcm, String channel, LCMDataInputStream ins)
-    {
-        if (channel.startsWith("POSE_seek"))
-        {
-            try
-            {
-                pose_t p = new pose_t(ins);
-                PointF robotLocation = new PointF((float) p.pos[0],
-                        -(float) p.pos[1]);
+	public void sendMessage(String message) {
+		tcpWriter.println(message);
+		tcpWriter.flush();
+	}
 
-                float theta = (float) (LinAlg.quatToRollPitchYaw(p.orientation)[2] * 180.0f / Math.PI);
-                SimObject robot = activity.getMapView().getRobot(
-                        channel.split("_")[1]);
-                if (robot != null)
-                {
-                    robot.setLocation(robotLocation);
-                    robot.setTheta(theta);
-                }
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-        }
-        else if (channel.startsWith("SIM_LIDAR_FRONT_seek"))
-        {
-            try
-            {
-                laser_t l = new laser_t(ins);
-                SimObject robot = activity.getMapView().getRobot(
-                        channel.split("_")[3]);
-                robot.setLidar(l);
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-        }
-        else if (channel.startsWith("LIDAR_LOWRES_seek"))
-        {
-            try
-            {
-                laser_t l = new laser_t(ins);
-                SimObject robot = activity.getMapView().getRobot(
-                        channel.split("_")[2]);
-                robot.setLowresLidar(l);
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-        }
-        else if (channel.startsWith("WAYPOINTS_seek"))
-        {
-            try
-            {
-                waypoint_list_t w = new waypoint_list_t(ins);
-                SimObject robot = activity.getMapView().getRobot(
-                        channel.split("_")[1]);
-                robot.setWaypoints(w);
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-        }
-        else
-        {
-            System.out.println("unknown channel: " + channel);
-        }
-        MapView mv = activity.getMapView();
-        if (mv != null)
-        {
-            mv.draw();
-        }
-    }
+	// Handles a TCP message that was sent from the server.
+	private void handleMessage(String message) {
+		int space = message.indexOf(' ');
+		if (space == -1) {
+			return;
+		}
+		String command = message.substring(0, space);
+		if (command.equals("map")) {
+			activity.getMapView().deserializeMap(message.substring(space));
+		} else if (command.equals("classes")) {
+			SimObject.init(message.substring(space) + " splinter { }");
+		} else if (command.equals("robots")) {
+			for (String robotString : message.substring(space).split(";")) {
+				if (robotString.length() == 0) {
+					continue;
+				}
+				Scanner s = new Scanner(robotString).useDelimiter(" ");
+				String name = s.next();
+				float x = s.nextFloat();
+				float y = -s.nextFloat();
+				float theta = s.nextFloat();
+				SimObject robot = new SimObject("splinter", new PointF(x, y));
+				robot.setTheta(theta);
+				robot.setAttribute("name", name);
+				activity.getMapView().addRobot(robot);
+				robotNames.add(name);
+				if (lcm != null) {
+					subscribeRobotLCM(name);
+				}
+			}
+		} else if (command.equals("objects")) {
+			for (String objString : message.substring(space).split(";")) {
+				if (objString.length() == 0) {
+					continue;
+				}
+				Scanner s = new Scanner(objString).useDelimiter(" ");
+				String name = s.next();
+				float x = s.nextFloat();
+				float y = -s.nextFloat();
+				float theta = s.nextFloat();
+				SimObject sim = new SimObject(name, new PointF(x, y));
+				sim.setTheta(theta);
+				activity.getMapView().addObject(sim);
+			}
+		} else if (command.equals("text")) {
+			activity.setPropertiesText(message.substring(space));
+		}
+		IMapView mv = activity.getMapView();
+		if (mv != null) {
+			mv.draw();
+		}
+	}
 
-    public void pause()
-    {
-        paused = true;
-        if (lcm != null)
-        {
-            lcm.close();
-            lcm = null;
-        }
-    }
+	// Handles a UDP message that was sent from the server.
+	@Override
+	public void messageReceived(LCM lcm, String channel, LCMDataInputStream ins) {
+		if (channel.startsWith("POSE_seek")) {
+			try {
+				pose_t p = new pose_t(ins);
+				PointF robotLocation = new PointF((float) p.pos[0],
+						-(float) p.pos[1]);
 
-    public void unPause()
-    {
-        paused = false;
-        if (lcmConnectionString == null)
-        {
-            return;
-        }
-        try
-        {
-            lcm = new LCM(lcmConnectionString);
-            for (String robotName : robotNames)
-            {
-                subscribeRobotLCM(robotName);
-            }
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-    }
+				float theta = (float) (LinAlg.quatToRollPitchYaw(p.orientation)[2] * 180.0f / Math.PI);
+				SimObject robot = activity.getMapView().getRobot(
+						channel.split("_")[1]);
+				if (robot != null) {
+					robot.setLocation(robotLocation);
+					robot.setTheta(theta);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else if (channel.startsWith("SIM_LIDAR_FRONT_seek")) {
+			try {
+				laser_t l = new laser_t(ins);
+				SimObject robot = activity.getMapView().getRobot(
+						channel.split("_")[3]);
+				robot.setLidar(l);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else if (channel.startsWith("LIDAR_LOWRES_seek")) {
+			try {
+				laser_t l = new laser_t(ins);
+				SimObject robot = activity.getMapView().getRobot(
+						channel.split("_")[2]);
+				robot.setLowresLidar(l);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else if (channel.startsWith("WAYPOINTS_seek")) {
+			try {
+				waypoint_list_t w = new waypoint_list_t(ins);
+				SimObject robot = activity.getMapView().getRobot(
+						channel.split("_")[1]);
+				robot.setWaypoints(w);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else {
+			System.out.println("unknown channel: " + channel);
+		}
+		IMapView mv = activity.getMapView();
+		if (mv != null) {
+			mv.draw();
+		}
+	}
 
-    public Thread tcpListener = new Thread()
-    {
-        public void run()
-        {
-            while (true)
-            {
-                try
-                {
-                    synchronized (RobotSession.this.lock)
-                    {
-                        String message = tcpScanner.next();
-                        RobotSession.this.handleMessage(message);
-                    }
-                }
-                catch (NoSuchElementException e)
-                {
-                    e.printStackTrace();
-                }
-            }
-        };
-    };
+	public void pause() {
+		paused = true;
+		if (lcm != null) {
+			lcm.close();
+			lcm = null;
+		}
+	}
+
+	public void unPause() {
+		paused = false;
+		if (lcmConnectionString == null) {
+			return;
+		}
+		try {
+			if (lcm == null) {
+				lcm = new LCM(lcmConnectionString);
+				for (String robotName : robotNames) {
+					subscribeRobotLCM(robotName);
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public Thread tcpListener = new Thread() {
+		public void run() {
+			while (true) {
+				try {
+					synchronized (RobotSession.this.lock) {
+						String message = tcpScanner.next();
+						RobotSession.this.handleMessage(message);
+					}
+				} catch (NoSuchElementException e) {
+					e.printStackTrace();
+				}
+			}
+		};
+	};
 }

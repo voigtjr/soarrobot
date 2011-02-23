@@ -1,8 +1,8 @@
 # This Makefile was tested with GNU Make
 
 # Use pkg-config to lookup the proper compiler and linker flags for LCM
-CFLAGS= -g -O0 -Wall -Werror `c_urg-config --cflags` -I/Users/voigtjr/sandbox/include
-LDFLAGS= `c_urg-config --libs` -L/Users/voigtjr/sandbox/lib -llcm
+CFLAGS= -g -O0 -Wall -Werror `c_urg-config --cflags` -I$(HOME)/sandbox/include
+LDFLAGS= `c_urg-config --libs` -L$(HOME)/sandbox/lib -llcm
 
 # list the LCM types here
 lcmtypes=urg_range_t

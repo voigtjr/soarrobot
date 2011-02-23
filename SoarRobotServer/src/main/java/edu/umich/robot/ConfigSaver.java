@@ -56,6 +56,13 @@ import edu.umich.robot.util.properties.PropertyManager;
  */
 public class ConfigSaver
 {
+	
+	public static void main(String[] args) {
+		for (String arg : args) {
+			System.out.println(arg);
+		}
+	}
+	
     private final Config config = new Config();
     
     /**

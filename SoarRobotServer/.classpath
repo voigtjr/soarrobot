@@ -15,5 +15,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/SOAR"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/libgrrc-java"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/SoarRobotLibrary"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/april"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -25,30 +25,30 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.microedition.khronos.egl.EGLConfig;
+import javax.microedition.khronos.opengles.GL10;
+
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Paint.Style;
 import android.graphics.PointF;
 import android.graphics.Rect;
+import android.opengl.GLSurfaceView;
+import android.opengl.GLSurfaceView.Renderer;
+import android.opengl.GLU;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
-import android.view.SurfaceView;
 import edu.umich.robot.metamap.AbridgedAreaDescription;
 import edu.umich.robot.metamap.AbridgedAreaDescriptions;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 
-public class MapView extends SurfaceView implements Callback, IMapView
+public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMapView
 {
 
     public static final String TAG = "MAP_VIEW";
     public static final int PX_PER_METER = 32;
     private static final float zoomRate = 1.5f;
-    private DrawThread dt;
     private SoarRobotTablet activity;
     private PointF camera;
     private float zoom;
@@ -57,22 +57,16 @@ public class MapView extends SurfaceView implements Callback, IMapView
     private HashMap<String, SimObject> robots;
     private ArrayList<Rect> areas;
     private String nextObjectClass;
-    
-    public MapView(Context context)
+        
+    public GLMapView(Context context)
     {
         super(context);
         init();
     }
 
-    public MapView(Context context, AttributeSet attrs)
+    public GLMapView(Context context, AttributeSet attrs)
     {
         super(context, attrs);
-        init();
-    }
-
-    public MapView(Context context, AttributeSet attrs, int defStyle)
-    {
-        super(context, attrs, defStyle);
         init();
     }
 
@@ -80,14 +74,16 @@ public class MapView extends SurfaceView implements Callback, IMapView
     {
         SurfaceHolder sh = getHolder();
         sh.addCallback(this);
-        dt = new DrawThread(sh);
         camera = new PointF(0.0f, 0.0f);
-        zoom = 1.0f;
+        zoom = -35.0f;
         lastTouch = new PointF(-1.0f, -1.0f);
         objects = new HashMap<Integer, SimObject>();
         robots = new HashMap<String, SimObject>();
         areas = new ArrayList<Rect>();
         nextObjectClass = null;
+        
+        setRenderer(this);
+        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
     }
 
     public void setActivity(SoarRobotTablet activity)
@@ -130,47 +126,9 @@ public class MapView extends SurfaceView implements Callback, IMapView
         return robots.get(name);
     }
 
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width,
-            int height)
-    {
-
-    }
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder)
-    {
-        dt.setRunning(true);
-        dt.start();
-    }
-
     public void draw()
     {
-        if (dt != null)
-        {
-            synchronized (dt)
-            {
-                dt.notify();
-            }
-        }
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder)
-    {
-        dt.setRunning(false);
-        boolean retry = true;
-        while (retry)
-        {
-            try
-            {
-                dt.join();
-                retry = false;
-            }
-            catch (InterruptedException e)
-            {
-            }
-        }
+        requestRender();
     }
 
     @Override
@@ -184,7 +142,7 @@ public class MapView extends SurfaceView implements Callback, IMapView
             {
                 synchronized (camera)
                 {
-                    camera.x -= (touch.x - lastTouch.x) / PX_PER_METER;
+                    camera.x += (touch.x - lastTouch.x) / PX_PER_METER;
                     camera.y -= (touch.y - lastTouch.y) / PX_PER_METER;
                 }
                 draw();
@@ -256,88 +214,50 @@ public class MapView extends SurfaceView implements Callback, IMapView
         return true;
     }
 
-    private class DrawThread extends Thread
+    public void deserializeMap(String map)
     {
-
-        private SurfaceHolder sh;
-
-        boolean running;
-
-        private static final long FPS = 60;
-
-        private static final long DELAY = 1000 / FPS;
-
-        public DrawThread(SurfaceHolder sh)
+        String[] areaList = map.split(";");
+        for (String area : areaList)
         {
-            this.sh = sh;
-        }
-
-        void setRunning(boolean running)
-        {
-            this.running = running;
-        }
-
-        @Override
-        public void run()
-        {
-            try
+            if (area.trim().length() == 0)
             {
-                while (running)
-                {
-                    Canvas c = null;
-                    synchronized (sh)
-                    {
-                        try
-                        {
-                            c = sh.lockCanvas(null);
-                            draw(c);
-                        }
-                        finally
-                        {
-                            if (c != null)
-                                sh.unlockCanvasAndPost(c);
-                        }
-                    }
-                    try
-                    {
-                        synchronized (this)
-                        {
-                            this.wait();
-                        }
-                    }
-                    catch (InterruptedException e)
-                    {
-                        e.printStackTrace();
-                    }
-                }
+                continue;
             }
-            catch (NullPointerException e)
-            {
-                e.printStackTrace();
-            }
+            System.out.println("Parsing area:\n" + area);
+            AbridgedAreaDescription aad = AbridgedAreaDescriptions
+                    .parseArea(area);
+            List<Double> xywh = aad.xywh;
+            int x = (int) (double) xywh.get(0);
+            int y = (int) (double) xywh.get(1);
+            synchronized (areas) {
+
+                areas.add(new Rect(x, y, x + (int) (double) xywh.get(2), y
+                        + (int) (double) xywh.get(3)));	
+			}
         }
+    }
 
-        private void draw(Canvas c)
-        {
+    public void zoomIn()
+    {
+        zoom += 1;
+        draw();
+    }
 
-            Paint p = new Paint();
+    public void zoomOut()
+    {
+        zoom -= 1;
+        draw();
+    }
 
-            p.setStyle(Style.FILL);
-            p.setColor(Color.BLACK);
-            c.drawRect(new Rect(0, 0, c.getWidth(), c.getHeight()), p);
+    public void setNextClass(CharSequence nextClass)
+    {
+        nextObjectClass = nextClass.toString();
+    }
 
-            float cx, cy;
-            synchronized (camera)
-            {
-                cx = camera.x;
-                cy = camera.y;
-            }
-
-            c.save();
-
-            c.scale(PX_PER_METER, PX_PER_METER);
-            c.translate(-cx, -cy);
-            c.scale(zoom, zoom);
+	@Override
+	public void onDrawFrame(GL10 gl) {
+		/*
+		 * Paint p = new Paint();
 
             p.setColor(Color.WHITE);
             for (Rect r : areas)
@@ -363,43 +283,44 @@ public class MapView extends SurfaceView implements Callback, IMapView
             }
 
             c.restore();
-        }
-    }
+            
+		 */
+        gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
+        gl.glMatrixMode(GL10.GL_MODELVIEW);
+		gl.glLoadIdentity();
+        GLU.gluLookAt(gl, camera.x, camera.y, zoom, camera.x, camera.y, 0.0f, 0f, 1.0f, 0.0f);
+        
+		synchronized (areas) {
+			for (Rect r : areas) {
+				GLUtil.drawCube(gl, r.left, r.top, 0.0f, r.width(), r.height(),
+						1.0f, 1.0f, 1.0f, 1.0f);
+			}
+		}
+	}
 
-    public void deserializeMap(String map)
-    {
-        String[] areaList = map.split(";");
-        for (String area : areaList)
-        {
-            if (area.trim().length() == 0)
-            {
-                continue;
-            }
-            System.out.println("Parsing area:\n" + area);
-            AbridgedAreaDescription aad = AbridgedAreaDescriptions
-                    .parseArea(area);
-            List<Double> xywh = aad.xywh;
-            int x = (int) (double) xywh.get(0);
-            int y = (int) (double) xywh.get(1);
-            areas.add(new Rect(x, y, x + (int) (double) xywh.get(2), y
-                    + (int) (double) xywh.get(3)));
-        }
-    }
+	@Override
+	public void onSurfaceChanged(GL10 gl, int width, int height) {
+        gl.glViewport(0, 0, width, height);
+        float ratio = (float) width / height;
+        gl.glMatrixMode(GL10.GL_PROJECTION);
+        gl.glLoadIdentity();
+        gl.glFrustumf(-ratio, ratio, 1, -1, 3, 100);
+	}
 
-    public void zoomIn()
-    {
-        zoom = zoom * zoomRate;
-        draw();
-    }
-
-    public void zoomOut()
-    {
-        zoom = zoom / zoomRate;
-        draw();
-    }
-
-    public void setNextClass(CharSequence nextClass)
-    {
-        nextObjectClass = nextClass.toString();
-    }
+	@Override
+	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+        gl.glEnable(GL10.GL_CULL_FACE);
+        gl.glEnable(GL10.GL_DEPTH_TEST);
+        // which is the front? the one which is drawn counter clockwise
+        gl.glFrontFace(GL10.GL_CW);
+        // which one should NOT be drawn
+        gl.glCullFace(GL10.GL_BACK);
+     
+        gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
+        gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
+        
+        gl.glClearColor(0f, 0f, 0f, 1.0f);
+        gl.glClearDepthf(1.0f);
+        gl.glDepthFunc(GL10.GL_LEQUAL);
+	}
 }

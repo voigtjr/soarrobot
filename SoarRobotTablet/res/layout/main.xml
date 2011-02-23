@@ -35,7 +35,15 @@
 				android:layout_toRightOf="@+id/zoomOut"
 				android:text="Add\nObject" />				
 			</RelativeLayout>
+			<!--
 		<edu.umich.soarrobot.SoarRobotTablet.layout.MapView
+			android:id="@+id/mapView"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:layout_above="@+id/propertiesLayout"
+			android:layout_below="@+id/buttonsLayout" />
+			-->
+		<edu.umich.soarrobot.SoarRobotTablet.layout.GLMapView
 			android:id="@+id/mapView"
 			android:layout_width="fill_parent"
 			android:layout_height="fill_parent"

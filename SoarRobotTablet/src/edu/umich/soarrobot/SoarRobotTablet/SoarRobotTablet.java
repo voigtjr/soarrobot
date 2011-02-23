@@ -21,9 +21,6 @@
  */
 package edu.umich.soarrobot.SoarRobotTablet;
 
-import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
-import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession;
-import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -35,11 +32,15 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import edu.umich.soarrobot.SoarRobotTablet.layout.IMapView;
+import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
+import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 
 public class SoarRobotTablet extends Activity
 {
 
-    private MapView mapView;
+    private IMapView mapView;
 
     private RobotSession robotSession;
 
@@ -123,14 +124,14 @@ public class SoarRobotTablet extends Activity
         {
             super.onCreate(savedInstanceState);
             setContentView(R.layout.main);
-            mapView = (MapView) findViewById(R.id.mapView);
+            mapView = (IMapView) findViewById(R.id.mapView);
             mapView.setActivity(this);
             propertiesTextView = (TextView) findViewById(R.id.propertiesTextView);
             commandsEditText = (EditText) findViewById(R.id.commandsEditText);
             setSelectedObject(null);
             try
             {
-                robotSession = new RobotSession(this, "141.212.109.194", 12122);
+                robotSession = new RobotSession(this, "141.212.109.139", 12122);
                 robotSession.start();
             }
             catch (Exception e)
@@ -168,7 +169,7 @@ public class SoarRobotTablet extends Activity
      * Accessor methods
      */
 
-    public MapView getMapView()
+    public IMapView getMapView()
     {
         return mapView;
     }
