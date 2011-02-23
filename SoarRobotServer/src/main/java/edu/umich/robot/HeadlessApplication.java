@@ -140,6 +140,7 @@ public class HeadlessApplication
 
                 controller.createSplinterRobot(s, pose, collisions);
                 controller.createSimSplinter(s);
+                controller.createSimLaser(s); 
                 if (prods == null)
                 {
                     logger.error("Splinter needs productions: " + s);

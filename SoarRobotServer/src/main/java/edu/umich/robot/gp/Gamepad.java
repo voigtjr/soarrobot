@@ -58,7 +58,7 @@ public class Gamepad
 
     private final GamepadJI gpji;
 
-    private GamepadInputScheme gpInputScheme = GamepadInputScheme.JOY_MOTOR;
+    private GamepadInputScheme gpInputScheme = GamepadInputScheme.JOY_VELOCITIES;
 
     private boolean slow = false;
 

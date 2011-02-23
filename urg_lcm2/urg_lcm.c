@@ -15,6 +15,8 @@
 urg_t urg;
 long * data;
 lcm_t * lcm;
+char * DEVICE = 0;
+char * CHANNEL = 0;
 
 static void urg_exit(urg_t *urg, const char *message)
 {
@@ -37,7 +39,7 @@ void ex_program(int sig){
 }
 
 int urg_connect_any(){
-        int ret = urg_connect(&urg, "/dev/tty.usbmodem1d21", 115200);
+        int ret = urg_connect(&urg, DEVICE, 115200);
 		if (ret >= 0) return ret;
 	return -1;
 
@@ -45,8 +47,6 @@ int urg_connect_any(){
 
 int main(int argc, char *argv[])
 {
- // const char device[] = "/dev/ttyACM0"; /* For Linux */
-
   char buffer[LinesMax][UrgLineWidth];
   char *lines[LinesMax];
   int data_max;
@@ -57,6 +57,16 @@ int main(int argc, char *argv[])
   int n;
   int i;
 
+  if (argc != 3) {
+    char* name = argv[0] ? argv[0] : "urg_lcm"; 
+    printf("Usage: %s DEVICE CHANNEL\n", name);
+    printf("\tExample (linux): %s /dev/ttyACM0 URG_RANGE_seek\n", name);
+    printf("\tExample (mac)  : %s /dev/tty.usbmodemfa141 URG_RANGE_charlie\n", name);
+    exit(1);
+  }
+  
+  DEVICE = argv[1];
+  CHANNEL = argv[2];
 
   /* Connection */  
   ret = urg_connect_any();
@@ -192,7 +202,7 @@ int main(int argc, char *argv[])
 		urg_data.radstep	= (2.0 * M_PI) / (float)parameter.area_total_;
 
 
-		urg_range_t_publish(lcm, "URG_RANGE", &urg_data);	
+		urg_range_t_publish(lcm, CHANNEL, &urg_data);	
 
 		printf("\r t = %llu [usec]",urg_data.utime);
     }

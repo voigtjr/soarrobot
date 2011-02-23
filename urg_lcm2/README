@@ -1,0 +1,14 @@
+Install this first:
+
+http://www.hokuyo-aut.jp/02sensor/07scanner/download/urg_programs_en/
+
+When building that, it'll error out, remove the extern snprintf line.
+
+Then run make here (lcm also needs to be installed first, TODO: document how)
+
+Your device will probably show up in a different spot than what is hard-coded
+in the file. Find out where yours is:
+
+ls /dev/tty.<TAB> where <TAB> is a tab. Open urg_lcm.c and find /dev/tty and
+replace that entry with what you find.
+

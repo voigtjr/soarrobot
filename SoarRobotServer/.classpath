@@ -2,6 +2,7 @@
 <classpath>
 	<classpathentry kind="src" path="src/main/java"/>
 	<classpathentry kind="src" path="src/main/resources"/>
+	<classpathentry kind="src" path="src/test/java"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/soar-smljava"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/ROBOT"/>
@@ -15,6 +16,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/SOAR"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/libgrrc-java"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/SoarRobotLibrary"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/april"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

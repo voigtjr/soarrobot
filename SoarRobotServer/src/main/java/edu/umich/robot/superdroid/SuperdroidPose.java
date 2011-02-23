@@ -26,7 +26,8 @@ public class SuperdroidPose implements PoseProvider
     SuperdroidPose(String id)
     {
         String channel = POSE_CHANNEL_BASE + id;
-        LCM.getSingleton().subscribe(channel, new LCMSubscriber()
+        LCM lcm = LCM.getSingleton();
+        lcm.subscribe(channel, new LCMSubscriber()
         {
             public void messageReceived(LCM lcm, String channel,
                     LCMDataInputStream ins)
@@ -42,6 +43,7 @@ public class SuperdroidPose implements PoseProvider
                 }
             }
         });
+
     }
     
     public pose_t getPose()

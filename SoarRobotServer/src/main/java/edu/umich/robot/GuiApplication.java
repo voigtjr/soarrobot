@@ -448,7 +448,12 @@ public class GuiApplication
             boolean collisions = config.getBoolean(s + ".wallCollisions", true);
             
             controller.createSplinterRobot(s, pose, collisions);
-            controller.createSimSplinter(s);
+            boolean simulated = config.getBoolean(s + ".simulated", true);
+            if (simulated)
+                controller.createSimSplinter(s);
+            else
+                controller.createRealSplinter(s);
+            controller.createSimLaser(s);
             if (prods != null)
             {
                 controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
@@ -471,9 +476,35 @@ public class GuiApplication
             boolean collisions = config.getBoolean(s + ".wallCollisions", true);
             
             controller.createSuperdroidRobot(s, pose, collisions);
-            controller.createSimSuperdroid(s);
+            boolean simulated = config.getBoolean(s + ".simulated", true);
+            if (simulated)
+                controller.createSimSuperdroid(s);
+            else
+            {
+                try
+                {
+                    controller.createRealSuperdroid(s, "192.168.1.165", 3192);
+                }
+                catch (UnknownHostException e1)
+                {
+                    e1.printStackTrace();
+                }
+                catch (SocketException e1)
+                {
+                    e1.printStackTrace();
+                }
+            }
+            controller.createSimLaser(s);
             if (prods != null)
             {
+                // wait a sec
+                try
+                {
+                    Thread.sleep(1000);
+                }
+                catch (InterruptedException ex)
+                {
+                }
                 controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
                 PREFERENCES.put("lastProductions", prods);
             }
@@ -678,6 +709,7 @@ public class GuiApplication
 
                 controller.createSplinterRobot(robotName, pose, true);
                 controller.createSimSplinter(robotName);
+                controller.createSimLaser(robotName);
                 dialog.dispose();
             }
         };
@@ -862,13 +894,13 @@ public class GuiApplication
 
         config.setString("viewer.areas.class", "april.viewer.ViewAreaDescriptions");
 
-//        config.setString("viewer.skybox.class", "april.viewer.ViewSkybox"); // need to add skybox to viewobjects list
-//        config.setString("viewer.skybox.north_image", "../common/north.jpg");
-//        config.setString("viewer.skybox.south_image", "../common/south.jpg");
-//        config.setString("viewer.skybox.east_image", "../common/east.jpg");
-//        config.setString("viewer.skybox.west_image", "../common/west.jpg");
-//        config.setString("viewer.skybox.up_image", "../common/top.jpg");
-//        config.setString("viewer.skybox.down_image", "../common/floor.jpg");
+        config.setString("viewer.skybox.class", "april.viewer.ViewSkybox"); // need to add skybox to viewobjects list
+        config.setString("viewer.skybox.north_image", "../common/north.jpg");
+        config.setString("viewer.skybox.south_image", "../common/south.jpg");
+        config.setString("viewer.skybox.east_image", "../common/east.jpg");
+        config.setString("viewer.skybox.west_image", "../common/west.jpg");
+        config.setString("viewer.skybox.up_image", "../common/top.jpg");
+        config.setString("viewer.skybox.down_image", "../common/floor.jpg");
     }
     
     /**
@@ -933,13 +965,15 @@ public class GuiApplication
         config.setString("class", "april.viewer.ViewLaser");
         config.setString("pose", name);
         config.setStrings("channels", new String[] { "SIM_LIDAR_FRONT",
-                "SICK_LIDAR_FRONT", "LIDAR_LOWRES", });
+                "SICK_LIDAR_FRONT", "LIDAR_LOWRES", "URG_RANGE" });
         addPositionInfo(config, "SIM_LIDAR_FRONT_" + name + ".", new double[] {
                 0, 0, 0.4 }, new double[] { 0, 0, 0 }, new int[] { 1, 0, 0 });
         addPositionInfo(config, "SICK_LIDAR_FRONT_" + name + ".", new double[] {
                 0, 0, 0.4 }, new double[] { 0, 0, 0 }, new int[] { 0, 1, 0 });
         addPositionInfo(config, "LIDAR_LOWRES_" + name + ".", new double[] { 0,
                 0, 0.4 }, new double[] { 0, 0, 0 }, new int[] { 0, 0, 1 });
+        addPositionInfo(config, "URG_RANGE_" + name + ".", new double[] { 0,
+                0, 0.4 }, new double[] { 0, 0, 0 }, new int[] { 0, 1, 0 });
 
         Configs.toLog(logger, config);
         viewer.addObject(name + "lidars", config);
@@ -1041,7 +1075,7 @@ public class GuiApplication
         final JDialog dialog = new JDialog(frame, "Connect to Superdroid", true);
         dialog.setLayout(layout);
         final JTextField namefield = new JTextField("charlie");
-        final JTextField hostfield = new JTextField("192.168.1.115");
+        final JTextField hostfield = new JTextField("192.168.1.165");
         final JTextField portfield = new JTextField(Integer.toString(defaultPort));
         final JButton cancel = new JButton("Cancel");
         final JButton ok = new JButton("OK");

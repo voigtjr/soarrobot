@@ -128,7 +128,7 @@ public class Superdroid implements Robot
         this.name = name;
         this.radio = radio;
         this.metamap = metamap;
-        this.lidar = new Lidar(name);
+        this.lidar = new Lidar(name, false, 5, Math.PI);
         
         pose = new SuperdroidPose(name);
         initGains();
@@ -142,7 +142,7 @@ public class Superdroid implements Robot
         long period = properties.get(SuperdroidProperties.UPDATE_PERIOD);
         commandTask = schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
     }
-
+    
     public RobotType getType()
     {
         return RobotType.SUPERDROID;
@@ -310,8 +310,10 @@ public class Superdroid implements Robot
                 DriveHeadingEvent d = (DriveHeadingEvent)event;
                 setHeading(d.getHeadingRadians());
             }
-            else 
-                throw new UnsupportedOperationException("Superdroid does not support " + event);
+            else
+            {
+                System.out.println("Superdroid does not support " + event);
+            }
         } 
         else if (event instanceof AbstractEffectorEvent)
         {
