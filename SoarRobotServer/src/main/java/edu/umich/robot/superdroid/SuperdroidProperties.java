@@ -59,7 +59,7 @@ public class SuperdroidProperties
     public static PropertyKey<double[]> HEADING_PID_GAINS = 
         key("heading-pid-gains", double[].class)
         //.defaultValue( new double[] { 0.6, 0, 0.125 })
-        .defaultValue( new double[] { 1.8, 0, 0.125 })
+        .defaultValue( new double[] { 0.35, 0, 0.2 })
         .build();
 
 }
