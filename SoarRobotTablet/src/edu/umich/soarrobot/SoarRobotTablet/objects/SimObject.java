@@ -32,6 +32,9 @@ package edu.umich.soarrobot.SoarRobotTablet.objects;
 import java.util.HashMap;
 import java.util.Scanner;
 
+import javax.microedition.khronos.opengles.GL;
+import javax.microedition.khronos.opengles.GL10;
+
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -41,6 +44,7 @@ import android.graphics.PointF;
 import april.lcmtypes.laser_t;
 import april.lcmtypes.waypoint_list_t;
 import april.lcmtypes.waypoint_t;
+import edu.umich.soarrobot.SoarRobotTablet.layout.GLUtil;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 
 public class SimObject {
@@ -146,24 +150,22 @@ public class SimObject {
 	}
 
     /**
-     * Draws the object to the canvas. Needs to be implemented.
+     * Draws the object to the canvas.
      * 
      * @param c
      */
-    public void draw(Canvas c, Paint p)
+    public void draw(GL10 gl)
     {
-        p.setColor(Color.RED);
-        drawLidar(lidar, lidarLocation, lidarTheta, c, p);
-        p.setColor(Color.BLUE);
-        drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, c, p);
-        p.setColor(Color.YELLOW);
-        drawWaypoints(c, p);
-        c.translate(location.x, location.y);
-        c.rotate(-theta);
-        p.setStrokeWidth(selected ? 3.0f / MapView.PX_PER_METER : 1.0f / MapView.PX_PER_METER);
-		p.setColor(color);
-		p.setStyle(Style.FILL);
+        drawLidar(lidar, lidarLocation, lidarTheta, gl, Color.RED);
+        drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, gl, Color.BLUE);
+        drawWaypoints(gl, Color.YELLOW);
+        //c.translate(location.x, location.y);
+        //c.rotate(-theta);
+		//p.setColor(color);
+		//p.setStyle(Style.FILL);
 		if (type.equals("splinter")) {
+			GLUtil.drawCube(gl, location.x - size.x / 2.0f, location.y - size.y / 2.0f, -1.0f, size.x, size.y, 1.0f, Color.RED);
+			/*
 			Path path = new Path();
 			path.lineTo(-1.0f, 0.4f);
 			path.lineTo(-1.0f, -0.4f);
@@ -172,11 +174,15 @@ public class SimObject {
 			p.setColor(selected ? Color.RED : Color.BLACK);
 			p.setStyle(Style.STROKE);
 			c.drawPath(path, p);
+			*/
 		} else {
+			GLUtil.drawCube(gl, location.x - size.x / 2.0f, location.y - size.y / 2.0f, -1.0f, size.x, size.y, 1.0f, color);
+/*
 			c.drawRect(-size.x / 2.0f, -size.y / 2.0f, size.x / 2.0f, size.y / 2.0f, p);
 			p.setColor(selected ? Color.RED : Color.BLACK);
 			p.setStyle(Style.STROKE);
             c.drawRect(-size.x / 2.0f, -size.y / 2.0f, size.x / 2.0f, size.y / 2.0f, p);
+            */
 		}
 	}
 	
@@ -205,36 +211,47 @@ public class SimObject {
           
     }
     
-    private static void drawLidar(laser_t lidar, PointF lidarLocation, float lidarTheta, Canvas c, Paint p) {
+    private static void drawLidar(laser_t lidar, PointF lidarLocation, float lidarTheta, GL10 gl, int color) {
         if (lidar == null) {
             return;
         }
-        c.save();
-        c.translate(lidarLocation.x, lidarLocation.y);
-        c.rotate(-lidarTheta);
-        p.setStyle(Style.FILL);
+        //c.save();
+        gl.glMatrixMode(GL10.GL_MODELVIEW);
+        gl.glPushMatrix();
+        //c.translate(lidarLocation.x, lidarLocation.y);
+        //c.rotate(-lidarTheta);
+        gl.glTranslatef(lidarLocation.x, lidarLocation.y, 0.0f);
+        gl.glRotatef(lidarTheta, 0.0f, 0.0f, 1.0f);
+        //p.setStyle(Style.FILL);
         for (int i = 0; i < lidar.nranges; ++i) {
             float range = lidar.ranges[i];
             float angle = lidar.rad0 + lidar.radstep * i;
-            float dx = (float)Math.cos(-angle) * range;
-            float dy = (float)Math.sin(-angle) * range;
+            float dx = (float)Math.cos(angle) * range;
+            float dy = (float)Math.sin(angle) * range;
+            GLUtil.drawCube(gl, -0.1f + dx, -0.1f + dy, -0.5f, 0.2f, 0.2f, 0.2f, color);
+            /*
             c.save();
             c.translate(dx, dy);
             c.drawCircle(0.0f, 0.0f, 0.1f, p);
             c.restore();
+            */
         }
-        c.restore();
+        gl.glPopMatrix();
+        //c.restore();
     }
     
-    private void drawWaypoints(Canvas c, Paint p) {
+    private void drawWaypoints(GL10 gl, int color) {
         if (waypoints == null) {
             return;
         }
         for (waypoint_t w : waypoints.waypoints) {
+        	GLUtil.drawCube(gl, (float) w.xLocal - 0.1f, (float) w.yLocal - 0.1f, -0.5f, 0.2f, 0.2f, 0.2f, color);
+        	/*
             c.save();
             c.translate((float)w.xLocal, (float)-w.yLocal);
             c.drawCircle(0.0f, 0.0f, 0.1f, p);
             c.restore();
+            */
         }
     }
 	

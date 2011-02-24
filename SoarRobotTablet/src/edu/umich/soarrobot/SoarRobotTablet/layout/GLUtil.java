@@ -3,10 +3,11 @@ package edu.umich.soarrobot.SoarRobotTablet.layout;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 
 import javax.microedition.khronos.opengles.GL10;
+
+import android.graphics.Color;
 
 public class GLUtil {
 	
@@ -63,10 +64,19 @@ public class GLUtil {
 		1, 5, 4,
 	};
 	
-	private static float[] cubeColors = new float[8 * 4];
+	private static short[] rectIndeces = {
+		0, 2, 1,
+		1, 2, 3,
+	};
 	
-	private static FloatBuffer cubeCoordsBuffer, cubeColorsBuffer;
-	private static ShortBuffer cubeIndecesBuffer;
+	private static float[] whiteColors = new float[8 * 4];
+	private static float[] redColors = new float[8 * 4];
+	private static float[] greenColors = new float[8 * 4];
+	private static float[] blueColors = new float[8 * 4];
+	private static float[] yellowColors = new float[8 * 4];
+	
+	private static FloatBuffer cubeCoordsBuffer, whiteColorsBuffer, redColorsBuffer, greenColorsBuffer, blueColorsBuffer, yellowColorsBuffer;
+	private static ShortBuffer cubeIndecesBuffer, rectIndecesBuffer;
 	
 	static {
         // float has 4 bytes, coordinate * 4 bytes
@@ -78,24 +88,69 @@ public class GLUtil {
         ByteBuffer ibb = ByteBuffer.allocateDirect(cubeIndeces.length * 2);
         ibb.order(ByteOrder.nativeOrder());
         cubeIndecesBuffer = ibb.asShortBuffer();
+        
+        // short has 2 bytes, indices * 2 bytes
+        ByteBuffer ribb = ByteBuffer.allocateDirect(rectIndeces.length * 2);
+        ribb.order(ByteOrder.nativeOrder());
+        rectIndecesBuffer = ribb.asShortBuffer();
      
         // float has 4 bytes, colors (RGBA) * 4 bytes
-        ByteBuffer cbb = ByteBuffer.allocateDirect(cubeColors.length * 4);
+        ByteBuffer cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
         cbb.order(ByteOrder.nativeOrder());
-        cubeColorsBuffer = cbb.asFloatBuffer();
+        whiteColorsBuffer = cbb.asFloatBuffer();
         
-        for (int i = 0; i < cubeColors.length; ++i)
-		{
-			cubeColors[i] = i / (float) cubeColors.length;
-		}
+        // float has 4 bytes, colors (RGBA) * 4 bytes
+        cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
+        cbb.order(ByteOrder.nativeOrder());
+        redColorsBuffer = cbb.asFloatBuffer();
+        
+        // float has 4 bytes, colors (RGBA) * 4 bytes
+        cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
+        cbb.order(ByteOrder.nativeOrder());
+        greenColorsBuffer = cbb.asFloatBuffer();
+        
+        // float has 4 bytes, colors (RGBA) * 4 bytes
+        cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
+        cbb.order(ByteOrder.nativeOrder());
+        blueColorsBuffer = cbb.asFloatBuffer();
+        
+        // float has 4 bytes, colors (RGBA) * 4 bytes
+        cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
+        cbb.order(ByteOrder.nativeOrder());
+        yellowColorsBuffer = cbb.asFloatBuffer();
+        
+		assignColors(whiteColors, 1.0f, 1.0f, 1.0f);
+		assignColors(redColors, 1.0f, 0.0f, 0.0f);
+		assignColors(greenColors, 0.0f, 1.0f, 0.0f);
+		assignColors(blueColors, 0.0f, 0.0f, 1.0f);
+		assignColors(yellowColors, 0.8f, 0.8f, 0.0f);
      
         cubeCoordsBuffer.put(cubeCoords);
         cubeIndecesBuffer.put(cubeIndeces);
-        cubeColorsBuffer.put(cubeColors);
+        whiteColorsBuffer.put(whiteColors);
+        redColorsBuffer.put(redColors);
+        greenColorsBuffer.put(greenColors);
+        blueColorsBuffer.put(blueColors);
+        yellowColorsBuffer.put(yellowColors);
+        rectIndecesBuffer.put(rectIndeces);
      
         cubeCoordsBuffer.position(0);
         cubeIndecesBuffer.position(0);
-        cubeColorsBuffer.position(0);
+        whiteColorsBuffer.position(0);
+        rectIndecesBuffer.position(0);
+        redColorsBuffer.position(0);
+        greenColorsBuffer.position(0);
+        blueColorsBuffer.position(0);
+        yellowColorsBuffer.position(0);
+	}
+	
+	private static void assignColors(float[] ar, float r, float g, float b) {
+		for (int i = 0; i < ar.length / 4; ++i) {
+			ar[i * 4] = r;
+			ar[i * 4 + 1] = g;
+			ar[i * 4 + 2] = b;
+			ar[i * 4 + 3] = 1.0f;
+		}
 	}
 	
 	/**
@@ -107,27 +162,51 @@ public class GLUtil {
 	 * @param g
 	 * @param b
 	 */
-	public static void drawCube(GL10 gl, float x, float y, float z, float w, float h, float d, float r, float g, float b)
+	public static void drawCube(GL10 gl, float x, float y, float z, float w, float h, float d, int color)
 	{
-		for (int i = 0; i < cubeColors.length / 4; ++i)
-		{
-			cubeColors[i * 4] = r;
-			cubeColors[i * 4 + 1] = g;
-			cubeColors[i * 4 + 2] = b;
-			cubeColors[i * 4 + 3] = 1.0f;
-		}
-
-		cubeColorsBuffer.put(cubeColors);
-        cubeColorsBuffer.position(0);
-        
         gl.glPushMatrix();
+        
+        gl.glTranslatef(x, y, z);
         gl.glScalef(w, h, d);
-        gl.glTranslatef(-x / w, -y / h, -z / d);
 
         gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
-        gl.glColorPointer(4, GL10.GL_FLOAT, 0, cubeColorsBuffer);
+        gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
         gl.glDrawElements(GL10.GL_TRIANGLES, 12 * 3, GL10.GL_UNSIGNED_SHORT, cubeIndecesBuffer);
         
         gl.glPopMatrix();
+	}
+	
+	/*************
+	 * Rectangle *
+	 *************/
+	
+	public static void drawRect(GL10 gl, float x, float y, float z, float w, float h, int color)
+	{        
+        gl.glPushMatrix();
+        
+        gl.glTranslatef(x, y, z);
+        gl.glScalef(w, h, 1.0f);
+
+        gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
+        gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+        gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, rectIndecesBuffer);
+        
+        gl.glPopMatrix();
+	}
+	
+	private static FloatBuffer getColor(int color) {
+		switch (color) {
+		case Color.WHITE:
+			return whiteColorsBuffer;
+		case Color.RED:
+			return redColorsBuffer;
+		case Color.GREEN:
+			return greenColorsBuffer;
+		case Color.BLUE:
+			return blueColorsBuffer;
+		case Color.YELLOW:
+			return yellowColorsBuffer;
+		}
+		return whiteColorsBuffer;
 	}
 }

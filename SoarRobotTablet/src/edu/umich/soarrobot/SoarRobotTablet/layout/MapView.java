@@ -351,14 +351,14 @@ public class MapView extends SurfaceView implements Callback, IMapView
             for (SimObject object : objects.values())
             {
                 c.save();
-                object.draw(c, p);
+                //object.draw(c, p);
                 c.restore();
             }
 
             for (SimObject robot : robots.values())
             {
                 c.save();
-                robot.draw(c, p);
+                //robot.draw(c, p);
                 c.restore();
             }
 

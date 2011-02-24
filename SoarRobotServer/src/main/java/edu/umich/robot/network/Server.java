@@ -23,6 +23,7 @@ import edu.umich.robot.metamap.SquareArea;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.metamap.VirtualObjectTemplate;
 import edu.umich.robot.splinter.Splinter;
+import edu.umich.robot.util.ImmutablePose;
 import edu.umich.robot.util.Pose;
 import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventListener;
@@ -207,8 +208,8 @@ public class Server implements RobotEventListener {
 	}
 	
 	public static AbridgedAreaDescription abridgeAreaDescription(SquareArea sa) {
-		int[] pr = sa.getPixelRect();
-		ImmutableList<Double> xywh = new ImmutableList.Builder<Double>().add((double)pr[0], (double)pr[1], (double)pr[2], (double)pr[3]).build();
+		ImmutablePose p = sa.getPose();
+		ImmutableList<Double> xywh = new ImmutableList.Builder<Double>().add(p.getX(), p.getY(), p.getVX(), -p.getVY()).build();
 		ImmutableList.Builder<AbridgedGateway> gatewaysBuilder = new ImmutableList.Builder<AbridgedGateway>();
 		for (Gateway g : sa.getGateways()) {
 			gatewaysBuilder.add(abridgeGateway(g));

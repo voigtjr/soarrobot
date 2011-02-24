@@ -115,9 +115,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 
 				lcmConnectionString = "udp:/" + clientHost + ":" + clientPort;
 				lcm = new LCM(lcmConnectionString);
-				for (String robotName : robotNames) {
-					subscribeRobotLCM(robotName);
-				}
+				subscribeAllRobots(lcm, robotNames);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -129,13 +127,6 @@ public class RobotSession extends Thread implements LCMSubscriber {
 					Toast.LENGTH_LONG);
 			activity.getMapView().draw();
 		}
-	}
-
-	private void subscribeRobotLCM(String robot) {
-		lcm.subscribe("POSE_" + robot, this);
-		lcm.subscribe("SIM_LIDAR_FRONT_" + robot, this);
-		lcm.subscribe("LIDAR_LOWRES_" + robot, this);
-		lcm.subscribe("WAYPOINTS_" + robot, this);
 	}
 
 	public void sendMessage(String message) {
@@ -162,16 +153,14 @@ public class RobotSession extends Thread implements LCMSubscriber {
 				Scanner s = new Scanner(robotString).useDelimiter(" ");
 				String name = s.next();
 				float x = s.nextFloat();
-				float y = -s.nextFloat();
+				float y = s.nextFloat();
 				float theta = s.nextFloat();
 				SimObject robot = new SimObject("splinter", new PointF(x, y));
 				robot.setTheta(theta);
 				robot.setAttribute("name", name);
 				activity.getMapView().addRobot(robot);
 				robotNames.add(name);
-				if (lcm != null) {
-					subscribeRobotLCM(name);
-				}
+				subscribeRobot(lcm, name);
 			}
 		} else if (command.equals("objects")) {
 			for (String objString : message.substring(space).split(";")) {
@@ -181,7 +170,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 				Scanner s = new Scanner(objString).useDelimiter(" ");
 				String name = s.next();
 				float x = s.nextFloat();
-				float y = -s.nextFloat();
+				float y = s.nextFloat();
 				float theta = s.nextFloat();
 				SimObject sim = new SimObject(name, new PointF(x, y));
 				sim.setTheta(theta);
@@ -195,6 +184,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 			mv.draw();
 		}
 	}
+	
 
 	// Handles a UDP message that was sent from the server.
 	@Override
@@ -203,7 +193,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 			try {
 				pose_t p = new pose_t(ins);
 				PointF robotLocation = new PointF((float) p.pos[0],
-						-(float) p.pos[1]);
+						(float) p.pos[1]);
 
 				float theta = (float) (LinAlg.quatToRollPitchYaw(p.orientation)[2] * 180.0f / Math.PI);
 				SimObject robot = activity.getMapView().getRobot(
@@ -267,9 +257,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 		try {
 			if (lcm == null) {
 				lcm = new LCM(lcmConnectionString);
-				for (String robotName : robotNames) {
-					subscribeRobotLCM(robotName);
-				}
+				subscribeAllRobots(lcm, robotNames);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -286,8 +274,27 @@ public class RobotSession extends Thread implements LCMSubscriber {
 					}
 				} catch (NoSuchElementException e) {
 					e.printStackTrace();
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
 			}
 		};
 	};
+	
+	private void subscribeAllRobots(LCM lcm, ArrayList<String> robots) {
+		for (String robot : robots) {
+			subscribeRobot(lcm, robot);
+		}
+	}
+	
+	private void subscribeRobot(LCM lcm, String robot) {
+		if (lcm == null)
+		{
+			return;
+		}
+		lcm.subscribe("POSE_" + robot, this);
+		lcm.subscribe("SIM_LIDAR_FRONT_" + robot, this);
+		lcm.subscribe("LIDAR_LOWRES_" + robot, this);
+		lcm.subscribe("WAYPOINTS_" + robot, this);
+	}
 }

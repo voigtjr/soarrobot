@@ -29,6 +29,7 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.opengl.GLSurfaceView;
@@ -75,7 +76,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         SurfaceHolder sh = getHolder();
         sh.addCallback(this);
         camera = new PointF(0.0f, 0.0f);
-        zoom = -35.0f;
+        zoom = -70.0f;
         lastTouch = new PointF(-1.0f, -1.0f);
         objects = new HashMap<Integer, SimObject>();
         robots = new HashMap<String, SimObject>();
@@ -83,7 +84,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         nextObjectClass = null;
         
         setRenderer(this);
-        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+        //setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
     }
 
     public void setActivity(SoarRobotTablet activity)
@@ -142,8 +143,8 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
             {
                 synchronized (camera)
                 {
-                    camera.x += (touch.x - lastTouch.x) / PX_PER_METER;
-                    camera.y -= (touch.y - lastTouch.y) / PX_PER_METER;
+                    camera.x -= (touch.x - lastTouch.x) / PX_PER_METER;
+                    camera.y += (touch.y - lastTouch.y) / PX_PER_METER;
                 }
                 draw();
             }
@@ -229,10 +230,25 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
             List<Double> xywh = aad.xywh;
             int x = (int) (double) xywh.get(0);
             int y = (int) (double) xywh.get(1);
+            int w = (int) (double) xywh.get(2);
+            int h = (int) (double) xywh.get(3);
+            int left, right, top, bottom;
+            if (w >= 0) {
+            	left = x;
+            	right = x + w;
+            } else {
+            	left = x + w;
+            	right = x;
+            }
+            if (h >= 0) {
+            	bottom = y;
+            	top = y + h;
+            } else {
+            	bottom = y;
+            	top = y - h;
+            }
             synchronized (areas) {
-
-                areas.add(new Rect(x, y, x + (int) (double) xywh.get(2), y
-                        + (int) (double) xywh.get(3)));	
+                areas.add(new Rect(left, top, right, bottom));	
 			}
         }
     }
@@ -292,8 +308,19 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         
 		synchronized (areas) {
 			for (Rect r : areas) {
-				GLUtil.drawCube(gl, r.left, r.top, 0.0f, r.width(), r.height(),
-						1.0f, 1.0f, 1.0f, 1.0f);
+				GLUtil.drawRect(gl, r.left, r.bottom, 0.0f, r.right - r.left, r.top - r.bottom, Color.WHITE);
+			}
+		}
+		
+		synchronized (objects) {
+			for (SimObject obj : objects.values()) {
+				obj.draw(gl);
+			}
+		}
+		
+		synchronized (robots) {
+			for (SimObject robot : robots.values()) {
+				robot.draw(gl);
 			}
 		}
 	}
@@ -304,7 +331,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         float ratio = (float) width / height;
         gl.glMatrixMode(GL10.GL_PROJECTION);
         gl.glLoadIdentity();
-        gl.glFrustumf(-ratio, ratio, 1, -1, 3, 100);
+        gl.glFrustumf(ratio, -ratio, -1, 1, 3, 100);
 	}
 
 	@Override
