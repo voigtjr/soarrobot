@@ -26,7 +26,8 @@ import edu.umich.robot.util.events.RobotEventListener;
 
 /**
  * <p>
- * Controller that does nothing, nameed "none".
+ * Robot controller that does nothing, nameed "none". I think this is here to be
+ * used instead of an actual null reference.
  * 
  * @author voigtjr@gmail.com
  */
