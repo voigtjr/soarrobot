@@ -175,13 +175,6 @@ public class RobotConfiguration
             return this;
         }
         
-        /**
-         * <p>
-         * PID gains in array format [p, i, d].
-         * 
-         * @param pid
-         * @return
-         */
         private static List<Double> newPidList(double[] pid)
         {
             return new ImmutableList.Builder<Double>()
@@ -321,71 +314,169 @@ public class RobotConfiguration
         this.objectManipulationDistanceMax = builder.objectManipulationDistanceMax;
     }
 
+    /**
+     * Fastest it can go forward.
+     * 
+     * @param limitVelocityLinearMax
+     * @return
+     */
     public double getLimitVelocityLinearMax()
     {
         return limitVelocityLinearMax;
     }
 
+    /**
+     * <p>
+     * Fastest it can go backwards.
+     * 
+     * @param limitVelocityLinearMin
+     * @return
+     */
     public double getLimitVelocityLinearMin()
     {
         return limitVelocityLinearMin;
     }
 
+    /**
+     * <p>
+     * Fastest it can rotate to the left.
+     * 
+     * @param limitVelocityAngularMax
+     * @return
+     */
     public double getLimitVelocityAngularMax()
     {
         return limitVelocityAngularMax;
     }
 
+    /**
+     * <p>
+     * Fastest it can rotate to the right.
+     * 
+     * @param limitVelocityAngularMin
+     * @return
+     */
     public double getLimitVelocityAngularMin()
     {
         return limitVelocityAngularMin;
     }
 
+    /**
+     * <p>
+     * Length of the robot.
+     * 
+     * @param geometryLength
+     * @return
+     */
     public double getGeometryLength()
     {
         return geometryLength;
     }
 
+    /**
+     * <p>
+     * Width of the robot.
+     * 
+     * @param geometryWidth
+     * @return
+     */
     public double getGeometryWidth()
     {
         return geometryWidth;
     }
 
+    /**
+     * <p>
+     * Height of the robot.
+     * 
+     * @param geometryHeight
+     * @return
+     */
     public double getGeometryHeight()
     {
         return geometryHeight;
     }
 
+    /**
+     * <p>
+     * PID gains for heading controller in array format [p, i, d].
+     * 
+     * @param pid
+     * @return
+     */
     public List<Double> getGainsHeading()
     {
         return gainsHeading;
     }
 
+    /**
+     * <p>
+     * PID gains for angular velocity controller in array format [p, i, d].
+     * 
+     * @param pid
+     * @return
+     */
     public List<Double> getGainsAngular()
     {
         return gainsAngular;
     }
 
+    /**
+     * <p>
+     * PID gains for linear velocity controller in array format [p, i, d].
+     * 
+     * @param pid
+     * @return
+     */
     public List<Double> getGainsLinear()
     {
         return gainsLinear;
     }
 
+    /**
+     * <p>
+     * Field of view for the virtual object sensor in radians.
+     * 
+     * @param objectFieldOfView
+     * @return
+     */
     public double getObjectFieldOfView()
     {
         return objectFieldOfView;
     }
 
+    /**
+     * <p>
+     * Distance between the centers of the wheels. This might not make sense
+     * for some robots.
+     * 
+     * @param geometryWheelbase
+     * @return
+     */
     public double getGeometryWheelbase()
     {
         return geometryWheelbase;
     }
 
+    /**
+     * <p>
+     * Minimum legal distance to manipulate objects, in meters.
+     * 
+     * @param objectManipulationDistanceMin
+     * @return
+     */
     public double getObjectManipulationDistanceMin()
     {
         return objectManipulationDistanceMin;
     }
 
+    /**
+     * <p>
+     * Maximum legal distance to manipulate objects, in meters.
+     * 
+     * @param objectManipulationDistanceMax
+     * @return
+     */
     public double getObjectManipulationDistanceMax()
     {
         return objectManipulationDistanceMax;

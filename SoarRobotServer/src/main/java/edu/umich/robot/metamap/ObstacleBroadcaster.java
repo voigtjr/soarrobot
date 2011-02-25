@@ -40,6 +40,21 @@ import edu.umich.robot.lcmtypes.map_objects_t;
 import edu.umich.robot.util.Pose;
 
 /**
+ * <p>
+ * This broadcasts obstacles that the simulator listens for and uses for
+ * collisions and virtual laser reports. We use this for virtual objects and for
+ * doors.
+ * 
+ * <p>
+ * It is assumed that the obstacles here will not move once placed because the
+ * current use case complies with this. To move an obstacle, remove and re-add
+ * it. Could be changed to support moving obstacles but it would have to update
+ * the list.
+ * 
+ * <p>
+ * For the sim_obstacles message, the colors of the objects are encoded in the
+ * circles field of the message. This is a hack.
+ * 
  * @author voigtjr@gmail.com
  */
 class ObstacleBroadcaster
@@ -48,8 +63,18 @@ class ObstacleBroadcaster
 
     private final ScheduledExecutorService schexec = MoreExecutors.getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1));
 
+    /**
+     * Maps virtual objects and doors to their relevant data for the obstacle
+     * broadcast.
+     */
     private final Map<Object, Obstacle> obstacles = Maps.newConcurrentMap();
     
+    /**
+     * The object id, type, rectangle and color.
+     * 
+     * @author voigtjr
+     *
+     */
     private static interface Obstacle
     {
         int getId();
@@ -62,6 +87,11 @@ class ObstacleBroadcaster
     {
         private final VirtualObject vo;
         
+        /**
+         * Virtual object represented as an obstacle.
+         * 
+         * @param vo
+         */
         ObstacleVO(VirtualObject vo)
         {
             this.vo = vo;
@@ -127,6 +157,12 @@ class ObstacleBroadcaster
         }
     }
     
+    /**
+     * Door represented as an obstacle.
+     * 
+     * @author voigtjr
+     *
+     */
     private static class ObstacleD implements Obstacle
     {
         private int id;
@@ -165,9 +201,24 @@ class ObstacleBroadcaster
         }
     }
     
+    /**
+     * The obstacles broadcasted, cached.
+     */
     private final sim_obstacles_t obs = new sim_obstacles_t();
+
+    /**
+     * Map objects broadcasted, cached.
+     */
     private final map_objects_t objs = new map_objects_t();
+    
+    /**
+     * Set to true when those lists need to be recached.
+     */
     private boolean changed = true;
+    
+    /**
+     * Protects the obstacle list from changes during updates.
+     */
     private final ReentrantLock obstacleLock = new ReentrantLock();
     
     ObstacleBroadcaster()
@@ -229,37 +280,66 @@ class ObstacleBroadcaster
             }
         }, 0, 250, TimeUnit.MILLISECONDS);    
     }
-    
+
+    /**
+     * Add a virtual object to the broadcaster list. Called when an object is
+     * placed on the map.
+     * 
+     * @param vo
+     */
     void addVirtualObject(VirtualObject vo)
     {
         obstacles.put(vo, new ObstacleVO(vo));
         changed = true;
     }
     
+    /**
+     * Remove a virtual object from the broadcaster list. Called when an object
+     * is removed from the map.
+     * 
+     * @param vo
+     */
     void removeVirtualObject(VirtualObject vo)
     {
         obstacles.remove(vo);
         changed = true;
     }
     
+    /**
+     * Add a door to the list, called when a door goes from OPEN to CLOSED
+     * 
+     * @param door
+     */
     void addDoor(Door door)
     {
         obstacles.put(door, new ObstacleD(door));
         changed = true;
     }
     
+    /**
+     * Remove a door from the list, called when a door goes from CLOSED to OPEN
+     * 
+     * @param door
+     */
     void removeDoor(Door door)
     {
         obstacles.remove(door);
         changed = true;
     }
     
+    /**
+     * Reset the obstacles, clearing everything. Metamap is responsible for
+     * resetting initial state.
+     */
     void reset()
     {
         obstacles.clear();
         changed = true;
     }
     
+    /**
+     * Shutdown broadcaster thread.
+     */
     public void shutdown()
     {
         schexec.shutdown();

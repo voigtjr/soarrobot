@@ -25,11 +25,41 @@ import sml.Identifier;
 import sml.StringElement;
 
 /**
+ * Commands have a number of status flags. Flags usually don't go away, for example, a flag can have both ACCEPTED
+ * and EXECUTING at the same time.
+ * 
  * @author voigtjr@gmail.com
  */
 enum CommandStatus
 {
-    ACCEPTED, EXECUTING, COMPLETE, ERROR, INTERRUPTED;
+    /**
+     * The command has been recognized and accepted in to the system. Syntax is
+     * ok, at least on a first pass. This is the first valid state a command
+     * will have.
+     */
+    ACCEPTED,
+
+    /**
+     * The command has been accepted and is currently executing. Only commands
+     * that take more than one cycle to complete can ever see this flag.
+     */
+    EXECUTING,
+
+    /**
+     * The command has finished processing with non-failure.
+     */
+    COMPLETE,
+    
+    /**
+     * The command has failed for whatever reason.
+     */
+    ERROR,
+
+    /**
+     * The command was interrupted before it was able to complete and the result
+     * may be partial success.
+     */
+    INTERRUPTED;
 
     private static final String STATUS = "status";
 

@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Input link manager.
+ * 
  * @author voigtjr@gmail.com
  */
 public class InputLink
@@ -34,6 +36,9 @@ public class InputLink
         return new InputLink(agent);
     }
 
+    /**
+     * Contains top-level input-link elements or "modules".
+     */
     private final List<InputLinkElement> elements = new ArrayList<InputLinkElement>();
 
     public InputLink(SoarAgent agent)
@@ -48,12 +53,18 @@ public class InputLink
         elements.add(new LidarIL(agent));
     }
 
+    /**
+     * Calls update on all the top level input-link "modules"
+     */
     public void update()
     {
         for (InputLinkElement element : elements)
             element.update();
     }
 
+    /**
+     * Calls destroy on everything.
+     */
     public void destroy()
     {
         for (InputLinkElement element : elements)

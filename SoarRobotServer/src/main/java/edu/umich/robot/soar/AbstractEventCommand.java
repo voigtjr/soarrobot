@@ -33,6 +33,15 @@ import edu.umich.robot.util.events.RobotEventListener;
 import edu.umich.robot.util.events.RobotEventManager;
 
 /**
+ * <p>
+ * Abstract base class for a command that fires an event in order to issue the
+ * command it represents. This also registers for events on the same manager in
+ * case that other fired events could stop or change the behavior of this
+ * command.
+ * 
+ * <p>
+ * Override the onEvent to check for other events that fire after this one.
+ * 
  * @author voigtjr@gmail.com
  */
 abstract class AbstractEventCommand extends OLCommand
@@ -50,8 +59,20 @@ abstract class AbstractEventCommand extends OLCommand
         this.logger = logger;
     }
     
+    /**
+     * Override to receive other events that fire after this one, in case it is
+     * necessary to cancel or finish this command if another conflicting command fires.
+     * @param event
+     */
     abstract void onEvent(RobotEvent event);
     
+    /**
+     * Add an event to fire when executing the command. There may be more than
+     * one event to fire.
+     * 
+     * @param event
+     * @param klass
+     */
     protected void addEvent(AbstractControlEvent event, Class<? extends AbstractControlEvent> klass)
     {
         assert event != null;
@@ -70,6 +91,9 @@ abstract class AbstractEventCommand extends OLCommand
         fireAndRegisterEvents();
     }
     
+    /**
+     * Fires events and registers for the same events.
+     */
     protected void fireAndRegisterEvents()
     {
         for (EventInfo e : eventInstances)
@@ -81,6 +105,9 @@ abstract class AbstractEventCommand extends OLCommand
             events.addListener(e.getEventClass(), listener);
     }
     
+    /**
+     * Listener for the robot events that fire after this one.
+     */
     RobotEventListener listener = new RobotEventListener() {
         public void onEvent(RobotEvent event)
         {
@@ -94,17 +121,22 @@ abstract class AbstractEventCommand extends OLCommand
         unregisterEvents();
     }
 
+    /**
+     * Removes listeners.
+     */
     protected void unregisterEvents()
     {
         for (EventInfo e : eventInstances)
             events.removeListener(e.getEventClass(), listener);
     }
 
+    /* (non-Javadoc)
+     * @see edu.umich.robot.soar.OLCommand#update()
+     */
     @Override
     void update() throws SoarCommandError
     {
-        // TODO Auto-generated method stub
-
+        // Overriding this is optional, depends on the nature of the event.
     }
 
     @Override

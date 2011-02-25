@@ -27,6 +27,8 @@ import org.apache.commons.logging.LogFactory;
 import sml.Identifier;
 
 /**
+ * Base class for output link commands. Different commands will likely extend other abstract
+ * base classes in this heirarchy. 
  * @author voigtjr@gmail.com
  */
 abstract class OLCommand
@@ -51,7 +53,14 @@ abstract class OLCommand
         name = id.GetAttribute();
         tt = id.GetTimeTag();
     }
-    
+
+    /**
+     * Some commands have a lot to print out before the closing brace, this
+     * separates the first part from the closing brace. Super-classes can
+     * override to string and call this before calling their own stuff.
+     * 
+     * @return
+     */
     protected String toStringPrefix()
     {
         StringBuilder sb = new StringBuilder("(");
@@ -67,16 +76,31 @@ abstract class OLCommand
         return toStringPrefix() + ")";
     }
 
+    /**
+     * Time tag of the main command wme.
+     * 
+     * @return
+     */
     public Long getTimeTag()
     {
         return tt;
     }
 
+    /**
+     * Soar identifier for the command wme.
+     * 
+     * @return
+     */
     protected Identifier getId()
     {
         return id;
     }
 
+    /**
+     * Status for the command.
+     * 
+     * @param status
+     */
     protected void setStatus(CommandStatus status)
     {
         assert status != null;
@@ -84,6 +108,13 @@ abstract class OLCommand
         this.status = status;
     }
 
+    /**
+     * Set status and a message to help with agent debugging. Usually used for
+     * errors.
+     * 
+     * @param status
+     * @param message
+     */
     protected void setStatus(CommandStatus status, String message)
     {
         setStatus(status);
@@ -109,24 +140,46 @@ abstract class OLCommand
     }
 
     abstract void update() throws SoarCommandError;
-    
+
+    /**
+     * Called when Soar stops, override to do something interesting at this
+     * point.
+     */
     void stopEvent()
     {
     }
-    
+
+    /**
+     * Called when Soar starts, override to do something interesting at this
+     * point. This is useful for re-firing drive commands after a stop so that
+     * the robot gets moving again.
+     */
     void startEvent()
     {
     }
 
+    /**
+     * Get rid of the command and any resources that need to be disposed.
+     */
     void dispose()
     {
     }
 
+    /**
+     * Returns the last set status.
+     * 
+     * @return
+     */
     public CommandStatus getStatus()
     {
         return status;
     }
 
+    /**
+     * Returns the status message if any.
+     * 
+     * @return
+     */
     public String getStatusMessage()
     {
         return statusMessage;

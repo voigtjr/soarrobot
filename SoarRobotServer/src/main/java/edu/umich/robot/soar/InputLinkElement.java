@@ -25,7 +25,7 @@ import sml.Identifier;
 
 /**
  * A collection of data managed under one top-level identifier on the input
- * link.
+ * link. Sort of a module of related input for the agent.
  * 
  * @author voigtjr@gmail.com
  */
@@ -38,11 +38,19 @@ abstract class InputLinkElement
         this.root = agent.getSoarAgent().CreateIdWME(parentWme, rootName);
     }
 
+    /**
+     * The top level identifier.
+     * 
+     * @return
+     */
     protected Identifier getRoot()
     {
         return root;
     }
 
+    /**
+     * Implemented by extenders to update the state.
+     */
     abstract void update();
 
     void destroy()

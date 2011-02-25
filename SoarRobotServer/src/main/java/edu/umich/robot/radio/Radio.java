@@ -22,6 +22,8 @@
 package edu.umich.robot.radio;
 
 /**
+ * Simulated radio communication.
+ * 
  * @author voigtjr@gmail.com
  */
 public interface Radio

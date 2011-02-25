@@ -31,6 +31,8 @@ import com.google.common.collect.ImmutableList;
 import edu.umich.robot.util.Misc;
 
 /**
+ * This represents a laser reading. Convertable to laser_t.
+ * 
  * @author voigtjr@gmail.com
  */
 public class Laser
@@ -76,16 +78,30 @@ public class Laser
         this.ranges = builder.ranges.build();
     }
     
+    /**
+     * Array of ranges, angle of range = rad0 + index * radstep
+     * 
+     * @return
+     */
     public List<Float> getRanges()
     {
         return ranges;
     }
 
+    /**
+     * Minimum (first) laser reading angle.
+     * @return
+     */
     public float getRad0()
     {
         return rad0;
     }
 
+    /**
+     * Angle between readings.
+     * 
+     * @return
+     */
     public float getRadStep()
     {
         return radstep;

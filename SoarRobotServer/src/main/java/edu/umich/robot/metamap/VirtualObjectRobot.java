@@ -31,6 +31,8 @@ import edu.umich.robot.Robot;
 import edu.umich.robot.util.Pose;
 
 /**
+ * Virtual object representing a robot in the simulation.
+ * 
  * @author voigtjr@gmail.com
  */
 public class VirtualObjectRobot implements VirtualObject

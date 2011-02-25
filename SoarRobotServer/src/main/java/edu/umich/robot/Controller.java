@@ -333,7 +333,7 @@ public class Controller
      */
     public void createSoarController(String rcName, String robotName, String productions, Config properties)
     {
-        RobotOutput output = robots.getOutput(robotName);
+        RobotOutput output = robots.get(robotName).getOutput();
         if (output == null)
             throw new IllegalArgumentException("No such robot: " + robotName);
 
@@ -439,7 +439,7 @@ public class Controller
             else
             {
                 robots.pushController(selectedRobot, gprc);
-                gp.setRobotOutput(robots.getOutput(selectedRobot));
+                gp.setRobotOutput(robots.get(selectedRobot).getOutput());
                 gamepadOverride = true;
             }
         }

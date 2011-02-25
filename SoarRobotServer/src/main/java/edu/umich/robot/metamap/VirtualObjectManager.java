@@ -41,6 +41,11 @@ import edu.umich.robot.Robot;
 import edu.umich.robot.util.Pose;
 
 /**
+ * Manages virtual objects. Maintains what objects exist both placed and not
+ * placed, manages object manipulation qualification, manages
+ * templates/prototypes, creates new objects, moves objects, keeps track of
+ * carried objects, updates state for broadcasting objects on LCM.
+ * 
  * @author voigtjr@gmail.com
  */
 class VirtualObjectManager
@@ -72,6 +77,9 @@ class VirtualObjectManager
         initialize();
     }
     
+    /**
+     * Places initial object instances on the map.
+     */
     private void initialize()
     {
         String[] placedString = null;
@@ -92,16 +100,32 @@ class VirtualObjectManager
         placeInstances(placedString);
     }
     
+    /**
+     * Add a new template from a configuration file.
+     * 
+     * @param name
+     * @param config
+     */
     private void addTemplate(String name, Config config)
     {
         templates.put(name, new VirtualObjectTemplate(name, config));
     }
     
+    /**
+     * Get all object class names, not instances.
+     * 
+     * @return
+     */
     List<String> getObjectNames()
     {
         return Lists.newArrayList(templates.keySet());
     }
     
+    /**
+     * Place instances as formatted in the configuration file.
+     * 
+     * @param placedString
+     */
     private void placeInstances(String[] placedString)
     {
         if (placedString == null)
@@ -123,6 +147,13 @@ class VirtualObjectManager
         }
     }
     
+    /**
+     * Place a new object by class name at pose.
+     * 
+     * @param name Object class name to place.
+     * @param pose Where to place the object.
+     * @return
+     */
     VirtualObject placeNew(String name, Pose pose)
     {
         VirtualObjectTemplate template = templates.get(name);
@@ -140,6 +171,11 @@ class VirtualObjectManager
         return vo;
     }
     
+    /**
+     * Set an object on the map.
+     * 
+     * @param voi
+     */
     private void addPlaced(VirtualObjectImpl voi)
     {
         logger.debug("Placed " + voi.toString());
@@ -149,6 +185,11 @@ class VirtualObjectManager
             obc.addVirtualObject(voi);
     }
     
+    /**
+     * Remove an object from the map.
+     * 
+     * @param voi
+     */
     private void removePlaced(VirtualObjectImpl voi)
     {
         placed.remove(voi);
@@ -156,11 +197,25 @@ class VirtualObjectManager
             obc.removeVirtualObject(voi);
     }
     
+    /**
+     * Get all objects in an area.
+     * 
+     * @param area
+     * @return
+     */
     List<VirtualObjectImpl> getObjects(int area)
     {
         return Collections.unmodifiableList(placed);
     }
     
+    /**
+     * Check to see if an object is in manipulation range of a robot. I don't
+     * think this uses the robot's manip distance set in its config, it should.
+     * 
+     * @param robot
+     * @param object
+     * @return
+     */
     private boolean isInRange(Robot robot, VirtualObject object)
     {
         pose_t rp = robot.getOutput().getPose().asLcmType();
@@ -175,6 +230,14 @@ class VirtualObjectManager
         return (squaredDistance - LinAlg.sq(diameter / 2)) <= SQUARED_MANIPULATION_DISTANCE;
     }
 
+    /**
+     * Pick up an object by id, give it to the robot. Fails if the robot is
+     * carrying something already.
+     * 
+     * @param robot
+     * @param id
+     * @return
+     */
     boolean pickupObject(Robot robot, int id)
     {
         if (!carried.containsKey(robot))
@@ -194,6 +257,12 @@ class VirtualObjectManager
         return false;   
     }
 
+    /**
+     * Drops a carried object at manip distance in front of the robot.
+     * 
+     * @param robot
+     * @return
+     */
     boolean dropObject(Robot robot)
     {
         // TODO placement restrictions
@@ -214,6 +283,13 @@ class VirtualObjectManager
         return false;
     }
 
+    /**
+     * Diffuses an object in front of a robot.
+     * 
+     * @param robot
+     * @param id
+     * @return
+     */
     boolean diffuseObject(Robot robot, int id)
     {
         VirtualObject vo = instances.get(id);
@@ -226,6 +302,14 @@ class VirtualObjectManager
         return false;
     }
 
+    /**
+     * Diffuses an object.
+     * 
+     * @param robot
+     * @param id
+     * @param color
+     * @return
+     */
     boolean diffuseObjectByWire(Robot robot, int id, String color)
     {
         VirtualObject vo = instances.get(id);
@@ -238,11 +322,20 @@ class VirtualObjectManager
         return false;
     }
 
+    /**
+     * Get the object carried by a robot.
+     * 
+     * @param robot
+     * @return
+     */
     VirtualObject getCarried(Robot robot)
     {
         return carried.get(robot);
     }
 
+    /**
+     * Reset all state.
+     */
     void reset()
     {
         obc.reset();
@@ -254,20 +347,41 @@ class VirtualObjectManager
         initialize();
     }
 
+    /**
+     * Returns the object responsible for broadcasting obstacles over lcm.
+     * 
+     * @return
+     */
     ObstacleBroadcaster getBroadcaster()
     {
         return obc;
     }
 
+    /**
+     * Get the template object by its name (class name, not java class though).
+     * 
+     * @param name
+     * @return
+     */
     public VirtualObject getTemplate(String name)
     {
         return templates.get(name);
     }
     
+    /**
+     * Get all templates/prototypes.
+     * 
+     * @return
+     */
     public Collection<VirtualObjectTemplate> getTemplates() {
     	return templates.values();
     }
 
+    /**
+     * Get all placed objects, objects on the map.
+     * 
+     * @return
+     */
     public List<VirtualObject> getPlacedObjects()
     {
         ImmutableList.Builder<VirtualObject> b = new ImmutableList.Builder<VirtualObject>();
@@ -275,6 +389,9 @@ class VirtualObjectManager
         return b.build();
     }
     
+    /**
+     * Shutdown broadcaster.
+     */
     public void shutdown()
     {
         obc.shutdown();

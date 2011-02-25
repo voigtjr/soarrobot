@@ -13,6 +13,13 @@ import april.util.TimeUtil;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+/**
+ * Bins values from the Hokuyo URG sensor. TODO: refactor with Sick, they share
+ * a lot of code.
+ * 
+ * @author voigtjr
+ * 
+ */
 public class UrgBinner
 {
     private final LCM lcm = LCM.getSingleton();
@@ -29,6 +36,11 @@ public class UrgBinner
     
     private final double fovstep;
     
+    /**
+     * @param channel The channel the URG is sending data to.
+     * @param bins How many bins to use.
+     * @param fov Field of view.
+     */
     public UrgBinner(String channel, int bins, double fov)
     {
         if (bins <= 0 || fov <= 0)
@@ -62,12 +74,23 @@ public class UrgBinner
             }
         }
     };
-    
+
+    /**
+     * Must call this to update state, otherwise values will not change. This is
+     * for performance reasons.
+     */
     public void update()
     {
         update(urg);
     }
     
+    /**
+     * Takes a reference and bins it. The reference in the constructor is a copy
+     * of the class member so it will not change as new ranges come in off of
+     * lcm. This is "poor man's" lcm synchronization.
+     * 
+     * @param urg
+     */
     void update(urg_range_t urg)
     {
         // shadowed this.urg on purpose
@@ -113,6 +136,11 @@ public class UrgBinner
             binned.set(bin, value);
     }
     
+    /**
+     * Returns a list of ranges, angle = rad0 + index * radstep
+     * 
+     * @return
+     */
     public List<Float> getBinned()
     {
         if (last == -1)

@@ -31,6 +31,14 @@ import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventManager;
 
 /**
+ * <p>
+ * This is an abstract base class for commands that are OK and intended to be
+ * interrupted. These are usually commands that would continue forever such as
+ * "drive forward".
+ * 
+ * <p>
+ * If there is any event, the command is finished with status complete.
+ * 
  * @author voigtjr@gmail.com
  */
 abstract class AbstractCompleteOnInterruptCommand extends AbstractEventCommand

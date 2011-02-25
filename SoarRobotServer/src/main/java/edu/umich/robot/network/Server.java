@@ -19,7 +19,7 @@ import edu.umich.robot.metamap.AbridgedAreaDescription;
 import edu.umich.robot.metamap.AbridgedGateway;
 import edu.umich.robot.metamap.AreaDescription;
 import edu.umich.robot.metamap.Gateway;
-import edu.umich.robot.metamap.SquareArea;
+import edu.umich.robot.metamap.RectArea;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.metamap.VirtualObjectTemplate;
 import edu.umich.robot.splinter.Splinter;
@@ -110,8 +110,8 @@ public class Server implements RobotEventListener {
 		if (command.equalsIgnoreCase("map")) {
 			StringBuilder sb = new StringBuilder();
 			for (AreaDescription ad : controller.getAreaList()) {
-				if (ad instanceof SquareArea) {
-					AbridgedAreaDescription aad = abridgeAreaDescription((SquareArea)ad);
+				if (ad instanceof RectArea) {
+					AbridgedAreaDescription aad = abridgeAreaDescription((RectArea)ad);
 					sb.append(aad.toString());
 					sb.append(" ; ");
 				}
@@ -207,7 +207,7 @@ public class Server implements RobotEventListener {
 	    return obj.getName() + " " + p.getX() + " " + p.getY() + " " + p.getYaw() + ";";
 	}
 	
-	public static AbridgedAreaDescription abridgeAreaDescription(SquareArea sa) {
+	public static AbridgedAreaDescription abridgeAreaDescription(RectArea sa) {
 		ImmutablePose p = sa.getPose();
 		ImmutableList<Double> xywh = new ImmutableList.Builder<Double>().add(p.getX(), p.getY(), p.getVX(), -p.getVY()).build();
 		ImmutableList.Builder<AbridgedGateway> gatewaysBuilder = new ImmutableList.Builder<AbridgedGateway>();

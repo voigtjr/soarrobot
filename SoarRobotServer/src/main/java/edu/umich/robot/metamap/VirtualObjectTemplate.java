@@ -34,6 +34,8 @@ import edu.umich.robot.util.ImmutablePose;
 import edu.umich.robot.util.Pose;
 
 /**
+ * Prototype object copied to make new object instances. Doesn't have an ID.
+ * 
  * @author voigtjr@gmail.com
  */
 public class VirtualObjectTemplate implements VirtualObject

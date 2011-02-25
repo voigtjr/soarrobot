@@ -32,6 +32,9 @@ import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventListener;
 
 /**
+ * <p>
+ * This is an abstract base class for effector commands. These commands listen for effector feedback
+ * to finish the command and to set the status code and message.
  * @author voigtjr@gmail.com
  */
 public abstract class AbstractEffectorCommand extends AbstractMultipleCycleCommand

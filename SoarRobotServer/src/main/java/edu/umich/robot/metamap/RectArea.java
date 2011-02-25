@@ -35,9 +35,11 @@ import edu.umich.robot.util.ImmutablePose;
 import edu.umich.robot.util.Pose;
 
 /**
+ * An area description based on rectangular areas.
+ * 
  * @author voigtjr@gmail.com
  */
-public class SquareArea implements AreaDescription
+public class RectArea implements AreaDescription
 {
     public static class Builder
     {
@@ -85,7 +87,7 @@ public class SquareArea implements AreaDescription
         }
         
         /**
-         * Breaks from builder pattern....
+         * Breaks from builder pattern because it doesn't return this
          * 
          * @param dir
          * @param id
@@ -113,9 +115,9 @@ public class SquareArea implements AreaDescription
             wallMap.put(dir, new WallImpl(pose, midpoint, dir, to));
         }
 
-        public SquareArea build()
+        public RectArea build()
         {
-            return new SquareArea(this);
+            return new RectArea(this);
         }
     }
 
@@ -133,7 +135,7 @@ public class SquareArea implements AreaDescription
 
     private final Map<String, String> properties;
     
-    private SquareArea(Builder builder)
+    private RectArea(Builder builder)
     {
         this.id = builder.id;
         this.xywhPixels = builder.xywhPixels;

@@ -45,6 +45,9 @@ import edu.umich.robot.soar.SoarDataCollector.DataCollectionMode;
 import edu.umich.robot.util.properties.PropertyManager;
 
 /**
+ * <p>
+ * Form for data collection settings.
+ * 
  * @author voigtjr@gmail.com
  */
 public class SoarDataView

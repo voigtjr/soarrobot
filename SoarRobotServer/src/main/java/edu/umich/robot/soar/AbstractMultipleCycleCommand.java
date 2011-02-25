@@ -28,6 +28,9 @@ import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventManager;
 
 /**
+ * <p>
+ * Abstract base class for a command that takes more than one cycle to complete.
+ * 
  * @author voigtjr@gmail.com
  */
 abstract class AbstractMultipleCycleCommand extends AbstractEventCommand
@@ -43,6 +46,12 @@ abstract class AbstractMultipleCycleCommand extends AbstractEventCommand
         setStatus(CommandStatus.INTERRUPTED);
     }
 
+    /**
+     * Check to see if the command is complete.
+     * 
+     * @return true if whatever state the command was trying for is achieved.
+     * @throws SoarCommandError
+     */
     abstract boolean isComplete() throws SoarCommandError;
 
     @Override
