@@ -285,6 +285,11 @@ public class SimObject {
 		this.location = location;
 	}
 	
+	public float getTheta()
+	{
+		return theta;
+	}
+	
 	public void setTheta(float theta) {
 		this.theta = theta;
 	}
