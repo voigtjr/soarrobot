@@ -32,6 +32,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import edu.umich.soarrobot.SoarRobotTablet.layout.GLMapView;
 import edu.umich.soarrobot.SoarRobotTablet.layout.IMapView;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession;
@@ -40,7 +41,7 @@ import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 public class SoarRobotTablet extends Activity
 {
 
-    private IMapView mapView;
+    private GLMapView mapView;
 
     private RobotSession robotSession;
 
@@ -51,6 +52,13 @@ public class SoarRobotTablet extends Activity
     private SimObject selectedObject;
 
     ProgressDialog pd;
+    
+    private OnClickListener toggleFollowListener = new OnClickListener() {
+		@Override
+		public void onClick(View v) {
+			mapView.toggleFollow();
+		}
+	};
 
     private OnClickListener buttonListener = new OnClickListener()
     {
@@ -124,7 +132,7 @@ public class SoarRobotTablet extends Activity
         {
             super.onCreate(savedInstanceState);
             setContentView(R.layout.main);
-            mapView = (IMapView) findViewById(R.id.mapView);
+            mapView = (GLMapView) findViewById(R.id.mapView);
             mapView.setActivity(this);
             propertiesTextView = (TextView) findViewById(R.id.propertiesTextView);
             commandsEditText = (EditText) findViewById(R.id.commandsEditText);
@@ -146,6 +154,7 @@ public class SoarRobotTablet extends Activity
             ((Button) findViewById(R.id.zoomIn)).setOnClickListener(zoomIn);
             ((Button) findViewById(R.id.zoomOut)).setOnClickListener(zoomOut);
             ((Button) findViewById(R.id.addObject)).setOnClickListener(addObject);
+            ((Button) findViewById(R.id.toggleFollow)).setOnClickListener(toggleFollowListener);
         }
         catch (RuntimeException e)
         {

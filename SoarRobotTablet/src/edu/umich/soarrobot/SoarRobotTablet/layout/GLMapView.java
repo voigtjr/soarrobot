@@ -49,7 +49,9 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 
     public static final String TAG = "MAP_VIEW";
     public static final int PX_PER_METER = 32;
-    private static final float zoomRate = 1.5f;
+    private static final float ZOOM_AMOUNT = 5.0f;
+    
+    
     private SoarRobotTablet activity;
     private PointF camera;
     private float zoom;
@@ -58,6 +60,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private HashMap<String, SimObject> robots;
     private ArrayList<Rect> areas;
     private String nextObjectClass;
+    private int follow;
         
     public GLMapView(Context context)
     {
@@ -76,12 +79,13 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         SurfaceHolder sh = getHolder();
         sh.addCallback(this);
         camera = new PointF(0.0f, 0.0f);
-        zoom = -70.0f;
+        zoom = -40.0f;
         lastTouch = new PointF(-1.0f, -1.0f);
         objects = new HashMap<Integer, SimObject>();
         robots = new HashMap<String, SimObject>();
         areas = new ArrayList<Rect>();
         nextObjectClass = null;
+        follow = robots.size();
         
         setRenderer(this);
         //setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
@@ -152,7 +156,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         }
         else if (action == MotionEvent.ACTION_DOWN)
         {
-            PointF touch = new PointF(event.getX(), event.getY());
+        	PointF touch = new PointF(event.getX(), event.getY());
             // Transform the touch into meter coordinates
             touch.x /= PX_PER_METER;
             touch.y /= PX_PER_METER;
@@ -255,13 +259,13 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 
     public void zoomIn()
     {
-        zoom += 1;
+        zoom += ZOOM_AMOUNT;
         draw();
     }
 
     public void zoomOut()
     {
-        zoom -= 1;
+        zoom -= ZOOM_AMOUNT;
         draw();
     }
 
@@ -272,39 +276,19 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 
 	@Override
 	public void onDrawFrame(GL10 gl) {
-		/*
-		 * Paint p = new Paint();
-
-            p.setColor(Color.WHITE);
-            for (Rect r : areas)
-            {
-                c.save();
-                c.translate(r.left, r.top);
-                c.drawRect(0, 0, r.width(), r.height(), p);
-                c.restore();
-            }
-
-            for (SimObject object : objects.values())
-            {
-                c.save();
-                object.draw(c, p);
-                c.restore();
-            }
-
-            for (SimObject robot : robots.values())
-            {
-                c.save();
-                robot.draw(c, p);
-                c.restore();
-            }
-
-            c.restore();
-            
-		 */
         gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
         gl.glMatrixMode(GL10.GL_MODELVIEW);
 		gl.glLoadIdentity();
-        GLU.gluLookAt(gl, camera.x, camera.y, zoom, camera.x, camera.y, 0.0f, 0f, 1.0f, 0.0f);
+		
+		SimObject following = getFollow();
+		if (following == null) {
+			GLU.gluLookAt(gl, camera.x, camera.y, zoom, camera.x, camera.y, 0.0f, 0.0f, 1.0f, 0.0f);
+		} else {
+			camera = following.getLocation();
+			float theta = (float) Math.toRadians(following.getTheta());
+			PointF c = new PointF((float) (camera.x + Math.cos(theta) * zoom / 2.0f), (float) (camera.y + Math.sin(theta) * zoom / 2.0f));
+			GLU.gluLookAt(gl, c.x, c.y, zoom / 4.0f, camera.x, camera.y, -2.0f, 0.0f, 0.0f, -1.0f);
+		}
         
 		synchronized (areas) {
 			for (Rect r : areas) {
@@ -331,7 +315,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         float ratio = (float) width / height;
         gl.glMatrixMode(GL10.GL_PROJECTION);
         gl.glLoadIdentity();
-        gl.glFrustumf(ratio, -ratio, -1, 1, 3, 100);
+        gl.glFrustumf(ratio, -ratio, -1, 1, 3, 1000);
 	}
 
 	@Override
@@ -349,5 +333,24 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         gl.glClearColor(0f, 0f, 0f, 1.0f);
         gl.glClearDepthf(1.0f);
         gl.glDepthFunc(GL10.GL_LEQUAL);
+	}
+	
+	/**
+	 * Switch to the next thing to follow.
+	 */
+	public void toggleFollow() {
+		follow = (follow + 1) % (robots.size() + 1);
+	}
+	
+	/**
+	 * Get the SimObject that this is following,
+	 * or null if this isn't following anything.
+	 * @return
+	 */
+	public SimObject getFollow() {
+		if (follow >= robots.size()) {
+			return null;
+		}
+		return (SimObject) robots.values().toArray()[follow];
 	}
 }

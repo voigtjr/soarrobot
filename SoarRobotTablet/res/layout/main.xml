@@ -33,16 +33,13 @@
 			    android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_toRightOf="@+id/zoomOut"
-				android:text="Add\nObject" />				
+				android:text="Add\nObject" />
+			<Button android:id="@+id/toggleFollow"
+			    android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_toRightOf="@+id/addObject"
+				android:text="Toggle\nFollow" />
 			</RelativeLayout>
-			<!--
-		<edu.umich.soarrobot.SoarRobotTablet.layout.MapView
-			android:id="@+id/mapView"
-			android:layout_width="fill_parent"
-			android:layout_height="fill_parent"
-			android:layout_above="@+id/propertiesLayout"
-			android:layout_below="@+id/buttonsLayout" />
-			-->
 		<edu.umich.soarrobot.SoarRobotTablet.layout.GLMapView
 			android:id="@+id/mapView"
 			android:layout_width="fill_parent"
