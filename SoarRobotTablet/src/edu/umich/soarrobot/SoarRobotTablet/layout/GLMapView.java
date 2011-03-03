@@ -30,6 +30,7 @@ import javax.microedition.khronos.opengles.GL10;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.opengl.GLSurfaceView;
@@ -50,7 +51,11 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     public static final String TAG = "MAP_VIEW";
     public static final int PX_PER_METER = 32;
     private static final float ZOOM_AMOUNT = 5.0f;
+    private static float FRUSTUM_FRONT = 3.0f;
     
+    // Variables that determine how the camera follows a robot
+    private static final float FOLLOW_HEIGHT_FACTOR = 4.0f;
+    private static final float FOLLOW_LOOK_AT_HEIGHT = 2.0f;
     
     private SoarRobotTablet activity;
     private PointF camera;
@@ -61,6 +66,8 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private ArrayList<Rect> areas;
     private String nextObjectClass;
     private int follow;
+    private Point windowSize; // The size of the window in pixel coordinates.
+    private PointF frustumSize; // The size of the window in "real-world" coordinates.
         
     public GLMapView(Context context)
     {
@@ -139,6 +146,120 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     @Override
     public boolean onTouchEvent(MotionEvent event)
     {
+    	PointF c = getCameraLocation();
+    	PointF touch = new PointF(event.getX() / windowSize.x, 1.0f - event.getY() / windowSize.y);
+    	if (c == camera) {
+    		// TODO
+    		// Given the origin of a ray (camera, zoom),
+    		// the projection frustum (windowSize, FRUSTUM_FRONT),
+    		// the direction of the frustum (downward),
+    		// and the projection of the ray into the frustum
+    		// (event.getX(), event.getY()):
+    		// Find the (x,y) coordinates where the ray intersects
+    		// z == 0.
+    		
+    	} else {
+    		float cHeight = -zoom / FOLLOW_HEIGHT_FACTOR;
+    		// TODO
+    		// Given the origin of a ray (c, cHeight),
+    		// the projection frustum (windowSize, FRUSTUM_FRONT),
+    		// the direction of the frustum (camera, z=FOLLOW_LOOK_AT_HEIGHT)
+    		// and the projection of the ray into the frustum
+    		// (event.getX(), event.getY()):
+    		// Find the (x,y) coordinates where the ray intersects
+    		// z == 0.
+    		
+    		// The strategy will be to find the x/y/z coords of
+    		// each of the four corners of the frustum, and then
+    		// interpolate the touch coords between those points.
+    		
+    		// Start by finding the distance between c and camera.
+    		float distCCam;
+    		{
+    			float dx = c.x - camera.x;
+    			float dy = c.y - camera.y;
+    			distCCam = (float) Math.sqrt(dx * dx + dy * dy);
+    		}
+    		
+    		// Now use that distance, combined with the height of c,
+    		// to find the angle from c to the object it's looking at.
+    		// Keep in mind, the look-at target is actually
+    		// FOLLOW_LOOK_AT_HEIGHT off the ground.
+    		// NOTE: This is the up-down angle--NOT the angle
+    		// as seen from above.
+    		
+    		float angleCCam;
+    		{
+    			float height = cHeight - FOLLOW_LOOK_AT_HEIGHT;
+    			angleCCam = (float) Math.atan(distCCam / height);
+    		}
+    		
+    		// Find the length from the bottom of the frustum to 
+    		// the top, as viewed from above.
+    		// (The width of the frustum will be unchanged)
+    		
+    		float lengthFrustumTop = (float) Math.cos(angleCCam) * frustumSize.y;
+    		
+    		// Find the distance from c of the bottom of the frustum and
+    		// the top of the frustum, as seen from above.
+    		
+    		float distanceCenterFrustum = (float) Math.sin(angleCCam) * FRUSTUM_FRONT;
+    		float distanceBottomFrustum = distanceCenterFrustum - lengthFrustumTop / 2.0f;
+    		float distanceTopFrustum = distanceCenterFrustum + lengthFrustumTop / 2.0f;
+    		float distanceIntersectFrustum = distanceBottomFrustum + touch.y * lengthFrustumTop;
+    		
+    		// Find the height of the bottom and top of the frustum.
+    		// To do this, find the height of the center point of the frustum
+    		// using angleCCam and FRUSTUM_FROM.
+    		// Next, find the height of the rotated frustum.
+    		// Then add (and subtract) half of that height to the height of the
+    		// center point to find the upper (and lower) heights.
+    		
+    		float heightRotatedFrustrum = (float) Math.sin(angleCCam) * frustumSize.y;
+    		float heightCenterFrustum = cHeight - (float) Math.cos(angleCCam) * FRUSTUM_FRONT;
+    		float heightBottomFrustum = heightCenterFrustum - heightRotatedFrustrum / 2.0f;
+    		float heightTopFrustum = heightCenterFrustum + heightRotatedFrustrum / 2.0f;
+    		float heightIntersect = heightBottomFrustum + touch.y * heightRotatedFrustrum;
+    		
+    		// Okay, now we have distance from c and height for the top and bottom of the frustum.
+    		// Let's use those to find the x,y,z coords for the four corners.
+    		// Basically that means applying the rotation of c to the distance values
+    		// and the width of the frustum.
+    		
+    		float rotation;
+    		{
+    			float dx = camera.x - c.x;
+    			float dy = camera.y - c.y;
+    			rotation = (float) Math.atan2(dy, dx);
+    		}
+    		
+    		float closeRotation = (float) Math.atan((frustumSize.x / 2.0f) / distanceBottomFrustum);
+    		float farRotation = (float) Math.atan((frustumSize.x / 2.0f) / distanceTopFrustum);
+    		
+    		float intersectX = (touch.x - 0.5f) * frustumSize.x;
+    		float intersectRotation = - (float) Math.atan((intersectX) / distanceIntersectFrustum);
+    		
+    		PointF intersect;
+    		{
+    			float x = (float) Math.cos(rotation + intersectRotation) * distanceIntersectFrustum;
+    			float y = (float) Math.sin(rotation + intersectRotation) * distanceIntersectFrustum;
+    			intersect = new PointF(x, y);
+    		}
+    		
+    		// Cool! Now we have the x,y,z coord of the intersection point.
+    		// Use that to extrapolate where the ray intersects z = 0.
+    		PointF floorTouch;
+    		{
+    			float dz = cHeight - heightIntersect;
+    			float dzRatio = cHeight / dz;
+    			floorTouch = new PointF(c.x + dzRatio * intersect.x, c.y + dzRatio * intersect.y);
+    		}
+    		
+    		lastTouch = floorTouch;
+    		
+    	}
+    	
+    	/*
         int action = event.getAction();
         if (action == MotionEvent.ACTION_MOVE)
         {
@@ -216,6 +337,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
             lastTouch.x = -1.0f;
             lastTouch.y = -1.0f;
         }
+        */
         return true;
     }
 
@@ -280,16 +402,13 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         gl.glMatrixMode(GL10.GL_MODELVIEW);
 		gl.glLoadIdentity();
 		
-		SimObject following = getFollow();
-		if (following == null) {
-			GLU.gluLookAt(gl, camera.x, camera.y, zoom, camera.x, camera.y, 0.0f, 0.0f, 1.0f, 0.0f);
+		PointF c = getCameraLocation();
+		if (c == camera) {
+			GLU.gluLookAt(gl, c.x, c.y, zoom, camera.x, camera.y, 0.0f, 0.0f, 1.0f, 0.0f);			
 		} else {
-			camera = following.getLocation();
-			float theta = (float) Math.toRadians(following.getTheta());
-			PointF c = new PointF((float) (camera.x + Math.cos(theta) * zoom / 2.0f), (float) (camera.y + Math.sin(theta) * zoom / 2.0f));
-			GLU.gluLookAt(gl, c.x, c.y, zoom / 4.0f, camera.x, camera.y, -2.0f, 0.0f, 0.0f, -1.0f);
+			GLU.gluLookAt(gl, c.x, c.y, zoom / FOLLOW_HEIGHT_FACTOR, camera.x, camera.y, -FOLLOW_LOOK_AT_HEIGHT, 0.0f, 0.0f, -1.0f);			
 		}
-        
+
 		synchronized (areas) {
 			for (Rect r : areas) {
 				GLUtil.drawRect(gl, r.left, r.bottom, 0.0f, r.right - r.left, r.top - r.bottom, Color.WHITE);
@@ -307,6 +426,8 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 				robot.draw(gl);
 			}
 		}
+		
+		GLUtil.drawRect(gl, lastTouch.x, lastTouch.y, -0.01f, 0.5f, 0.5f, Color.RED);
 	}
 
 	@Override
@@ -315,14 +436,16 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         float ratio = (float) width / height;
         gl.glMatrixMode(GL10.GL_PROJECTION);
         gl.glLoadIdentity();
-        gl.glFrustumf(ratio, -ratio, -1, 1, 3, 1000);
+        gl.glFrustumf(ratio, -ratio, -1, 1, FRUSTUM_FRONT, 1000);
+        windowSize = new Point(width, height);
+        frustumSize = new PointF(2.0f * ratio, 2.0f);
 	}
 
 	@Override
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         gl.glEnable(GL10.GL_CULL_FACE);
         gl.glEnable(GL10.GL_DEPTH_TEST);
-        // which is the front? the one which is drawn counter clockwise
+        // which is the front? the one which is drawn clockwise
         gl.glFrontFace(GL10.GL_CW);
         // which one should NOT be drawn
         gl.glCullFace(GL10.GL_BACK);
@@ -353,4 +476,17 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 		}
 		return (SimObject) robots.values().toArray()[follow];
 	}
+	
+	private PointF getCameraLocation() {
+		SimObject following = getFollow();
+		if (following == null) {
+			return camera;
+		} else {
+			camera = following.getLocation();
+			float theta = (float) Math.toRadians(following.getTheta());
+			PointF c = new PointF((float) (camera.x + Math.cos(theta) * zoom / 2.0f), (float) (camera.y + Math.sin(theta) * zoom / 2.0f));
+			return c;
+		}
+	}
+	
 }
