@@ -21,7 +21,11 @@
  */
 package edu.umich.soarrobot.SoarRobotTablet.layout;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -54,21 +58,26 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private static float FRUSTUM_FRONT = 3.0f;
     
     // Variables that determine how the camera follows a robot
-    private static final float FOLLOW_HEIGHT_FACTOR = 4.0f;
     private static final float FOLLOW_LOOK_AT_HEIGHT = 2.0f;
-    
+
     private SoarRobotTablet activity;
     private PointF camera;
     private float zoom;
-    private PointF lastTouch;
+    private PointF lastFloorTouch;
+    private PointF lastScreenTouch;
+    private boolean fingerDown;
     private HashMap<Integer, SimObject> objects;
     private HashMap<String, SimObject> robots;
     private ArrayList<Rect> areas;
     private String nextObjectClass;
-    private int follow;
+    private int follow; // Which robot to follow
+    private boolean topDown;
     private Point windowSize; // The size of the window in pixel coordinates.
     private PointF frustumSize; // The size of the window in "real-world" coordinates.
-        
+    private float followHeightFactor;
+    
+    private FloatBuffer positionBuffer;
+
     public GLMapView(Context context)
     {
         super(context);
@@ -87,12 +96,16 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         sh.addCallback(this);
         camera = new PointF(0.0f, 0.0f);
         zoom = -40.0f;
-        lastTouch = new PointF(-1.0f, -1.0f);
+        lastFloorTouch = new PointF(-1.0f, -1.0f);
+        lastScreenTouch = new PointF(-1.0f, -1.0f);
         objects = new HashMap<Integer, SimObject>();
         robots = new HashMap<String, SimObject>();
         areas = new ArrayList<Rect>();
         nextObjectClass = null;
         follow = robots.size();
+        topDown = true;
+        fingerDown = false;
+        followHeightFactor = 4.0f;
         
         setRenderer(this);
         //setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
@@ -105,37 +118,57 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 
     public void addObject(SimObject object)
     {
-        objects.put(object.getID(), object);
+    	synchronized (objects) {
+            objects.put(object.getID(), object);
+		}
     }
 
     public void removeObject(SimObject object)
     {
-        objects.remove(object.getID());
+    	synchronized (objects) {
+            objects.remove(object.getID());
+		}
     }
 
     public SimObject getObject(int objectID)
     {
-        return objects.get(objectID);
+    	synchronized (objects) {
+    		return objects.get(objectID);
+    	}
     }
 
     public void addRobot(SimObject robot)
     {
-        robots.put(robot.getAttribute("name"), robot);
+    	synchronized (robots) {
+            robots.put(robot.getAttribute("name"), robot);
+            ++follow;
+		}
     }
 
     public void removeRobot(String name)
     {
-        robots.remove(name);
+    	synchronized (robots) {
+            robots.remove(name);
+		}
     }
 
     public void removeRobot(SimObject robot)
     {
-        robots.remove(robot.getAttribute("name"));
+    	synchronized (robots) {
+            robots.remove(robot.getAttribute("name"));
+            --follow;
+            if (follow < 0) {
+            	follow = 0;
+            	topDown = true;
+            }
+		}
     }
 
     public SimObject getRobot(String name)
     {
-        return robots.get(name);
+    	synchronized (robots) {
+            return robots.get(name);
+		}
     }
 
     public void draw()
@@ -146,10 +179,107 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     @Override
     public boolean onTouchEvent(MotionEvent event)
     {
+    	PointF screenTouch = new PointF(event.getX() / windowSize.x, 1.0f - event.getY() / windowSize.y);
+    	if (screenTouch.x < 0.0f) {
+    		screenTouch.x = 0.0f;
+    	}
+    	if (screenTouch.x > 1.0f) {
+    		screenTouch.x = 1.0f;
+    	}
+    	if (screenTouch.y < 0.0f) {
+    		screenTouch.y = 0.0f;
+    	}
+    	if (screenTouch.y >= 1.0f) {
+    		screenTouch.y = 1.0f;
+    	}
+    	PointF floorTouch = floorTouch(screenTouch);
+    	
+    	int action = event.getAction();
+        if (action == MotionEvent.ACTION_MOVE)
+        {
+			if (fingerDown) {
+				if (topDown) {
+					synchronized (camera) {
+						camera.x -= (floorTouch.x - lastFloorTouch.x);
+						camera.y -= (floorTouch.y - lastFloorTouch.y);
+						floorTouch = floorTouch(screenTouch);
+					}
+				} else {
+					if (event.getPointerCount() > 1) {
+						followHeightFactor = 16.0f * (screenTouch.y + 0.1f);
+					}
+				}
+				if (event.getPointerCount() > 1) {
+			    	PointF screenTouch2 = new PointF(event.getX(1) / windowSize.x, 1.0f - event.getY(1) / windowSize.y);
+			    	float dx = screenTouch.x - screenTouch2.x;
+			    	float dy = screenTouch.y - screenTouch2.y;
+			    	zoom = -15.0f / (float) Math.sqrt(dx * dx + dy * dy) + 0.001f;
+				}
+			}
+        }
+        else if (action == MotionEvent.ACTION_DOWN)
+        {
+        	fingerDown = true;
+            if (nextObjectClass != null)
+            {
+                activity.getRobotSession().sendMessage("object " + nextObjectClass + " " + floorTouch.x + " " + floorTouch.y);
+                nextObjectClass = null;
+            }
+            else {
+				try {
+					boolean selected = false;
+					synchronized (robots) {
+						for (SimObject obj : robots.values()) {
+							if (obj.intersectsPoint(floorTouch)) {
+								activity.setSelectedObject(obj);
+								selected = true;
+								break;
+							}
+						}
+					}
+					if (!selected) {
+						synchronized (objects) {
+
+							for (SimObject obj : objects.values()) {
+								if (obj.intersectsPoint(floorTouch)) {
+									activity.setSelectedObject(obj);
+									selected = true;
+									break;
+								}
+							}
+						}
+					}
+					draw();
+				} catch (NullPointerException e) { // Don't know why this is happening
+                    e.printStackTrace();
+                }
+            }
+
+        }
+        else if (action == MotionEvent.ACTION_CANCEL
+                || action == MotionEvent.ACTION_UP)
+        {
+        	fingerDown = false;
+        }
+        synchronized (lastFloorTouch) {
+        	lastFloorTouch = floorTouch;
+		}
+        synchronized (lastScreenTouch) {
+        	lastScreenTouch = screenTouch;
+        }
+        return true;
+    }
+
+    /**
+     * Find where the touch intersects the floor.
+     * @param touch The touch on the screen, normalized
+     * so that X and Y are between 0 and 1.
+     * @return
+     */
+    private PointF floorTouch(PointF touch) {
     	PointF c = getCameraLocation();
-    	PointF touch = new PointF(event.getX() / windowSize.x, 1.0f - event.getY() / windowSize.y);
+    	synchronized (camera) {
     	if (c == camera) {
-    		// TODO
     		// Given the origin of a ray (camera, zoom),
     		// the projection frustum (windowSize, FRUSTUM_FRONT),
     		// the direction of the frustum (downward),
@@ -157,10 +287,14 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     		// (event.getX(), event.getY()):
     		// Find the (x,y) coordinates where the ray intersects
     		// z == 0.
-    		
-    	} else {
-    		float cHeight = -zoom / FOLLOW_HEIGHT_FACTOR;
-    		// TODO
+    		float dy = (touch.y - 0.5f) * frustumSize.y;
+    		float dx = (touch.x - 0.5f) * frustumSize.x;
+    		float factor = - zoom / FRUSTUM_FRONT;
+    		dx *= factor;
+    		dy *= factor;
+    		return new PointF(c.x + dx, c.y + dy);
+       	} else {
+    		float cHeight = -zoom / followHeightFactor;
     		// Given the origin of a ray (c, cHeight),
     		// the projection frustum (windowSize, FRUSTUM_FRONT),
     		// the direction of the frustum (camera, z=FOLLOW_LOOK_AT_HEIGHT)
@@ -254,94 +388,12 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     			float dzRatio = cHeight / dz;
     			floorTouch = new PointF(c.x + dzRatio * intersect.x, c.y + dzRatio * intersect.y);
     		}
-    		
-    		lastTouch = floorTouch;
-    		
+    		return floorTouch;
     	}
-    	
-    	/*
-        int action = event.getAction();
-        if (action == MotionEvent.ACTION_MOVE)
-        {
-            PointF touch = new PointF(event.getX(), event.getY());
-            if (lastTouch.x >= 0.0f && lastTouch.y >= 0.0f)
-            {
-                synchronized (camera)
-                {
-                    camera.x -= (touch.x - lastTouch.x) / PX_PER_METER;
-                    camera.y += (touch.y - lastTouch.y) / PX_PER_METER;
-                }
-                draw();
-            }
-            lastTouch = touch;
-        }
-        else if (action == MotionEvent.ACTION_DOWN)
-        {
-        	PointF touch = new PointF(event.getX(), event.getY());
-            // Transform the touch into meter coordinates
-            touch.x /= PX_PER_METER;
-            touch.y /= PX_PER_METER;
-            // Translate the touch according to the camera
-            touch.x += camera.x;
-            touch.y += camera.y;
-            // Taking the zoom factor into account
-            touch.x /= zoom;
-            touch.y /= zoom;
-            if (nextObjectClass != null)
-            {
-                activity.getRobotSession().sendMessage("object " + nextObjectClass + " " + touch.x + " " + touch.y);
-                nextObjectClass = null;
-            }
-            else
-            {
-                try
-                {
-                    boolean selected = false;
-                    synchronized (objects)
-                    {
-                        for (SimObject obj : robots.values())
-                        {
-                            if (obj.intersectsPoint(touch))
-                            {
-                                activity.setSelectedObject(obj);
-                                selected = true;
-                                break;
-                            }
-                        }
-                        if (!selected)
-                        {
-                            for (SimObject obj : objects.values())
-                            {
-                                if (obj.intersectsPoint(touch))
-                                {
-                                    activity.setSelectedObject(obj);
-                                    selected = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    draw();
-                }
-                catch (NullPointerException e)
-                { // Don't know why this is happening
-                    e.printStackTrace();
-                }
-            }
-            lastTouch.x = (int) event.getX();
-            lastTouch.y = (int) event.getY();
-        }
-        else if (action == MotionEvent.ACTION_CANCEL
-                || action == MotionEvent.ACTION_UP)
-        {
-            lastTouch.x = -1.0f;
-            lastTouch.y = -1.0f;
-        }
-        */
-        return true;
+		}
     }
 
-    public void deserializeMap(String map)
+	public void deserializeMap(String map)
     {
         String[] areaList = map.split(";");
         for (String area : areaList)
@@ -398,15 +450,23 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 
 	@Override
 	public void onDrawFrame(GL10 gl) {
+		try {
         gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
         gl.glMatrixMode(GL10.GL_MODELVIEW);
 		gl.glLoadIdentity();
 		
-		PointF c = getCameraLocation();
-		if (c == camera) {
-			GLU.gluLookAt(gl, c.x, c.y, zoom, camera.x, camera.y, 0.0f, 0.0f, 1.0f, 0.0f);			
-		} else {
-			GLU.gluLookAt(gl, c.x, c.y, zoom / FOLLOW_HEIGHT_FACTOR, camera.x, camera.y, -FOLLOW_LOOK_AT_HEIGHT, 0.0f, 0.0f, -1.0f);			
+		if (positionBuffer != null)
+		{
+			gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_POSITION, positionBuffer);
+		}
+		
+		synchronized (camera) {
+			PointF c = getCameraLocation();
+			if (c == camera) {
+				GLU.gluLookAt(gl, c.x, c.y, zoom, camera.x, camera.y, 0.0f, 0.0f, 1.0f, 0.0f);			
+			} else {
+				GLU.gluLookAt(gl, c.x, c.y, zoom / followHeightFactor, camera.x, camera.y, -FOLLOW_LOOK_AT_HEIGHT, 0.0f, 0.0f, -1.0f);			
+			}
 		}
 
 		synchronized (areas) {
@@ -427,7 +487,15 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 			}
 		}
 		
-		GLUtil.drawRect(gl, lastTouch.x, lastTouch.y, -0.01f, 0.5f, 0.5f, Color.RED);
+		/*
+		synchronized (lastFloorTouch) {
+			GLUtil.drawRect(gl, lastFloorTouch.x, lastFloorTouch.y, -0.01f, 0.5f, 0.5f, Color.GRAY);
+		}
+		*/
+
+		} catch (ConcurrentModificationException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -452,17 +520,85 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
      
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
         gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
+        gl.glEnableClientState(GL10.GL_NORMAL_ARRAY);
         
-        gl.glClearColor(0f, 0f, 0f, 1.0f);
+        gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         gl.glClearDepthf(1.0f);
         gl.glDepthFunc(GL10.GL_LEQUAL);
+
+        // lighting
+        /*
+        gl.glEnable(GL10.GL_LIGHTING);
+        gl.glEnable(GL10.GL_COLOR_MATERIAL);
+        
+        float[] ambientLight = {0.5f, 0.5f, 0.5f, 1.0f};
+        ByteBuffer bb = ByteBuffer.allocateDirect(ambientLight.length * 4);
+        bb.order(ByteOrder.nativeOrder());
+        FloatBuffer ambientBuffer = bb.asFloatBuffer();
+        ambientBuffer.put(ambientLight);
+        ambientBuffer.position(0);
+        gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_AMBIENT, ambientBuffer);
+        
+        float[] diffuseLight = {1.0f, 1.0f, 1.0f, 1.0f};
+        bb = ByteBuffer.allocateDirect(diffuseLight.length * 4);
+        bb.order(ByteOrder.nativeOrder());
+        FloatBuffer diffuseBuffer = bb.asFloatBuffer();
+        ambientBuffer.put(diffuseLight);
+        gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_DIFFUSE, diffuseBuffer);
+        
+        float[] specularLight = {0.0f, 0.0f, 0.0f, 1.0f};
+        bb = ByteBuffer.allocateDirect(diffuseLight.length * 4);
+        bb.order(ByteOrder.nativeOrder());
+        FloatBuffer specularBuffer = bb.asFloatBuffer();
+        specularBuffer.put(specularLight);
+        specularBuffer.position(0);
+        gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_SPECULAR, specularBuffer);
+        
+        float[] lightPosition = {1.0f, 1.0f, 1.0f, 1.0f};
+        bb = ByteBuffer.allocateDirect(lightPosition.length * 4);
+        bb.order(ByteOrder.nativeOrder());
+        positionBuffer = bb.asFloatBuffer();
+        positionBuffer.put(lightPosition);
+        positionBuffer.position(0);
+        gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_POSITION, positionBuffer);
+        
+        FloatBuffer mab = ByteBuffer.allocateDirect(4 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        mab.put(new float[]{1.0f, 1.0f, 1.0f, 1.0f});
+        mab.position(0);
+        FloatBuffer mdb = ByteBuffer.allocateDirect(4 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        mdb.put(new float[]{1.0f, 1.0f, 1.0f, 1.0f});
+        mdb.position(0);
+        FloatBuffer msb = ByteBuffer.allocateDirect(4 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        msb.put(new float[]{0.0f, 0.0f, 0.0f, 1.0f});
+        msb.position(0);
+        
+        gl.glMaterialfv(GL10.GL_FRONT_AND_BACK, GL10.GL_AMBIENT, mab);
+        gl.glMaterialfv(GL10.GL_FRONT_AND_BACK, GL10.GL_DIFFUSE, mdb);
+        gl.glMaterialfv(GL10.GL_FRONT_AND_BACK, GL10.GL_SPECULAR, msb);
+        gl.glMaterialf(GL10.GL_FRONT_AND_BACK, GL10.GL_SHININESS, 0.0f);
+        
+        gl.glEnable(GL10.GL_LIGHT0);
+        
+		gl.glShadeModel(GL10.GL_SMOOTH); 			//Enable Smooth Shading
+		*/
+        /*
+        float[] lightDirection = {0.0f, 0.0f, -1.0f};
+        FloatBuffer directionBuffer = FloatBuffer.allocate(lightDirection.length);
+        directionBuffer.put(lightDirection);
+        directionBuffer.position(0);
+        gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_SPOT_DIRECTION, directionBuffer);
+        gl.glLightf(GL10.GL_LIGHT0, GL10.GL_SPOT_CUTOFF, 45.0f);
+        */
 	}
 	
 	/**
 	 * Switch to the next thing to follow.
 	 */
 	public void toggleFollow() {
-		follow = (follow + 1) % (robots.size() + 1);
+		synchronized (robots) {
+			follow = (follow + 1) % (robots.size() + 1);
+			topDown = follow == robots.size();
+		}
 	}
 	
 	/**
@@ -471,22 +607,28 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 	 * @return
 	 */
 	public SimObject getFollow() {
-		if (follow >= robots.size()) {
-			return null;
+		synchronized (robots) {
+			if (follow >= robots.size()) {
+				return null;
+			}
+			return (SimObject) robots.values().toArray()[follow];
 		}
-		return (SimObject) robots.values().toArray()[follow];
 	}
 	
 	private PointF getCameraLocation() {
 		SimObject following = getFollow();
-		if (following == null) {
-			return camera;
-		} else {
-			camera = following.getLocation();
-			float theta = (float) Math.toRadians(following.getTheta());
-			PointF c = new PointF((float) (camera.x + Math.cos(theta) * zoom / 2.0f), (float) (camera.y + Math.sin(theta) * zoom / 2.0f));
-			return c;
+		synchronized (camera) {
+			if (following == null) {
+				return camera;
+			} else {
+				camera = following.getLocation();
+				float theta = (float) Math.toRadians(following.getTheta());
+				PointF c = new PointF((float) (camera.x + Math.cos(theta)
+						* zoom / 2.0f), (float) (camera.y + Math.sin(theta)
+						* zoom / 2.0f));
+				return c;
+			}
 		}
 	}
-	
+
 }

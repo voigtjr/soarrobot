@@ -229,17 +229,6 @@ public class SoarRobotTablet extends Activity
         }
     }
 
-    @Override
-    protected void onStop()
-    {
-        super.onStop();
-        if (robotSession != null)
-        {
-            robotSession.pause();
-        }
-        System.exit(0);
-    }
-
     public void setPropertiesText(final String text)
     {
         runOnUiThread(new Runnable()

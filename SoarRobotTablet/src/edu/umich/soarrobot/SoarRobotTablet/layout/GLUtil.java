@@ -64,88 +64,101 @@ public class GLUtil {
 		1, 5, 4,
 	};
 	
+	private static float[] cubeNormals = {
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, -1.0f,
+		-1.0f, 0.0f, 0.0f,
+		-1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f,
+	};
+		
 	private static short[] rectIndeces = {
 		0, 2, 1,
 		1, 2, 3,
 	};
 	
-	private static float[] whiteColors = new float[8 * 4];
-	private static float[] redColors = new float[8 * 4];
-	private static float[] greenColors = new float[8 * 4];
-	private static float[] blueColors = new float[8 * 4];
-	private static float[] yellowColors = new float[8 * 4];
-	
-	private static FloatBuffer cubeCoordsBuffer, whiteColorsBuffer, redColorsBuffer, greenColorsBuffer, blueColorsBuffer, yellowColorsBuffer;
+	private static FloatBuffer cubeCoordsBuffer, whiteColorsBuffer, redColorsBuffer, greenColorsBuffer, blueColorsBuffer, yellowColorsBuffer, blackColorsBuffer, grayColorsBuffer;
 	private static ShortBuffer cubeIndecesBuffer, rectIndecesBuffer;
+	private static FloatBuffer cubeNormalsBuffer, rectNormalsBuffer;
 	
 	static {
         // float has 4 bytes, coordinate * 4 bytes
-        ByteBuffer vbb = ByteBuffer.allocateDirect(cubeCoords.length * 4);
-        vbb.order(ByteOrder.nativeOrder());
-        cubeCoordsBuffer = vbb.asFloatBuffer();
+        ByteBuffer bb = ByteBuffer.allocateDirect(cubeCoords.length * 4);
+        bb.order(ByteOrder.nativeOrder());
+        cubeCoordsBuffer = bb.asFloatBuffer();
      
         // short has 2 bytes, indices * 2 bytes
-        ByteBuffer ibb = ByteBuffer.allocateDirect(cubeIndeces.length * 2);
-        ibb.order(ByteOrder.nativeOrder());
-        cubeIndecesBuffer = ibb.asShortBuffer();
+        bb = ByteBuffer.allocateDirect(cubeIndeces.length * 2);
+        bb.order(ByteOrder.nativeOrder());
+        cubeIndecesBuffer = bb.asShortBuffer();
         
         // short has 2 bytes, indices * 2 bytes
-        ByteBuffer ribb = ByteBuffer.allocateDirect(rectIndeces.length * 2);
-        ribb.order(ByteOrder.nativeOrder());
-        rectIndecesBuffer = ribb.asShortBuffer();
-     
-        // float has 4 bytes, colors (RGBA) * 4 bytes
-        ByteBuffer cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
-        cbb.order(ByteOrder.nativeOrder());
-        whiteColorsBuffer = cbb.asFloatBuffer();
-        
-        // float has 4 bytes, colors (RGBA) * 4 bytes
-        cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
-        cbb.order(ByteOrder.nativeOrder());
-        redColorsBuffer = cbb.asFloatBuffer();
-        
-        // float has 4 bytes, colors (RGBA) * 4 bytes
-        cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
-        cbb.order(ByteOrder.nativeOrder());
-        greenColorsBuffer = cbb.asFloatBuffer();
-        
-        // float has 4 bytes, colors (RGBA) * 4 bytes
-        cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
-        cbb.order(ByteOrder.nativeOrder());
-        blueColorsBuffer = cbb.asFloatBuffer();
-        
-        // float has 4 bytes, colors (RGBA) * 4 bytes
-        cbb = ByteBuffer.allocateDirect(whiteColors.length * 4);
-        cbb.order(ByteOrder.nativeOrder());
-        yellowColorsBuffer = cbb.asFloatBuffer();
-        
-		assignColors(whiteColors, 1.0f, 1.0f, 1.0f);
-		assignColors(redColors, 1.0f, 0.0f, 0.0f);
-		assignColors(greenColors, 0.0f, 1.0f, 0.0f);
-		assignColors(blueColors, 0.0f, 0.0f, 1.0f);
-		assignColors(yellowColors, 0.8f, 0.8f, 0.0f);
+        bb = ByteBuffer.allocateDirect(rectIndeces.length * 2);
+        bb.order(ByteOrder.nativeOrder());
+        rectIndecesBuffer = bb.asShortBuffer();
+
+        whiteColorsBuffer = makeColorBuffer(1.0f, 1.0f, 1.0f);
+        redColorsBuffer = makeColorBuffer(1.0f, 0.0f, 0.0f);
+        greenColorsBuffer = makeColorBuffer(0.0f, 1.0f, 0.0f);
+        blueColorsBuffer = makeColorBuffer(0.0f, 0.0f, 1.0f);
+        yellowColorsBuffer = makeColorBuffer(1.0f, 1.0f, 0.0f);
+        blackColorsBuffer = makeColorBuffer(0.0f, 0.0f, 0.0f);
+        grayColorsBuffer = makeColorBuffer(0.5f, 0.5f, 0.5f);
      
         cubeCoordsBuffer.put(cubeCoords);
         cubeIndecesBuffer.put(cubeIndeces);
-        whiteColorsBuffer.put(whiteColors);
-        redColorsBuffer.put(redColors);
-        greenColorsBuffer.put(greenColors);
-        blueColorsBuffer.put(blueColors);
-        yellowColorsBuffer.put(yellowColors);
         rectIndecesBuffer.put(rectIndeces);
      
         cubeCoordsBuffer.position(0);
         cubeIndecesBuffer.position(0);
-        whiteColorsBuffer.position(0);
         rectIndecesBuffer.position(0);
-        redColorsBuffer.position(0);
-        greenColorsBuffer.position(0);
-        blueColorsBuffer.position(0);
-        yellowColorsBuffer.position(0);
+        
+        bb = ByteBuffer.allocateDirect(cubeNormals.length * 4);
+        bb.order(ByteOrder.nativeOrder());
+        cubeNormalsBuffer = bb.asFloatBuffer();
+        cubeNormalsBuffer.put(cubeNormals);
+        cubeNormalsBuffer.position(0);
+
+	}
+	
+	private static FloatBuffer makeColorBuffer(float r, float g, float b) {
+        float[] colors = new float[8 * 4];
+        assignColors(colors, r, g, b);
+		ByteBuffer cbb = ByteBuffer.allocateDirect(colors.length * 4);
+        cbb.order(ByteOrder.nativeOrder());
+        FloatBuffer buffer = cbb.asFloatBuffer();
+        buffer.put(colors);
+        buffer.position(0);
+        return buffer;
 	}
 	
 	private static void assignColors(float[] ar, float r, float g, float b) {
-		for (int i = 0; i < ar.length / 4; ++i) {
+		r += 0.2f;
+		g += 0.2f;
+		b += 0.2f;
+		if (r > 1.0f) r = 1.0f;
+		if (g > 1.0f) g = 1.0f;
+		if (b > 1.0f) b = 1.0f;
+		for (int i = 0; i < ar.length / 8; ++i) {
+			ar[i * 4] = r;
+			ar[i * 4 + 1] = g;
+			ar[i * 4 + 2] = b;
+			ar[i * 4 + 3] = 1.0f;
+		}
+		r -= 0.4f;
+		g -= 0.4f;
+		b -= 0.4f;
+		if (r < 0.0f) r = 0.0f;
+		if (g < 0.0f) g = 0.0f;
+		if (b < 0.0f) b = 0.0f;
+		for (int i = ar.length / 8; i < ar.length / 4; ++i) {
 			ar[i * 4] = r;
 			ar[i * 4 + 1] = g;
 			ar[i * 4 + 2] = b;
@@ -162,19 +175,28 @@ public class GLUtil {
 	 * @param g
 	 * @param b
 	 */
-	public static void drawCube(GL10 gl, float x, float y, float z, float w, float h, float d, int color)
+	public static void drawCube(GL10 gl, float x, float y, float z, float w, float h, float d, int color, float theta)
 	{
         gl.glPushMatrix();
-        
-        gl.glTranslatef(x, y, z);
-        gl.glScalef(w, h, d);
 
+        gl.glTranslatef(x, y, z);
+        gl.glRotatef(theta, 0.0f, 0.0f, 1.0f);
+        gl.glScalef(w, h, d);
+        gl.glTranslatef(-0.5f, -0.5f, -0.5f);
+        
         gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
         gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+        gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
         gl.glDrawElements(GL10.GL_TRIANGLES, 12 * 3, GL10.GL_UNSIGNED_SHORT, cubeIndecesBuffer);
         
         gl.glPopMatrix();
 	}
+	
+	public static void drawCube(GL10 gl, float x, float y, float z, float w, float h, float d, int color)
+	{
+		drawCube(gl, x, y, z, w, h, d, color, 0.0f);
+	}
+
 	
 	/*************
 	 * Rectangle *
@@ -189,6 +211,7 @@ public class GLUtil {
 
         gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
         gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+        gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
         gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, rectIndecesBuffer);
         
         gl.glPopMatrix();
@@ -206,6 +229,10 @@ public class GLUtil {
 			return blueColorsBuffer;
 		case Color.YELLOW:
 			return yellowColorsBuffer;
+		case Color.BLACK:
+			return blackColorsBuffer;
+		case Color.GRAY:
+			return grayColorsBuffer;
 		}
 		return whiteColorsBuffer;
 	}

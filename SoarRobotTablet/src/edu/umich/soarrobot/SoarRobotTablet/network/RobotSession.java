@@ -69,7 +69,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 
 	Object lock = new Object();
 
-	public RobotSession(SoarRobotTablet activity, String server, int port) {
+	public RobotSession(SoarRobotTablet activity, String server, int port) throws IOException {
 		synchronized (lock) {
 			this.activity = activity;
 			this.server = server;
@@ -118,6 +118,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 				subscribeAllRobots(lcm, robotNames);
 			} catch (IOException e) {
 				e.printStackTrace();
+				throw e;
 			}
 			sendMessage("map");
 			sendMessage("classes");

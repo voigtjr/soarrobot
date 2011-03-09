@@ -44,6 +44,7 @@ import android.graphics.PointF;
 import april.lcmtypes.laser_t;
 import april.lcmtypes.waypoint_list_t;
 import april.lcmtypes.waypoint_t;
+import april.sim.CostMap;
 import edu.umich.soarrobot.SoarRobotTablet.layout.GLUtil;
 import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 
@@ -146,7 +147,14 @@ public class SimObject {
 				e.printStackTrace();
 			}
 		}
-		size = new PointF(0.5f, 0.5f);
+		if (type.equals("splinter"))
+		{
+			size = new PointF(0.5f, 0.5f);
+		}
+		else
+		{
+			size = new PointF(0.25f, 0.25f);
+		}
 	}
 
     /**
@@ -159,30 +167,11 @@ public class SimObject {
         drawLidar(lidar, lidarLocation, lidarTheta, gl, Color.RED);
         drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, gl, Color.BLUE);
         drawWaypoints(gl, Color.YELLOW);
-        //c.translate(location.x, location.y);
-        //c.rotate(-theta);
-		//p.setColor(color);
-		//p.setStyle(Style.FILL);
 		if (type.equals("splinter")) {
-			GLUtil.drawCube(gl, location.x - size.x / 2.0f, location.y - size.y / 2.0f, -1.0f, size.x, size.y, 1.0f, Color.RED);
-			/*
-			Path path = new Path();
-			path.lineTo(-1.0f, 0.4f);
-			path.lineTo(-1.0f, -0.4f);
-			path.lineTo(0.0f, 0.0f);
-			c.drawPath(path, p);
-			p.setColor(selected ? Color.RED : Color.BLACK);
-			p.setStyle(Style.STROKE);
-			c.drawPath(path, p);
-			*/
+			GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, Color.GRAY, theta);
+
 		} else {
-			GLUtil.drawCube(gl, location.x - size.x / 2.0f, location.y - size.y / 2.0f, -1.0f, size.x, size.y, 1.0f, color);
-/*
-			c.drawRect(-size.x / 2.0f, -size.y / 2.0f, size.x / 2.0f, size.y / 2.0f, p);
-			p.setColor(selected ? Color.RED : Color.BLACK);
-			p.setStyle(Style.STROKE);
-            c.drawRect(-size.x / 2.0f, -size.y / 2.0f, size.x / 2.0f, size.y / 2.0f, p);
-            */
+			GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, color);
 		}
 	}
 	
@@ -228,7 +217,7 @@ public class SimObject {
             float angle = lidar.rad0 + lidar.radstep * i;
             float dx = (float)Math.cos(angle) * range;
             float dy = (float)Math.sin(angle) * range;
-            GLUtil.drawCube(gl, -0.1f + dx, -0.1f + dy, -0.5f, 0.2f, 0.2f, 0.2f, color);
+            GLUtil.drawCube(gl, -0.05f + dx, -0.05f + dy, -0.5f, 0.1f, 0.1f, 0.1f, color);
             /*
             c.save();
             c.translate(dx, dy);
@@ -245,7 +234,7 @@ public class SimObject {
             return;
         }
         for (waypoint_t w : waypoints.waypoints) {
-        	GLUtil.drawCube(gl, (float) w.xLocal - 0.1f, (float) w.yLocal - 0.1f, -0.5f, 0.2f, 0.2f, 0.2f, color);
+        	GLUtil.drawCube(gl, (float) w.xLocal - 0.05f, (float) w.yLocal - 0.05f, -0.5f, 0.1f, 0.1f, 0.1f, color);
         	/*
             c.save();
             c.translate((float)w.xLocal, (float)-w.yLocal);
