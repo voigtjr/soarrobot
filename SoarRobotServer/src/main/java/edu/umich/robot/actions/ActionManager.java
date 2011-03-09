@@ -17,8 +17,9 @@ import edu.umich.robot.GuiApplication;
 
 /**
  * Based on jsoar action manager. Modified.
+ * 
  * @author ray
- * @author voigtjr@gmail.com
+ * @author voigtjr
  */
 public class ActionManager
 {

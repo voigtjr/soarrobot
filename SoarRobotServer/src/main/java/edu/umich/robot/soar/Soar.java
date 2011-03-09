@@ -52,6 +52,8 @@ import edu.umich.robot.util.events.RobotEventListener;
 import edu.umich.robot.util.properties.PropertyManager;
 
 /**
+ * The main Soar interface class. Listens for reset events to init agents.
+ * 
  * @author voigtjr@gmail.com
  */
 public class Soar implements RobotEventListener

@@ -34,6 +34,9 @@ import edu.umich.robot.util.ImmutablePose;
 import edu.umich.robot.util.Pose;
 
 /**
+ * Normal virtual object implementation, as opposed to a template/prototype or
+ * robot representation.
+ * 
  * @author voigtjr@gmail.com
  */
 class VirtualObjectImpl implements VirtualObject
@@ -141,16 +144,32 @@ class VirtualObjectImpl implements VirtualObject
         return Integer.valueOf(id).hashCode();
     }
 
+    /**
+     * Simply tests a specific property.
+     * 
+     * @return
+     */
     boolean isDiffusable()
     {
         return "true".equals(properties.get("diffusable"));
     }
 
+    /**
+     * Sets a boolean property.
+     * 
+     * @param b
+     */
     void setDiffused(boolean b)
     {
         properties.put("diffused", Boolean.toString(b));
     }
 
+    /**
+     * Checks a property.
+     * 
+     * @param color
+     * @return
+     */
     boolean isDiffusableByColor(String color)
     {
         return isDiffusable() && color.equals(properties.get("diffuse-color"));

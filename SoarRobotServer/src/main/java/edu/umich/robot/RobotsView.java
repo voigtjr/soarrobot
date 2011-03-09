@@ -58,6 +58,8 @@ import edu.umich.robot.actions.ActionManager;
 import edu.umich.robot.actions.CreateSplinterRobotAction;
 
 /**
+ * The robot & robot controller table.
+ * 
  * @author voigtjr@gmail.com
  */
 public class RobotsView extends JPanel implements RobotSelectionChangedListener

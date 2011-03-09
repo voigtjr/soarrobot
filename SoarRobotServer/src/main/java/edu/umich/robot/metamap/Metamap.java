@@ -48,6 +48,19 @@ import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventListener;
 
 /**
+ * <p>
+ * This is where the virtual map data is managed. There is a list of areas, a
+ * virtual object manager, area states mapped by area id number, doors, initial
+ * door states saved in case of a reset, robots on the map, and a few other
+ * things.
+ * 
+ * <p>
+ * All new map entities get assigned ids from the same id pool managed by this
+ * glass.
+ * 
+ * <p>
+ * As much as possible is immutable.
+ * 
  * @author voigtjr@gmail.com
  */
 public class Metamap implements RobotEventListener
@@ -131,6 +144,12 @@ public class Metamap implements RobotEventListener
         }, 0, 1, TimeUnit.SECONDS);
     }
 
+    /**
+     * Doors are implemented as obstacles in the simulator, the same way the
+     * other objects are implemented. To create these obstacles, they must be
+     * added to the broadcaster so the dimensions go out over LCM. This handles
+     * that.
+     */
     private void broadcastDoors()
     {
         for (Door door : doors.values())
@@ -138,6 +157,12 @@ public class Metamap implements RobotEventListener
                 objects.getBroadcaster().addDoor(door);
     }
 
+    /**
+     * Get an area description from an id number, or null if none.
+     * 
+     * @param id
+     * @return
+     */
     public AreaDescription getAreaFromId(int id)
     {
         if (id >= areaList.size())
@@ -145,6 +170,13 @@ public class Metamap implements RobotEventListener
         return areaList.get(id);
     }
     
+    /**
+     * Get an area description from a pose. Returns the area description of the
+     * area that the passed pose falls in to.
+     * 
+     * @param pose
+     * @return
+     */
     public AreaDescription getArea(Pose pose)
     {
         // TODO optimize
@@ -164,10 +196,21 @@ public class Metamap implements RobotEventListener
         return null;
     }
     
+    /**
+     * Get a list of all known areas, immutable.
+     * 
+     * @return
+     */
     public List<AreaDescription> getAreaList() {
     	return areaList;
     }
 
+    /**
+     * Get area state by id.
+     * 
+     * @param id
+     * @return
+     */
     public AreaState getAreaState(int id)
     {
         AreaState ret = areaStates.get(id);
@@ -179,6 +222,12 @@ public class Metamap implements RobotEventListener
         return ret;
     }
 
+    /**
+     * Change the state of a room light by area id.
+     * 
+     * @param id
+     * @param on
+     */
     public void setRoomLight(int id, boolean on)
     {
         AreaState as = areaStates.get(id);
@@ -187,6 +236,12 @@ public class Metamap implements RobotEventListener
         as.setRoomLightOn(on);
     }
     
+    /**
+     * Get an area id from a pose.
+     * 
+     * @param pose
+     * @return
+     */
     private int getAreaId(Pose pose)
     {
         AreaDescription area = getArea(pose);
@@ -195,6 +250,12 @@ public class Metamap implements RobotEventListener
         return area.getId();
     }
 
+    /**
+     * Get all visible objects from the passed robot's perspective.
+     * 
+     * @param robot
+     * @return
+     */
     public List<VirtualObject> getVisibleObjects(Robot robot)
     {
         AreaDescription area = getArea(robot.getOutput().getPose());
@@ -227,6 +288,14 @@ public class Metamap implements RobotEventListener
         return ret;
     }
     
+    /**
+     * Find out if myPose can see otherPose using 180 degree fov. TODO: use
+     * virtual object fov instead of hard-coded.
+     * 
+     * @param myPose source, viewer
+     * @param otherPose target, viewed
+     * @return
+     */
     private boolean isVisible(Pose myPose, Pose otherPose)
     {
         int myAreaId = getAreaId(myPose);
@@ -243,37 +312,83 @@ public class Metamap implements RobotEventListener
         return false;
     }
 
+    /**
+     * Get the object carried by the passed robot.
+     * 
+     * @param robot
+     * @return
+     */
     public VirtualObject getCarried(Robot robot)
     {
         return objects.getCarried(robot);
     }
 
+    /**
+     * Someday, this will cancel an effector command issued to a robot.
+     * 
+     * @param robot
+     * @return
+     */
     public boolean cancelEffector(Robot robot)
     {
         // nothing to do, everything happens instantaneously right now
         return true;
     }
 
+    /**
+     * Have a robot pick up an object by id.
+     * 
+     * @param robot
+     * @param id
+     * @return
+     */
     public boolean pickupObject(Robot robot, int id)
     {
         return objects.pickupObject(robot, id);
     }
 
+    /**
+     * Have a robot drop its currently held object.
+     * 
+     * @param robot
+     * @return
+     */
     public boolean dropObject(Robot robot)
     {
         return objects.dropObject(robot);
     }
 
+    /**
+     * Task dependent effector command.
+     * 
+     * @param robot
+     * @param id
+     * @return
+     */
     public boolean diffuseObject(Robot robot, int id)
     {
         return objects.diffuseObject(robot, id);
     }
 
+    /**
+     * Task dependent effector command.
+     * 
+     * @param robot
+     * @param id
+     * @param color
+     * @return
+     */
     public boolean diffuseObjectByWire(Robot robot, int id, String color)
     {
         return objects.diffuseObjectByWire(robot, id, color);
     }
 
+    /**
+     * Open a door by id. Transitions from CLOSED to OPEN
+     * 
+     * @param robot
+     * @param id
+     */
     public void doorOpen(Robot robot, int id)
     {
         Door door = doors.get(id);
@@ -293,6 +408,12 @@ public class Metamap implements RobotEventListener
         }
     }
 
+    /**
+     * Close a door by id. Transitions from OPEN to CLOSED
+     * 
+     * @param robot
+     * @param id
+     */
     public void doorClose(Robot robot, int id)
     {
         Door door = doors.get(id);
@@ -312,6 +433,13 @@ public class Metamap implements RobotEventListener
         }
     }
 
+    /**
+     * Unlock a door by id and lock code. Transitions from LOCKED to CLOSED
+     * 
+     * @param robot
+     * @param id
+     * @param code
+     */
     public void doorUnlock(Robot robot, int id, int code)
     {
         Door door = doors.get(id);
@@ -331,6 +459,13 @@ public class Metamap implements RobotEventListener
         }
     }
 
+    /**
+     * Lock a door and set a lock code. Transitions from CLOSED to LOCKED
+     * 
+     * @param robot
+     * @param id
+     * @param code
+     */
     public void doorLock(Robot robot, int id, int code)
     {
         Door door = doors.get(id);
@@ -350,11 +485,23 @@ public class Metamap implements RobotEventListener
         }
     }
 
+    /**
+     * Get a list of object names, kind of like classes of objects.
+     * 
+     * @return
+     */
     public List<String> getObjectNames()
     {
         return objects.getObjectNames();
     }
 
+    /**
+     * Add an object by object name, like a class name, from the set returned by getObjectNames
+     * 
+     * @param name
+     * @param pos
+     * @return
+     */
     public VirtualObject addObject(String name, double[] pos)
     {
         VirtualObject obj = objects.placeNew(name, new Pose(pos));
@@ -385,6 +532,9 @@ public class Metamap implements RobotEventListener
         }
     }
     
+    /**
+     * Restore state to initial state.
+     */
     public void reset()
     {
         areaStates.clear();
@@ -401,35 +551,70 @@ public class Metamap implements RobotEventListener
         broadcastDoors();
     }
 
+    /**
+     * Get a virtual object prototype by name.
+     * 
+     * @param name
+     * @return
+     */
     public VirtualObject getTemplate(String name)
     {
         return objects.getTemplate(name);
     }
     
+    /**
+     * Get all virtual object prototypes.
+     * 
+     * @return
+     */
     public Collection<VirtualObjectTemplate> getTemplates() {
     	return objects.getTemplates();
     }
 
+    /**
+     * Get all objects placed on the map. This doesn't include objects carried
+     * by robots.
+     * 
+     * @return
+     */
     public List<VirtualObject> getPlacedObjects()
     {
         return objects.getPlacedObjects();
     }
 
+    /**
+     * Get the path to the image used to generate the wall data.
+     * 
+     * @return
+     */
     public String getImagePath()
     {
         return imagePath;
     }
 
+    /**
+     * Get the scale converting the image data to map data. Meters per pixel.
+     * 
+     * @return
+     */
     public double getMetersPerPixel()
     {
         return metersPerPixel;
     }
 
+    /**
+     * Get what pixel represents the map origin.
+     * 
+     * @return
+     */
     public int[] getImageOrigin()
     {
         return Arrays.copyOf(origin, origin.length);
     }
     
+    /**
+     * Shutdown and invalidate everything, kill threads.
+     */
     public void shutdown()
     {
         schexec.shutdown();

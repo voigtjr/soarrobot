@@ -22,6 +22,9 @@
 package edu.umich.robot.metamap;
 
 /**
+ * Various state variables for a room. A lot of this is unimplemented or
+ * untested.
+ * 
  * @author voigtjr@gmail.com
  */
 public class AreaState
@@ -32,11 +35,21 @@ public class AreaState
     private boolean areWindowShadesBroken = false;
     private boolean windowShadesActivated = false;
     
+    /**
+     * Returns true if the light in the room is malfunctioning.
+     * 
+     * @param broken
+     */
     void setRoomLightBroken(boolean broken)
     {
         this.isRoomLightBroken = broken;
     }
     
+    /**
+     * Returns true if the room light is on.
+     * 
+     * @param on
+     */
     void setRoomLightOn(boolean on)
     {
         if (isRoomLightBroken)
@@ -44,16 +57,31 @@ public class AreaState
         this.roomLightOn = on;
     }
     
+    /**
+     * Returns true if the room has windows.
+     * 
+     * @param hasWindows
+     */
     void setHasWindows(boolean hasWindows)
     {
         this.hasWindows = hasWindows;
     }
     
+    /**
+     * Returns true if the room's window shades are broken.
+     * 
+     * @param broken
+     */
     void setWindowShadesBroken(boolean broken)
     {
         this.areWindowShadesBroken = broken;
     }
     
+    /**
+     * Returns true if the window shades are down.
+     * 
+     * @param activated
+     */
     void setWindowShadesActivated(boolean activated)
     {
         if (areWindowShadesBroken)
@@ -61,16 +89,32 @@ public class AreaState
         this.windowShadesActivated = activated;
     }
     
+    /**
+     * Returns true if the room has windows.
+     * 
+     * @return
+     */
     public boolean hasWindows()
     {
         return hasWindows;
     }
     
+    /**
+     * Returns true if there is any light in the room. Does not check robot headlights.
+     * 
+     * @param daytime
+     * @return
+     */
     public boolean isLit(boolean daytime)
     {
         return roomLightOn || (daytime && hasWindows && !windowShadesActivated);
     }
 
+    /**
+     * Returns true if the room light is on.
+     * 
+     * @return
+     */
     public boolean isRoomLightOn()
     {
         return roomLightOn;

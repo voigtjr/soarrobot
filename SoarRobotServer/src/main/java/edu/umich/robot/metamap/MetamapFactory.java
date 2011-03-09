@@ -37,6 +37,9 @@ import com.google.common.collect.Maps;
 import edu.umich.robot.metamap.Door.State;
 
 /**
+ * This creates a metamap from a configuration file. As much as possible is made
+ * immutable.
+ * 
  * @author voigtjr@gmail.com
  */
 public class MetamapFactory
@@ -55,7 +58,7 @@ public class MetamapFactory
     
     private final Map<Integer, Integer> lockedCodes = Maps.newHashMap();
     
-    private final Map<Integer, SquareArea.Builder> absMap = Maps.newHashMap();
+    private final Map<Integer, RectArea.Builder> absMap = Maps.newHashMap();
     
     private final String imagePath;
     private final double metersPerPixel;
@@ -78,6 +81,10 @@ public class MetamapFactory
 //    }
 //    
     
+    /**
+     * This is the same id generator that gets handed to the metamap instance
+     * for future object creation.
+     */
     private final IdGenerator idg = new IdGenerator();
     
     public MetamapFactory(Config config)
@@ -124,13 +131,13 @@ public class MetamapFactory
                 add(WallDir.WEST, xywh[0], index);
             }
             
-            SquareArea.Builder ab = new SquareArea.Builder(xywh, u.getMeters_xywh(xywh), idg);
+            RectArea.Builder ab = new RectArea.Builder(xywh, u.getMeters_xywh(xywh), idg);
             absMap.put(index, ab);
         }
 
         for (int index = 0; index < pixelRooms.size(); ++index)
         {
-            SquareArea.Builder ab = absMap.get(index);
+            RectArea.Builder ab = absMap.get(index);
 
             int[] xywh = pixelRooms.get(index);
             logger.debug("Room " + index);
@@ -143,7 +150,7 @@ public class MetamapFactory
         Map<Integer, Door> doors = Maps.newConcurrentMap();
         for (Integer id : doorIds)
         {
-            SquareArea.Builder ab = absMap.get(id);
+            RectArea.Builder ab = absMap.get(id);
             int[] xywh = pixelRooms.get(id);
             
             Door door = new Door(id, u.getMeters_xywh(xywh));
@@ -185,7 +192,7 @@ public class MetamapFactory
         return new Metamap(imagePath, metersPerPixel, origin, areaList.build(), new VirtualObjectManager(oc, idg), doors, idg);
     }
     
-    private void gateways(WallDir dir, SquareArea.Builder current, Door door)
+    private void gateways(WallDir dir, RectArea.Builder current, Door door)
     {
         // create a gateway at the midpoint of the <dir> wall of this room.
         Gateway gw = current.gateway(dir, door);
@@ -230,7 +237,7 @@ public class MetamapFactory
      * @param a The other axis for looking at wall lengths, 0 or 1 (x or y).
      * @param xywh Target room dimensions.
      */
-    private void setToList(SquareArea.Builder ab, WallDir dir, int p, int a, int[] xywh)
+    private void setToList(RectArea.Builder ab, WallDir dir, int p, int a, int[] xywh)
     {
         Map<Integer, List<Integer>> m = wallMaps.get(dir.opposite());
         List<Integer> tos = Lists.newArrayList();

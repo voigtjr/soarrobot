@@ -24,6 +24,8 @@ package edu.umich.robot.soar;
 import sml.Identifier;
 
 /**
+ * Utility for parsing parameters off of Soar wmes.
+ * 
  * @author voigtjr@gmail.com
  */
 public class CommandParameters

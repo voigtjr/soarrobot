@@ -51,6 +51,9 @@ import edu.umich.robot.util.properties.PropertyKey;
 import edu.umich.robot.util.properties.PropertyManager;
 
 /**
+ * <p>
+ * Form for agent parameter settings.
+ * 
  * @author voigtjr@gmail.com
  */
 public class SoarParametersView

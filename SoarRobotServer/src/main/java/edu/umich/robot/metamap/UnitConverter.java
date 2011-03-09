@@ -26,6 +26,9 @@ import java.util.List;
 import com.google.common.collect.Lists;
 
 /**
+ * Convert coordinates from the map to meters. Deals with the flipping of the y
+ * axis.
+ * 
  * @author voigtjr@gmail.com
  */
 public class UnitConverter

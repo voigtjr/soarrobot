@@ -24,6 +24,9 @@ package edu.umich.robot.metamap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Generates globally unique integer identifier numbers for entities in the
+ * simulator.
+ * 
  * @author voigtjr@gmail.com
  */
 public class IdGenerator

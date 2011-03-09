@@ -36,17 +36,33 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
+ * Main output link interface. Manually watches for new commands and manages
+ * their state.
+ * 
  * @author voigtjr@gmail.com
  */
 public class OutputLink
 {
     private static final Log logger = LogFactory.getLog(OutputLink.class);
 
+    /**
+     * Create a new output link manager for the passed agent.
+     * 
+     * @param agent
+     * @return
+     */
     static OutputLink newInstance(SoarAgent agent)
     {
         return new OutputLink(agent);
     }
 
+    /**
+     * Maps an output link command with a status. The status is also stored in
+     * the command so I forget why this is here. I think it is because the
+     * command can become null or invalid or something.
+     * 
+     * @author voigtjr
+     */
     private static class OLCommandPair
     {
         final OLCommand command;
@@ -65,6 +81,12 @@ public class OutputLink
 
     private final Map<Long, OLCommandPair> commands = Maps.newHashMap();
 
+    /**
+     * This turns off output-link change tracking, the changes are all tracked
+     * manually.
+     * 
+     * @param agent
+     */
     public OutputLink(SoarAgent agent)
     {
         this.ol = agent.getSoarAgent().GetOutputLink();
@@ -73,6 +95,9 @@ public class OutputLink
         agent.getSoarAgent().SetOutputLinkChangeTracking(false);
     }
 
+    /**
+     * Update the output link looking for and instantiating new commands.
+     */
     void update()
     {
         // walk output link, creating and updating, marking keeps

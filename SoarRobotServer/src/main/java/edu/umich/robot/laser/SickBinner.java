@@ -13,10 +13,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 /**
- * TODO refactor this and UrgBinner -- they share a lot of code.
+ * TODO refactor this and UrgBinner -- they share a lot of code. See URG binner
+ * for detailed comments.
  * 
  * @author voigtjr
- *
+ * 
  */
 public class SickBinner
 {

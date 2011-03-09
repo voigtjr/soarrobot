@@ -25,10 +25,15 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
+ * Simple simulated radio interface.
+ * 
  * @author voigtjr@gmail.com
  */
 public class SimRadio implements Radio
 {
+    /**
+     * Keeps track of everyone who cares to receive radio messages.
+     */
     private final List<RadioHandler> handlers = new CopyOnWriteArrayList<RadioHandler>();
 
     public void addRadioHandler(RadioHandler handler)

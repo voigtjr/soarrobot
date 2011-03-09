@@ -28,6 +28,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ * <p>
+ * Radio message data for transmission in simulated radio.
+ * 
+ * <p>
  * Immutable.
  * 
  * @author voigtjr
@@ -36,12 +40,32 @@ public class RadioMessage
 {
     private static final AtomicLong counter = new AtomicLong();
 
+    /**
+     * Create a new one from these arguments.
+     * 
+     * @param from
+     *            Sender
+     * @param destination
+     *            Receiver
+     * @param tokens
+     *            The message
+     * @return
+     */
     static RadioMessage newCommunication(String from, String destination,
             List<String> tokens)
     {
         return new RadioMessage(from, destination, tokens);
     }
 
+    /**
+     * Create a new message for broadcast to all recipients.
+     * 
+     * @param from
+     *            Sender
+     * @param tokens
+     *            The message
+     * @return
+     */
     static RadioMessage newCommunication(String from, List<String> tokens)
     {
         return newCommunication(from, null, tokens);
@@ -108,26 +132,50 @@ public class RadioMessage
                 .unmodifiableList(new ArrayList<String>(tokens));
     }
 
+    /**
+     * Who the message is targeted at. Null means everyone.
+     * 
+     * @return
+     */
     public String getDestination()
     {
         return destination;
     }
 
+    /**
+     * Who the message is from, usually a robot name.
+     * 
+     * @return
+     */
     public String getFrom()
     {
         return from;
     }
 
+    /**
+     * Unique identifier across messages.
+     * 
+     * @return
+     */
     public long getId()
     {
         return id;
     }
 
+    /**
+     * The message.
+     * 
+     * @return
+     */
     public List<String> getTokens()
     {
         return tokens;
     }
 
+    /**
+     * True if there is no destination and it should go to all listeners.
+     * @return
+     */
     public boolean isBroadcast()
     {
         return destination == null;

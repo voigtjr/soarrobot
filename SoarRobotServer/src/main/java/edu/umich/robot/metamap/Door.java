@@ -26,6 +26,11 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 
 /**
+ * Represents a door that can be opened, closed, locked. Note that this
+ * represents a physical door and not the area that makes up the room that the
+ * door is in. The area that contains a door is simply tagged with a door
+ * property and is otherwise a normal area description.
+ * 
  * @author voigtjr@gmail.com
  */
 public class Door
@@ -35,12 +40,24 @@ public class Door
         OPEN, CLOSED, LOCKED
     }
     
+    /**
+     * Doors start open.
+     */
     private State state = State.OPEN;
     
+    /**
+     * -1 means no locking code.
+     */
     private int code = -1;
     
+    /**
+     * This is the location of the door in meters, x, y, width, height.
+     */
     private final List<Double> xywh;
     
+    /**
+     * Globally unique door identifier number.
+     */
     private final int id;
     
     public Door(int id, List<Double> xywh)
@@ -51,6 +68,11 @@ public class Door
         .build();
     }
     
+    /**
+     * Exact copy, same id.
+     * 
+     * @return
+     */
     Door copy()
     {
         Door ret = new Door(id, xywh);
@@ -59,31 +81,61 @@ public class Door
         return ret;
     }
     
+    /**
+     * Check if the door is open, closed, locked.
+     * 
+     * @return
+     */
     public synchronized State getState()
     {
         return state;
     }
     
+    /**
+     * Set the door to be open, closed, locked.
+     * 
+     * @param state
+     */
     synchronized void setState(State state)
     {
         this.state = state;
     }
     
+    /**
+     * Get the door's lock code.
+     * 
+     * @return
+     */
     public synchronized int getCode()
     {
         return code;
     }
     
+    /**
+     * Set the door's lock code.
+     * 
+     * @param code
+     */
     synchronized void setCode(int code)
     {
         this.code = code;
     }
     
+    /**
+     * Find out where the door is.
+     * 
+     * @return x, y, width, height
+     */
     public synchronized List<Double> getxywh()
     {
         return xywh;
     }
 
+    /**
+     * Get the door's global identifier number.
+     * 
+     * @return
+     */
     public synchronized int getId()
     {
         return id;

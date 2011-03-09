@@ -38,6 +38,8 @@ import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventListener;
 
 /**
+ * Model for the robots list in the GUI.
+ * 
  * @author voigtjr@gmail.com
  */
 public class RobotsTableModel extends AbstractTableModel
@@ -46,8 +48,14 @@ public class RobotsTableModel extends AbstractTableModel
 
     private static final long serialVersionUID = 1466373161707709390L;
 
+    /**
+     * Reference to the main program controller.
+     */
     private final Controller controller;
 
+    /**
+     * List of all current robots.
+     */
     private final List<Robot> robots = new ArrayList<Robot>();
 
     public static final int ROBOT_COL = 0;
@@ -55,10 +63,18 @@ public class RobotsTableModel extends AbstractTableModel
     public static final int CONTROL_COL = 1;
 
     /**
-     * synchronized by field robots
+     * <p>
+     * List of robot controllers, the top of the stack, the current controllers
+     * controlling the robot in the same row of the table. See RobotManager.
+     * 
+     * <p>
+     * Synchronized by member variable 'robots'
      */
     private final List<RobotController> controllers = new ArrayList<RobotController>();
 
+    /**
+     * @param controller Main program controller, not a robot controller.
+     */
     public RobotsTableModel(Controller controller)
     {
         this.controller = controller;
@@ -75,6 +91,11 @@ public class RobotsTableModel extends AbstractTableModel
         }
     }
 
+    /**
+     * Called when a robot is added to the simulator.
+     * 
+     * @param robot
+     */
     private void handleRobotAdded(Robot robot)
     {
         int row = 0;
@@ -87,6 +108,11 @@ public class RobotsTableModel extends AbstractTableModel
         fireTableRowsInserted(row, row);
     }
 
+    /**
+     * Called when a robot is removed from the simulator.
+     * 
+     * @param robot
+     */
     private void handleRobotRemoved(Robot robot)
     {
         int row = 0;
@@ -103,6 +129,12 @@ public class RobotsTableModel extends AbstractTableModel
         fireTableRowsDeleted(row, row);
     }
 
+    /**
+     * Called when a robot controller is deactivated. Sets that row to
+     * NullController.
+     * 
+     * @param robot
+     */
     private void handleControllerDeactivated(Robot robot)
     {
         int row = -1;
@@ -120,6 +152,12 @@ public class RobotsTableModel extends AbstractTableModel
         fireTableRowsUpdated(row, row);
     }
 
+    /**
+     * Called when a robot controller is activated.
+     * 
+     * @param robot
+     * @param controller The new controller.
+     */
     private void handleControllerActivated(Robot robot,
             RobotController controller)
     {
@@ -138,10 +176,14 @@ public class RobotsTableModel extends AbstractTableModel
         fireTableRowsUpdated(row, row);
     }
 
+    /**
+     * Handles the robot events used to update state in this table.
+     */
     RobotEventListener listener = new RobotEventListener()
     {
         public void onEvent(final RobotEvent event)
         {
+            // Create a task for this so that we can update it in the correct thread.
             Runnable runnable = new Runnable()
             {
                 public void run()
@@ -173,6 +215,8 @@ public class RobotsTableModel extends AbstractTableModel
                 }
 
             };
+            
+            // Must update table in GUI thread.
             if (SwingUtilities.isEventDispatchThread())
             {
                 runnable.run();
@@ -184,6 +228,12 @@ public class RobotsTableModel extends AbstractTableModel
         }
     };
     
+    /**
+     * Look up the row a robot is on by name.
+     * 
+     * @param robotName
+     * @return -1 if not found
+     */
     public int getRowByName(String robotName)
     {
         for (int i = 0; i < robots.size(); ++i)

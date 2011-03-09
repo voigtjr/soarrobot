@@ -27,7 +27,7 @@ import javax.swing.ImageIcon;
 
 /**
  * <p>
- * Map image utility class.
+ * Images loaded once. Most of these are used in the GUI.
  * 
  * @author voigtjr@gmail.com
  */

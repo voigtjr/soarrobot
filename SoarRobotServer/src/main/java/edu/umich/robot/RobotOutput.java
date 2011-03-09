@@ -33,32 +33,104 @@ import edu.umich.robot.util.Pose;
 import edu.umich.robot.util.events.RobotEventListener;
 
 /**
+ * A read-only view in to the robot's current state.
+ * 
  * @author voigtjr@gmail.com
  */
 public interface RobotOutput
 {
+    /**
+     * Get the robot's current pose. At least position, orientation, and
+     * velocities should all be elaborated.
+     * 
+     * @return
+     */
     Pose getPose();
 
+    /**
+     * Get a list of objects within the virtual object sensor's field of view.
+     * 
+     * @return 
+     */
     List<VirtualObject> getVisibleObjects();
 
+    /**
+     * Get laser sensor data.
+     * 
+     * @return
+     */
     Laser getLaser();
 
+    /**
+     * Get the current area description. This is immutable definitions like room
+     * dimensions, gateways, etc.
+     * 
+     * @return
+     */
     AreaDescription getAreaDescription();
     
+    /**
+     * Get the current area state, this is stuff that can change.
+     * 
+     * @return
+     */
     AreaState getAreaState();
 
+    /**
+     * Get an interface to the radio system to communicate with other bots and
+     * the gui.
+     * 
+     * @return
+     */
     Radio getRadio();
 
+    /**
+     * Get the object carried by the virtual object manipulator, or null if
+     * nothing.
+     * 
+     * @return Null if nothing is carried.
+     */
     VirtualObject getCarriedObject();
     
+    /**
+     * Register for feedback events from various actions the robot can take.
+     * 
+     * @param <T>
+     * @param klass
+     *            The event to listen for, or null for all events.
+     * @param listener
+     */
     <T extends AbstractFeedbackEvent> void addFeedbackEventListener(Class<T> klass, RobotEventListener listener);
     
+    /**
+     * Unregester for previously registered feedback events.
+     * 
+     * @param <T>
+     * @param klass
+     * @param listener
+     */
     <T extends AbstractFeedbackEvent> void removeFeedbackEventListener(Class<T> klass, RobotEventListener listener);
     
+    /**
+     * Get immutable configuration information for the robot, such as limits and
+     * geometry.
+     * 
+     * @return
+     */
     RobotConfiguration getRobotConfiguration();
     
+    /**
+     * Get battery life expressed as a percentage remaining.
+     * 
+     * @return
+     */
     double getBatteryLife();
 
+    /**
+     * Get the current headlight state.
+     * 
+     * @return Returns true if the headlight is on.
+     */
     boolean isHeadlightOn();
     
 }

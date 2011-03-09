@@ -53,6 +53,10 @@ import edu.umich.robot.util.Configs;
 import edu.umich.robot.util.swing.SwingTools;
 
 /**
+ * This is for read-only viewing of a simulation running on the machine.
+ * Subscribes to a bunch of LCM channels and displays what it sees using the
+ * configuration file it is given.
+ * 
  * @author voigtjr@gmail.com
  */
 public class ViewerApplication

@@ -27,6 +27,17 @@ import edu.umich.robot.util.events.RobotEventListener;
 import edu.umich.robot.util.events.RobotEventManager;
 
 /**
+ * <p>
+ * This is a class that scales control events as they pass through it. It is
+ * currently only used as a pipe for gamepad events right now (the gamepad
+ * generates control event objects and hands them to this class which then fires
+ * them to listeners (the current robot it controls). In theory, the setLimits
+ * function could be called to scale the values in the drive events by a number.
+ * 
+ * <p>
+ * So, if setLimits(2, 2) was called, a DriveLinearEvent with value 1.0 would
+ * change to 2.0 as it passed through this class on the way to a robot.
+ * 
  * @author voigtjr@gmail.com
  */
 public class ScalableRobotController implements RobotController
@@ -74,8 +85,10 @@ public class ScalableRobotController implements RobotController
             DriveScalable drive = (DriveScalable) event;
             drive = drive.scaleLinear(linear);
             drive = drive.scaleAngular(angular);
+            events.fireEvent((AbstractControlEvent)drive, eventType);
         }
-        events.fireEvent(event, eventType);
+        else
+            events.fireEvent(event, eventType);
     }
 
     @Override

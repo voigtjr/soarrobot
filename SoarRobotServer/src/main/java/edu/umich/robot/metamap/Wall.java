@@ -26,13 +26,32 @@ import java.util.List;
 import edu.umich.robot.util.Pose;
 
 /**
+ * Represents walls in area descriptions.
+ * 
  * @author voigtjr@gmail.com
  */
 public interface Wall
 {
+    /**
+     * The center of the wall.
+     * 
+     * @return
+     */
     Pose getMidpoint();
     
+    /**
+     * Which side of the room this wall is on.
+     * 
+     * @return
+     */
     WallDir getDirection();
     
+    /**
+     * Returns an empty list if this wall is a real wall (it still may have
+     * gateways though). If the wall is fully open and part of a composition of
+     * areas, this will list what rooms are on the other side of the wall.
+     * 
+     * @return
+     */
     List<Integer> getTo();
 }

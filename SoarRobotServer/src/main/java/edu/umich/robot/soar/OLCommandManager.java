@@ -32,6 +32,9 @@ import org.apache.commons.logging.LogFactory;
 import sml.Identifier;
 
 /**
+ * This class takes a command off the input link and returns a new command
+ * instance for it.
+ * 
  * @author voigtjr@gmail.com
  */
 class OLCommandManager
@@ -83,6 +86,14 @@ class OLCommandManager
         commands.put(DoorLockCommand.NAME, DoorLockCommand.class);
     }
 
+    /**
+     * Convert a wme in to a command instance for processing. If the command
+     * returns from this, it is accepted and status is set as such.
+     * 
+     * @param id
+     * @return
+     * @throws SoarCommandError
+     */
     public OLCommand newInstance(Identifier id) throws SoarCommandError
     {
         String name = id.GetAttribute();

@@ -22,9 +22,16 @@
 package edu.umich.robot.radio;
 
 /**
+ * Implement this to receive messages.
+ * 
  * @author voigtjr@gmail.com
  */
 public interface RadioHandler
 {
+    /**
+     * Called when a new message is received.
+     * 
+     * @param comm
+     */
     public void radioMessageReceived(RadioMessage comm);
 }

@@ -1,7 +1,6 @@
 splinters = [seek];
 seek {
 	position = [0, 0];
-	productions = "agents/robot3/clean-house-new.soar";
 }
 
 image_path = "../common/3fcse.png";

@@ -27,17 +27,44 @@ import java.util.Map;
 import edu.umich.robot.util.Pose;
 
 /**
+ * Everything a virtual object needs to do.
+ * 
  * @author voigtjr@gmail.com
  */
 public interface VirtualObject
 {
+    /**
+     * Globally unique identification number, unique among instances.
+     * @return
+     */
     public int getId();
     
+    /**
+     * A "class" name of the object, unique among other classes, many instaces
+     * can share the same name.
+     * 
+     * @return
+     */
     public String getName();
 
+    /**
+     * Where the object is, null if carried and not placed.
+     * 
+     * @return
+     */
     public Pose getPose();
 
+    /**
+     * Size in x, y.
+     * 
+     * @return
+     */
     public List<Double> getSize();
 
+    /**
+     * Arbitrary property list.
+     * 
+     * @return
+     */
     public Map<String, String> getProperties();
 }

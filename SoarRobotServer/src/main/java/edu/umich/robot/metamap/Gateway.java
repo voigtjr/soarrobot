@@ -29,6 +29,9 @@ import edu.umich.robot.util.ImmutablePose;
 import edu.umich.robot.util.Pose;
 
 /**
+ * Gateways are points that lead to other rooms. These connect rooms and door
+ * areas, and have a reference to the door object in the associated door room.
+ * 
  * @author voigtjr@gmail.com
  */
 public class Gateway
@@ -49,21 +52,42 @@ public class Gateway
         this.door = door;
     }
 
+    /**
+     * Globally unique identifier number.
+     * 
+     * @return
+     */
     public int getId()
     {
         return id;
     }
 
+    /**
+     * List of area ids that this gateway connects.
+     * 
+     * @return
+     */
     public List<Integer> getTo()
     {
         return to;
     }
 
+    /**
+     * Where this gateway is, a point.
+     * 
+     * @return
+     */
     public Pose getPose()
     {
         return pose;
     }
     
+    /**
+     * Find out what wall this gateway is on in the passed area description.
+     * 
+     * @param ad
+     * @return
+     */
     public WallDir getDirection(AreaDescription ad)
     {
         WallDir ret = WallDir.NORTH;
@@ -111,6 +135,11 @@ public class Gateway
         return sb.toString();
     }
 
+    /**
+     * The door object in the door area associated with this gateway.
+     * 
+     * @return
+     */
     public Door getDoor()
     {
         return door;
