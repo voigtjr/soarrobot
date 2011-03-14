@@ -46,6 +46,8 @@ import edu.umich.robot.events.AfterResetEvent;
 import edu.umich.robot.events.BeforeResetEvent;
 import edu.umich.robot.events.control.AbstractDriveEvent;
 import edu.umich.robot.events.control.DriveEStopEvent;
+import edu.umich.robot.radio.RadioHandler;
+import edu.umich.robot.radio.RadioMessage;
 import edu.umich.robot.util.WallClock;
 import edu.umich.robot.util.events.RobotEvent;
 import edu.umich.robot.util.events.RobotEventListener;
@@ -56,7 +58,7 @@ import edu.umich.robot.util.properties.PropertyManager;
  * 
  * @author voigtjr@gmail.com
  */
-public class Soar implements RobotEventListener
+public class Soar implements RobotEventListener, RadioHandler
 {
     private static final Log logger = LogFactory.getLog(Soar.class);
 
@@ -331,5 +333,14 @@ public class Soar implements RobotEventListener
     {
         return !agents.isEmpty();
     }
+
+	@Override
+	public void radioMessageReceived(RadioMessage comm) {
+		for (SoarAgent a : agents) {
+			if (a.getName().equals(comm.getDestination())) {
+				a.radioMessageReceived(comm);
+			}
+		}
+	}
 
 }

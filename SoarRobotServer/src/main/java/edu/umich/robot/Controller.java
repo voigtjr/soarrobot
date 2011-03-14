@@ -182,6 +182,7 @@ public class Controller
             rcmap.put(gprc.getName(), gprc);
         
         soar = new Soar(config.getChild("soar"));
+        radio.addRadioHandler(soar);
         soar.registerForSystemEvent(smlSystemEventId.smlEVENT_SYSTEM_START, soarHandler, null);
         soar.registerForSystemEvent(smlSystemEventId.smlEVENT_SYSTEM_STOP, soarHandler, null);
         
@@ -761,6 +762,10 @@ public class Controller
     
     public Collection<VirtualObjectTemplate> getTemplates() {
     	return metamap.getTemplates();
+    }
+    
+    public Radio getRadio() {
+    	return radio;
     }
 
 }
