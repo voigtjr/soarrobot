@@ -18,5 +18,6 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/SoarRobotLibrary"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/april"/>
+	<classpathentry kind="lib" path="/SoarRobotTablet/assets/lcm.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
