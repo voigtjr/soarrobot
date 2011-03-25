@@ -280,12 +280,10 @@ public class Server implements RobotEventListener {
 		if (lcm != null) {
 			stopLCM();
 		}
-		String connectionString = "udp://" + client.getHostAddress() + ":"
-				+ port;
+		String connectionString = "udp://" + client.getHostAddress() + ":" + port;
 		try {
 			lcm = new TabletLCM(connectionString);
-			System.out.println("Started UDP LCM forwarding to client: "
-					+ connectionString);
+			System.out.println("Started UDP LCM forwarding to client: " + connectionString);
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

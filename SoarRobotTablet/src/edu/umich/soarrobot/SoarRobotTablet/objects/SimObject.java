@@ -149,7 +149,7 @@ public class SimObject {
 		}
 		if (type.equals("splinter"))
 		{
-			size = new PointF(0.5f, 0.5f);
+			size = new PointF(0.75f, 0.5f);
 		}
 		else
 		{
@@ -168,7 +168,8 @@ public class SimObject {
         drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, gl, Color.BLUE);
         drawWaypoints(gl, Color.YELLOW);
 		if (type.equals("splinter")) {
-			GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, Color.GRAY, theta);
+			//GLUtil.drawCylinder(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, Color.GRAY, theta);
+		    drawRobot(gl);
 
 		} else {
 			GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, color);
@@ -242,6 +243,48 @@ public class SimObject {
             c.restore();
             */
         }
+    }
+    
+    private void drawRobot(GL10 gl) {
+        //GLUtil.drawCylinder(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, Color.GRAY, theta);
+        GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 0.3f, Color.BLUE, theta); // Body
+        GLUtil.drawCube(gl, location.x, location.y, -0.75f, size.x * 0.4f, size.y * 0.4f, 0.125f, Color.GRAY, theta); // Head
+        GLUtil.drawWheel(gl, 
+                location.x + 0.4f * (size.x) * (float) Math.cos(Math.toRadians(theta) - Math.PI/4), 
+                location.y + 0.6f * (size.y) * (float) Math.sin(Math.toRadians(theta) - Math.PI/4),
+                -0.3f, 
+                0.15f, 
+                0.15f, 
+                0.15f, 
+                Color.BLACK, 
+                theta);
+        GLUtil.drawWheel(gl, 
+                location.x - 0.4f * (size.x) * (float) Math.cos(Math.toRadians(-theta) - Math.PI/4), 
+                location.y + 0.6f * (size.y) * (float) Math.sin(Math.toRadians(-theta) - Math.PI/4),
+                -0.3f, 
+                0.15f, 
+                0.15f, 
+                0.15f, 
+                Color.BLACK, 
+                theta);      
+        GLUtil.drawWheel(gl, 
+                location.x - 0.4f * (size.x + 0.22f) * (float) Math.cos(Math.toRadians(theta) - Math.PI/3), 
+                location.y - 0.6f * (size.y + 0.22f) * (float) Math.sin(Math.toRadians(theta) - Math.PI/3),
+                -0.3f, 
+                0.15f, 
+                0.15f, 
+                0.15f, 
+                Color.BLACK, 
+                theta);
+        GLUtil.drawWheel(gl, 
+                location.x + 0.4f * (size.x + 0.22f) * (float) Math.cos(Math.toRadians(-theta) - Math.PI/3), 
+                location.y - 0.6f * (size.y + 0.22f) * (float) Math.sin(Math.toRadians(-theta) - Math.PI/3),
+                -0.3f, 
+                0.15f, 
+                0.15f, 
+                0.15f, 
+                Color.BLACK, 
+                theta);     
     }
 	
 	/*
