@@ -40,6 +40,7 @@ import com.google.common.collect.Lists;
 import edu.umich.robot.RobotController;
 import edu.umich.robot.RobotOutput;
 import edu.umich.robot.events.control.AbstractControlEvent;
+import edu.umich.robot.radio.RadioHandler;
 import edu.umich.robot.radio.RadioMessage;
 import edu.umich.robot.soar.AgentProperties.LearnSetting;
 import edu.umich.robot.soar.AgentProperties.Mission;
@@ -65,7 +66,7 @@ import edu.umich.soar.SoarProperties;
 /**
  * @author voigtjr@gmail.com
  */
-public class SoarAgent implements RobotController
+public class SoarAgent implements RobotController, RadioHandler
 {
     private static final Log logger = LogFactory.getLog(SoarAgent.class);
 
@@ -479,5 +480,10 @@ public class SoarAgent implements RobotController
     {
         waypoints.shutdown();
     }
+
+	@Override
+	public void radioMessageReceived(RadioMessage comm) {
+		radioMessages.put((long) radioMessages.size(), comm);
+	}
 
 }

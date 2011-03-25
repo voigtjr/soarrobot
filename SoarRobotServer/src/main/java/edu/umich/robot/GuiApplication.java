@@ -94,6 +94,7 @@ import edu.umich.robot.actions.SoarDataAction;
 import edu.umich.robot.actions.SoarParametersAction;
 import edu.umich.robot.actions.SoarStepAction;
 import edu.umich.robot.actions.SoarToggleAction;
+import edu.umich.robot.actions.TextMessageAction;
 import edu.umich.robot.events.AfterResetEvent;
 import edu.umich.robot.events.ControllerActivatedEvent;
 import edu.umich.robot.events.ControllerDeactivatedEvent;
@@ -298,8 +299,8 @@ public class GuiApplication
         fileMenu.add(new JSeparator());
         fileMenu.add(actionManager.getAction(ResetPreferencesAction.class));
 
-        //fileMenu.add(new JSeparator());
-        //fileMenu.add(actionManager.getAction(ForwardToTabletAction.class));
+        fileMenu.add(new JSeparator());
+        fileMenu.add(actionManager.getAction(TextMessageAction.class));
         
         fileMenu.add(new JSeparator());
         fileMenu.add(actionManager.getAction(SaveMapAction.class));
@@ -536,6 +537,7 @@ public class GuiApplication
         new MoveCameraAboveAction(actionManager);
         new MoveCameraBehindAction(actionManager);
         new SimSpeedAction(actionManager);
+        new TextMessageAction(actionManager);
         //new ForwardToTabletAction(actionManager);
     }
     
