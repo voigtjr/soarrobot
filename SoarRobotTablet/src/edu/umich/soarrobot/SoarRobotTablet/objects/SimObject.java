@@ -31,22 +31,13 @@ package edu.umich.soarrobot.SoarRobotTablet.objects;
 
 import java.util.HashMap;
 import java.util.Scanner;
-
-import javax.microedition.khronos.opengles.GL;
 import javax.microedition.khronos.opengles.GL10;
-
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Paint.Style;
-import android.graphics.Path;
 import android.graphics.PointF;
 import april.lcmtypes.laser_t;
 import april.lcmtypes.waypoint_list_t;
 import april.lcmtypes.waypoint_t;
-import april.sim.CostMap;
 import edu.umich.soarrobot.SoarRobotTablet.layout.GLUtil;
-import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 
 public class SimObject {
 	
@@ -59,9 +50,6 @@ public class SimObject {
 	// Value is of type String or Float, or an array
 	// of one of those types.
 	private static HashMap<String, HashMap<String, String>> classes;
-	
-	// The highest id value that's been assigned so far.
-	private static int maxID;
 	
 	public static void init(String classesString) {
 		SimObject.classes = new HashMap<String, HashMap<String,String>>();
@@ -83,7 +71,6 @@ public class SimObject {
 			}
 			classes.put(name, properties);
 		}
-		maxID = 0;
 	}
 	
 	public static String[] getClassNames() {
@@ -102,6 +89,10 @@ public class SimObject {
 	private int color;
 	private int id;
 	private boolean selected;
+	private boolean visible;
+	
+	// These variable could fit better in a robot-themed subclass.
+	private SimObject carrying;
 	
 	private laser_t lidar;
 	private float lidarTheta;
@@ -123,13 +114,14 @@ public class SimObject {
 	 * @param type
 	 * @param instanceAttributes
 	 */
-	public SimObject(String type, PointF location) {
+	public SimObject(String type, int id, PointF location) {
 		this.type = type;
+		this.id = id;
 		this.attributes = classes.get(type);
 		this.location = location;
 		this.theta = 0.0f;
-		this.id = maxID;
-		++maxID;
+		this.visible = true;
+		this.carrying = null;
 		selected = false;
 		lidar = null;
 		lowresLidar = null;
@@ -164,6 +156,9 @@ public class SimObject {
      */
     public void draw(GL10 gl)
     {
+    	if (!visible) {
+    		return;
+    	}
         drawLidar(lidar, lidarLocation, lidarTheta, gl, Color.RED);
         drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, gl, Color.BLUE);
         drawWaypoints(gl, Color.YELLOW);
@@ -312,5 +307,21 @@ public class SimObject {
     public void setWaypoints(waypoint_list_t w)
     {
         waypoints = w;
+    }
+    
+    public void setVisible(boolean visible) {
+    	this.visible = visible;
+    }
+    
+    public boolean isVisible() {
+    	return visible;
+    }
+    
+    public void setCarrying(SimObject carrying) {
+    	this.carrying = carrying;
+    }
+    
+    public SimObject getCarrying() {
+    	return carrying;
     }
 }

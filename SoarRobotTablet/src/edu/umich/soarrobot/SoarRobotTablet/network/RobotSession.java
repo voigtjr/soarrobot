@@ -26,6 +26,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
@@ -148,7 +149,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 			SimObject.init(message.substring(space) + " splinter { }");
 		} else if (command.equals("robots")) {
 			for (String robotString : message.substring(space).split(";")) {
-				if (robotString.length() == 0) {
+				if (robotString.trim().length() == 0) {
 					continue;
 				}
 				Scanner s = new Scanner(robotString).useDelimiter(" ");
@@ -156,7 +157,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 				float x = s.nextFloat();
 				float y = s.nextFloat();
 				float theta = s.nextFloat();
-				SimObject robot = new SimObject("splinter", new PointF(x, y));
+				SimObject robot = new SimObject("splinter", -1, new PointF(x, y));
 				robot.setTheta(theta);
 				robot.setAttribute("name", name);
 				activity.getMapView().addRobot(robot);
@@ -165,20 +166,28 @@ public class RobotSession extends Thread implements LCMSubscriber {
 			}
 		} else if (command.equals("objects")) {
 			for (String objString : message.substring(space).split(";")) {
-				if (objString.length() == 0) {
+				if (objString.trim().length() == 0) {
 					continue;
 				}
 				Scanner s = new Scanner(objString).useDelimiter(" ");
 				String name = s.next();
+				int id = s.nextInt();
 				float x = s.nextFloat();
 				float y = s.nextFloat();
 				float theta = s.nextFloat();
-				SimObject sim = new SimObject(name, new PointF(x, y));
+				SimObject sim = new SimObject(name, id, new PointF(x, y));
 				sim.setTheta(theta);
 				activity.getMapView().addObject(sim);
 			}
 		} else if (command.equals("text")) {
 			activity.setPropertiesText(message.substring(space));
+		} else if (command.equals("pickup-object")) {
+			//TODO
+			// Have the robot pickup the object.
+			Scanner s = new Scanner(message.substring(space));
+			String name = s.next();
+			int id = s.nextInt();
+			activity.getMapView().pickUpObject(name, id);
 		}
 		IMapView mv = activity.getMapView();
 		if (mv != null) {
@@ -297,5 +306,9 @@ public class RobotSession extends Thread implements LCMSubscriber {
 		lcm.subscribe("SIM_LIDAR_FRONT_" + robot, this);
 		lcm.subscribe("LIDAR_LOWRES_" + robot, this);
 		lcm.subscribe("WAYPOINTS_" + robot, this);
+	}
+	
+	public List<String> getRobotNames() {
+		return robotNames;
 	}
 }

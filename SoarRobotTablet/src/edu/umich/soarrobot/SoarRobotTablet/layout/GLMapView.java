@@ -630,5 +630,12 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 			}
 		}
 	}
-
+	
+	@Override
+	public void pickUpObject(String robotName, int id) {
+		SimObject robot = robots.get(robotName);
+		SimObject pickedUp = objects.get(id);
+		robot.setCarrying(pickedUp);
+		pickedUp.setVisible(false);
+	}
 }

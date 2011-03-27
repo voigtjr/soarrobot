@@ -402,4 +402,12 @@ public class MapView extends SurfaceView implements Callback, IMapView
     {
         nextObjectClass = nextClass.toString();
     }
+
+	@Override
+	public void pickUpObject(String robotName, int id) {
+		SimObject robot = robots.get(robotName);
+		SimObject pickedUp = objects.get(id);
+		robot.setCarrying(pickedUp);
+		pickedUp.setVisible(false);
+	}
 }

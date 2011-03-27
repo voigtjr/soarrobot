@@ -1,6 +1,7 @@
 package edu.umich.robot;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 import lcm.lcm.LCM;
 import lcm.lcm.LCMDataInputStream;
@@ -8,11 +9,15 @@ import lcm.lcm.LCMSubscriber;
 
 public class TabletLCM
 {
+	private static final long MIN_INTERVAL = 100L;
+	
     private final LCM input;
     private final LCM output;
+    private HashMap<String, Long> lastMessages;
     
     public TabletLCM(String connectionString) throws IOException, IllegalArgumentException
     {
+    	lastMessages = new HashMap<String, Long>();
         output = new LCM(connectionString);
         input = LCM.getSingleton();
         input.subscribe("POSE_seek", subscriber);
@@ -27,7 +32,11 @@ public class TabletLCM
         {
             try
             {
-                output.publish(channel, ins.getBuffer(), ins.getBufferOffset(), ins.available());
+            	long now = System.currentTimeMillis();
+            	if (!lastMessages.containsKey(channel) || now - lastMessages.get(channel) > MIN_INTERVAL) {
+            		output.publish(channel, ins.getBuffer(), ins.getBufferOffset(), ins.available());
+                	lastMessages.put(channel, now);
+            	}
             }
             catch (IOException e)
             {

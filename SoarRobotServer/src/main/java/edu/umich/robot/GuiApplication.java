@@ -101,6 +101,8 @@ import edu.umich.robot.events.ControllerDeactivatedEvent;
 import edu.umich.robot.events.RobotAddedEvent;
 import edu.umich.robot.events.RobotRemovedEvent;
 import edu.umich.robot.gp.Gamepad;
+import edu.umich.robot.radio.RadioHandler;
+import edu.umich.robot.radio.RadioMessage;
 import edu.umich.robot.util.Configs;
 import edu.umich.robot.util.Pose;
 import edu.umich.robot.util.events.RobotEvent;
@@ -113,7 +115,7 @@ import edu.umich.robot.util.events.RobotEventListener;
  * 
  * @author voigtjr@gmail.com
  */
-public class GuiApplication
+public class GuiApplication implements RadioHandler
 {
     private static final Log logger = LogFactory.getLog(GuiApplication.class);
 
@@ -274,7 +276,8 @@ public class GuiApplication
         controller.addListener(AfterResetEvent.class, listener);
         controller.addListener(ControllerActivatedEvent.class, listener);
         controller.addListener(ControllerDeactivatedEvent.class, listener);
-
+        controller.getRadio().addRadioHandler(this);
+        
         actionManager = new ActionManager(this);
         initActions();
         
@@ -538,7 +541,6 @@ public class GuiApplication
         new MoveCameraBehindAction(actionManager);
         new SimSpeedAction(actionManager);
         new TextMessageAction(actionManager);
-        //new ForwardToTabletAction(actionManager);
     }
     
     /**
@@ -1173,5 +1175,20 @@ public class GuiApplication
         dialog.pack();
         dialog.setVisible(true);
     }
+
+	@Override
+	public void radioMessageReceived(RadioMessage comm) {
+		if (!comm.getDestination().equalsIgnoreCase("user")) {
+			return;
+		}
+		
+		StringBuilder b = new StringBuilder();
+		for (String s : comm.getTokens()) {
+			b.append(s);
+			b.append(" ");
+		}
+		String message = (b.length() > 0) ? b.substring(0, b.length() - 1) : b.toString();
+		setStatusBarMessage(message);
+	}
 
 }

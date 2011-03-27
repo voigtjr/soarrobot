@@ -46,6 +46,7 @@ import edu.umich.robot.events.AbstractProgramEvent;
 import edu.umich.robot.events.AfterResetEvent;
 import edu.umich.robot.events.BeforeResetEvent;
 import edu.umich.robot.events.ObjectAddedEvent;
+import edu.umich.robot.events.PickUpObjectEvent;
 import edu.umich.robot.events.RobotAddedEvent;
 import edu.umich.robot.events.RobotRemovedEvent;
 import edu.umich.robot.events.SoarStartedEvent;
@@ -182,15 +183,17 @@ public class Controller
             rcmap.put(gprc.getName(), gprc);
         
         soar = new Soar(config.getChild("soar"));
-        radio.addRadioHandler(soar);
         soar.registerForSystemEvent(smlSystemEventId.smlEVENT_SYSTEM_START, soarHandler, null);
         soar.registerForSystemEvent(smlSystemEventId.smlEVENT_SYSTEM_STOP, soarHandler, null);
         
         sim = new Simulator(config);
         metamap = new MetamapFactory(config).build();
+        metamap.setController(this);
         events.addListener(RobotAddedEvent.class, metamap);
         events.addListener(RobotRemovedEvent.class, metamap);
 
+        radio.addRadioHandler(soar);
+        
         events.addListener(BeforeResetEvent.class, soar);
         events.addListener(AfterResetEvent.class, soar);
         
@@ -198,11 +201,13 @@ public class Controller
 			server = new Server(12122);
 			server.setController(this);
 			server.start();
+			radio.addRadioHandler(server);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
         events.addListener(ObjectAddedEvent.class, server);
+        events.addListener(PickUpObjectEvent.class, server);
     }
     
     /**
@@ -645,9 +650,6 @@ public class Controller
     public void addObject(String name, double[] pos)
     {
         VirtualObject obj = metamap.addObject(name, pos);
-        if (obj != null) {
-            events.fireEvent(new ObjectAddedEvent(obj));
-        }
     }
 
     /**
@@ -767,5 +769,8 @@ public class Controller
     public Radio getRadio() {
     	return radio;
     }
-
+    
+    public RobotEventManager getEventManager() {
+    	return events;
+    }
 }

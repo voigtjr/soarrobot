@@ -38,7 +38,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umich.robot.Controller;
 import edu.umich.robot.Robot;
+import edu.umich.robot.events.ObjectAddedEvent;
+import edu.umich.robot.events.PickUpObjectEvent;
 import edu.umich.robot.events.RobotAddedEvent;
 import edu.umich.robot.events.RobotRemovedEvent;
 import edu.umich.robot.metamap.Door.State;
@@ -85,6 +88,8 @@ public class Metamap implements RobotEventListener
     private final int[] origin;
    
     private final IdGenerator idg;
+
+	private Controller controller;
     
     Metamap(String imagePath, double metersPerPixel, int[] origin, 
             List<AreaDescription> areaList, VirtualObjectManager objects, Map<Integer, Door> doors, IdGenerator idg)
@@ -344,7 +349,11 @@ public class Metamap implements RobotEventListener
      */
     public boolean pickupObject(Robot robot, int id)
     {
-        return objects.pickupObject(robot, id);
+        boolean ret = objects.pickupObject(robot, id);
+		if (ret) {
+			controller.getEventManager().fireEvent(new PickUpObjectEvent(robot, id));
+		}
+		return ret;
     }
 
     /**
@@ -505,6 +514,9 @@ public class Metamap implements RobotEventListener
     public VirtualObject addObject(String name, double[] pos)
     {
         VirtualObject obj = objects.placeNew(name, new Pose(pos));
+        if (obj != null) {
+            controller.getEventManager().fireEvent(new ObjectAddedEvent(obj));
+        }
         return obj;
     }
 
@@ -620,4 +632,8 @@ public class Metamap implements RobotEventListener
         schexec.shutdown();
         objects.shutdown();
     }
+
+	public void setController(Controller controller) {
+		this.controller = controller;
+	}
 }

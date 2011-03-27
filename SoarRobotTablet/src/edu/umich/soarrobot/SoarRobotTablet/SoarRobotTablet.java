@@ -21,6 +21,8 @@
  */
 package edu.umich.soarrobot.SoarRobotTablet;
 
+import java.util.List;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -66,8 +68,17 @@ public class SoarRobotTablet extends Activity
         public void onClick(View v)
         {
             // send the message
-            String message = commandsEditText.getText().toString();
-            robotSession.sendMessage("text " + message);
+        	List<String> robotNames = robotSession.getRobotNames();
+        	SimObject robot = mapView.getFollow();
+        	if (robot == null) {
+                showAlert("No robot selected.", Toast.LENGTH_SHORT);
+        		return;
+        	}
+        	if(robotNames.size() > 0) {
+                String message = commandsEditText.getText().toString();
+                String robotName = robot.getAttribute("name");
+                robotSession.sendMessage("text tablet " + robotName + " " + message);
+        	}
             commandsEditText.setText("");
         }
     };
@@ -139,8 +150,8 @@ public class SoarRobotTablet extends Activity
             setSelectedObject(null);
             try
             {
-                //robotSession = new RobotSession(this, "141.212.109.194", 12122); // Miller's ip
-                robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
+                robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
+                //robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
                 robotSession.start();
             }
             catch (Exception e)

@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -13,9 +14,10 @@ import java.util.Scanner;
 import com.google.common.collect.ImmutableList;
 
 import edu.umich.robot.Controller;
+import edu.umich.robot.Robot;
 import edu.umich.robot.TabletLCM;
 import edu.umich.robot.events.ObjectAddedEvent;
-import edu.umich.robot.events.ObjectRemovedEvent;
+import edu.umich.robot.events.PickUpObjectEvent;
 import edu.umich.robot.metamap.AbridgedAreaDescription;
 import edu.umich.robot.metamap.AbridgedGateway;
 import edu.umich.robot.metamap.AreaDescription;
@@ -23,6 +25,8 @@ import edu.umich.robot.metamap.Gateway;
 import edu.umich.robot.metamap.RectArea;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.metamap.VirtualObjectTemplate;
+import edu.umich.robot.radio.RadioHandler;
+import edu.umich.robot.radio.RadioMessage;
 import edu.umich.robot.splinter.Splinter;
 import edu.umich.robot.util.ImmutablePose;
 import edu.umich.robot.util.Pose;
@@ -35,7 +39,7 @@ import edu.umich.robot.util.events.RobotEventListener;
  * @author miller
  * 
  */
-public class Server implements RobotEventListener {
+public class Server implements RobotEventListener, RadioHandler {
 
 	ServerSocket socket;
 	boolean running;
@@ -178,7 +182,7 @@ public class Server implements RobotEventListener {
 		}
 
 		// objects
-		// Return objects description
+		// Return object instances
 		if (command.equalsIgnoreCase("objects")) {
 			StringBuilder sb = new StringBuilder();
 			for (VirtualObject obj : controller.getPlacedObjects()) {
@@ -192,18 +196,7 @@ public class Server implements RobotEventListener {
 		if (command.equalsIgnoreCase("robots")) {
 			StringBuilder sb = new StringBuilder();
 			for (Object obj : controller.getAllRobots()) {
-				if (obj instanceof Splinter) {
-					Splinter s = (Splinter) obj;
-					sb.append(s.getName());
-					sb.append(' ');
-					Pose p = s.getOutput().getPose();
-					sb.append(p.getX());
-					sb.append(' ');
-					sb.append(p.getY());
-					sb.append(' ');
-					sb.append(p.getYaw());
-					sb.append(';');
-				}
+				sb.append(stringForRobot((Robot)obj));
 			}
 			return "robots " + sb.toString();
 		}
@@ -215,14 +208,14 @@ public class Server implements RobotEventListener {
 					+ (controller.toggleSoarRunState() ? "Soar started"
 							: "Soar paused");
 		}
-
+		
 		if (command.equalsIgnoreCase("emulator")) {
 			try {
 				startLCM(InetAddress.getByName("127.0.0.1"), 12122);
-				return "Started LCM forwarding to emulator";
+				return "text Started LCM forwarding to emulator";
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
-				return "Error forwarding LCM to emulator";
+				return "text Error forwarding LCM to emulator";
 			}
 		}
 
@@ -237,8 +230,20 @@ public class Server implements RobotEventListener {
 					tokens[1],
 					new double[] { Double.parseDouble(tokens[2]),
 							Double.parseDouble(tokens[3]) });
-			return "Created " + tokens[1] + " at (" + tokens[2] + ", "
+			return "text Created " + tokens[1] + " at (" + tokens[2] + ", "
 					+ tokens[3] + ")";
+		}
+		
+		if (tokens[0].equalsIgnoreCase("text") && tokens.length >= 3)
+		{
+			ArrayList<String> ar = new ArrayList<String>();
+			for (int i = 3; i < tokens.length; ++i)
+			{
+				ar.add(tokens[i]);
+			}
+			RadioMessage message = new RadioMessage(tokens[1], tokens[2], ar);
+			controller.getRadio().postRadioMessage(message);
+			return "text " + message.getDestination() + " received: \"" + message.getConcatenatedTokens(" ") + "\"";
 		}
 
 		return "text Invalid command: " + command;
@@ -246,8 +251,17 @@ public class Server implements RobotEventListener {
 
 	private static String stringForVirtualObject(VirtualObject obj) {
 		Pose p = obj.getPose();
-		return obj.getName() + " " + p.getX() + " " + p.getY() + " "
+		return obj.getName() + " " + obj.getId() + " " + p.getX() + " " + p.getY() + " "
 				+ p.getYaw() + ";";
+	}
+	
+	private static String stringForRobot(Robot robot) {
+		if (robot instanceof Splinter) {
+			Splinter s = (Splinter) robot;
+			Pose p = s.getOutput().getPose();
+			return s.getName() + ' ' + p.getX() + ' ' + p.getY() + ' ' + p.getYaw() + ';';
+		}
+		return null;
 	}
 
 	public static AbridgedAreaDescription abridgeAreaDescription(RectArea sa) {
@@ -305,11 +319,20 @@ public class Server implements RobotEventListener {
 			ObjectAddedEvent oae = (ObjectAddedEvent) event;
 			VirtualObject vo = oae.getObject();
 			sendMessage("objects " + stringForVirtualObject(vo));
-		} else if (event instanceof ObjectRemovedEvent) {
-			ObjectRemovedEvent ore = (ObjectRemovedEvent) event;
-			VirtualObject vo = ore.getObject();
-			sendMessage("remove-object " + stringForVirtualObject(vo));
+		} else if (event instanceof PickUpObjectEvent) {
+			PickUpObjectEvent ore = (PickUpObjectEvent) event;
+			Robot robot = ore.getRobot();
+			int id = ore.getID();
+			sendMessage("pickup-object " + robot.getName() + " " + id);
 		}
+	}
+
+	@Override
+	public void radioMessageReceived(RadioMessage comm) {
+		if (!comm.getDestination().equalsIgnoreCase("user")) {
+			return;
+		}
+		sendMessage("text " + comm.getFrom() + ": \"" + comm.getConcatenatedTokens(" ") + "\"");
 	}
 
 }

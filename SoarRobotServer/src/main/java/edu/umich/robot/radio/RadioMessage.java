@@ -171,6 +171,17 @@ public class RadioMessage
     {
         return tokens;
     }
+    
+    public String getConcatenatedTokens(String join)
+    {
+		StringBuilder b = new StringBuilder();
+		for (String s : tokens) {
+			b.append(s);
+			b.append(join);
+		}
+		String message = (b.length() > 0) ? b.substring(0, b.length() - join.length()) : b.toString();
+		return message;
+    }
 
     /**
      * True if there is no destination and it should go to all listeners.

@@ -15,11 +15,12 @@ public interface IMapView {
 	void draw();
 
 	void addObject(SimObject sim);
-
 	void addRobot(SimObject robot);
+	void pickUpObject(String robotName, int id);
 
 	void deserializeMap(String substring);
 
 	SimObject getRobot(String string);
+
 
 }
