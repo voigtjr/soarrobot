@@ -12,19 +12,26 @@ import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 
 import edu.umich.robot.Controller;
 import edu.umich.robot.Robot;
 import edu.umich.robot.TabletLCM;
+import edu.umich.robot.events.DropObjectEvent;
 import edu.umich.robot.events.ObjectAddedEvent;
 import edu.umich.robot.events.PickUpObjectEvent;
+import edu.umich.robot.events.RoomLightEvent;
+import edu.umich.robot.events.control.DoorCloseEvent;
+import edu.umich.robot.events.control.DoorOpenEvent;
 import edu.umich.robot.metamap.AbridgedAreaDescription;
 import edu.umich.robot.metamap.AbridgedGateway;
+import edu.umich.robot.metamap.AbridgedWall;
 import edu.umich.robot.metamap.AreaDescription;
 import edu.umich.robot.metamap.Gateway;
 import edu.umich.robot.metamap.RectArea;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.metamap.VirtualObjectTemplate;
+import edu.umich.robot.metamap.Wall;
 import edu.umich.robot.radio.RadioHandler;
 import edu.umich.robot.radio.RadioMessage;
 import edu.umich.robot.splinter.Splinter;
@@ -272,7 +279,11 @@ public class Server implements RobotEventListener, RadioHandler {
 		for (Gateway g : sa.getGateways()) {
 			gatewaysBuilder.add(abridgeGateway(g));
 		}
-		return new AbridgedAreaDescription(sa.getId(), xywh,
+		String type = sa.getProperties().get("type");
+		if (type == null) {
+			type = "none";
+		}
+		return new AbridgedAreaDescription(sa.getId(), xywh, type,
 				gatewaysBuilder.build());
 	}
 
@@ -280,6 +291,17 @@ public class Server implements RobotEventListener, RadioHandler {
 		ImmutableList<Double> xy = new ImmutableList.Builder<Double>().add(
 				g.getPose().getX(), g.getPose().getY()).build();
 		return new AbridgedGateway(g.getId(), xy);
+	}
+	
+	public static AbridgedWall abridgeWall(Wall w) {
+		ImmutableList<Double> xy = new ImmutableList.Builder<Double>().add(
+				w.getMidpoint().getX(), w.getMidpoint().getY()).build();
+		Builder<Integer> to = new ImmutableList.Builder<Integer>();
+		for (Integer i : w.getTo()) {
+			to.add(i);
+		}
+
+		return new AbridgedWall(xy, w.getDirection(), to.build());
 	}
 
 	public void stop() {
@@ -322,6 +344,23 @@ public class Server implements RobotEventListener, RadioHandler {
 			Robot robot = ore.getRobot();
 			int id = ore.getID();
 			sendMessage("pickup-object " + robot.getName() + " " + id);
+		} else if (event instanceof DropObjectEvent) {
+			DropObjectEvent ore = (DropObjectEvent) event;
+			Robot robot = ore.getRobot();
+			sendMessage("drop-object " + robot.getName());
+		} else if (event instanceof DoorCloseEvent) {
+			DoorCloseEvent dce = (DoorCloseEvent) event;
+			int id = dce.getId();
+			sendMessage("door-close " + id);
+		} else if (event instanceof DoorOpenEvent) {
+			DoorOpenEvent dce = (DoorOpenEvent) event;
+			int id = dce.getId();
+			sendMessage("door-open " + id);
+		} else if (event instanceof RoomLightEvent) {
+			RoomLightEvent rle = (RoomLightEvent) event;
+			int id = rle.getID();
+			boolean on = rle.isOn();
+			sendMessage("room-light " + id + " " + on);
 		}
 	}
 

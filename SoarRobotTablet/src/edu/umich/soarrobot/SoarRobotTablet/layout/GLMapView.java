@@ -21,6 +21,7 @@
  */
 package edu.umich.soarrobot.SoarRobotTablet.layout;
 
+import java.awt.geom.Area;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -47,7 +48,9 @@ import android.view.SurfaceHolder.Callback;
 import edu.umich.robot.metamap.AbridgedAreaDescription;
 import edu.umich.robot.metamap.AbridgedAreaDescriptions;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimArea;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimWall;
 
 public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMapView
 {
@@ -68,7 +71,8 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private boolean fingerDown;
     private HashMap<Integer, SimObject> objects;
     private HashMap<String, SimObject> robots;
-    private ArrayList<Rect> areas;
+    private HashMap<Integer, SimArea> areas; // Map from id onto area.
+    private ArrayList<SimWall> walls;
     private String nextObjectClass;
     private int follow; // Which robot to follow
     private boolean topDown;
@@ -100,12 +104,13 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         lastScreenTouch = new PointF(-1.0f, -1.0f);
         objects = new HashMap<Integer, SimObject>();
         robots = new HashMap<String, SimObject>();
-        areas = new ArrayList<Rect>();
+        areas = new HashMap<Integer, SimArea>();
         nextObjectClass = null;
         follow = robots.size();
         topDown = true;
         fingerDown = false;
         followHeightFactor = 4.0f;
+        walls = new ArrayList<SimWall>();
         
         setRenderer(this);
         //setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
@@ -170,6 +175,13 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
             return robots.get(name);
 		}
     }
+    
+	@Override
+	public SimObject getSimObject(int id) {
+		synchronized (objects) {
+			return objects.get(id);
+		}
+	}
 
     public void draw()
     {
@@ -426,12 +438,62 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
             	top = y - h;
             }
             synchronized (areas) {
-                areas.add(new Rect(left, top, right, bottom));	
+                areas.put(aad.id, new SimArea(aad.id, new Rect(left, top, right, bottom), aad.type));
 			}
         }
+        makeWalls();
     }
 
-    public void zoomIn()
+    private void makeWalls() {
+    	Point max = new Point(0, 0);
+    	boolean [][] open;
+		synchronized (areas) {
+			for (SimArea area : areas.values())
+			{
+				Rect r = area.getRect();
+				if (r.bottom < max.y)
+				{
+					max.y = r.bottom;
+				}
+				if (r.right > max.x)
+				{
+					max.x = r.right;
+				}
+			}
+			open = new boolean[max.x][-max.y];
+			for (SimArea area : areas.values())
+			{
+				Rect r = area.getRect();
+				for (int x = r.left; x < r.right; ++x)
+				{
+					for (int y = r.top; y > r.bottom; --y)
+					{
+						open[x][-y] = true;
+					}
+				}
+			}
+		}
+		synchronized (walls) {
+			walls.clear();
+			for (int x = 0; x + 1 < max.x; ++x)
+			{
+				for (int y = 0; y - 1 > max.y; --y)
+				{
+					// Check to the right and to the bottom.
+					if (open[x][-y] != open[x+1][-y])
+					{
+						walls.add(new SimWall(new Point(x + 1, y - 1), new Point(x + 1, y)));
+					}
+					if (open[x][-y] != open[x][-(y-1)])
+					{
+						walls.add(new SimWall(new Point(x, y - 1), new Point(x + 1, y - 1)));
+					}
+				}
+			}
+		}
+	}
+
+	public void zoomIn()
     {
         zoom += ZOOM_AMOUNT;
         draw();
@@ -470,8 +532,15 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 		}
 
 		synchronized (areas) {
-			for (Rect r : areas) {
-				GLUtil.drawRect(gl, r.left, r.bottom, 0.0f, r.right - r.left, r.top - r.bottom, Color.WHITE);
+			for (SimArea area : areas.values()) {
+				area.draw(gl);
+			}
+		}
+		
+		synchronized (walls) {
+			for (SimWall wall : walls)
+			{
+				wall.draw(gl);
 			}
 		}
 		
@@ -637,5 +706,42 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 		SimObject pickedUp = objects.get(id);
 		robot.setCarrying(pickedUp);
 		pickedUp.setVisible(false);
+	}
+	
+	@Override
+	public void dropObject(String robotName) {
+		SimObject robot = robots.get(robotName);
+		SimObject dropped = robot.getCarrying();
+		if (dropped != null) {
+			dropped.setVisible(true);
+			robot.setCarrying(null);
+		}
+	}
+
+	@Override
+	public void doorClose(int id) {
+		SimArea a = areas.get(id);
+		if (a == null) {
+			return;
+		}
+		a.setDoorClosed(true);
+	}
+
+	@Override
+	public void doorOpen(int id) {
+		SimArea a = areas.get(id);
+		if (a == null) {
+			return;
+		}
+		a.setDoorClosed(false);
+	}
+
+	@Override
+	public void roomLight(int id, boolean on) {
+		SimArea a = areas.get(id);
+		if (a == null) {
+			return;
+		}
+		a.setLightsOn(on);
 	}
 }

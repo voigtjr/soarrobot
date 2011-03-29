@@ -36,7 +36,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import edu.umich.soarrobot.SoarRobotTablet.layout.GLMapView;
 import edu.umich.soarrobot.SoarRobotTablet.layout.IMapView;
-import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 

@@ -24,6 +24,8 @@ public class TabletLCM
         input.subscribe("SIM_LIDAR_FRONT_seek", subscriber);
         input.subscribe("LIDAR_LOWRES_seek", subscriber);
         input.subscribe("WAYPOINTS_seek", subscriber);
+        input.subscribe("SIM_OBSTACLES", subscriber);
+        input.subscribe("MAP_OBJECTS", subscriber);
     }
     
     private final LCMSubscriber subscriber = new LCMSubscriber() 
@@ -51,6 +53,9 @@ public class TabletLCM
         input.unsubscribe("SIM_LIDAR_FRONT_seek", subscriber);
         input.unsubscribe("LIDAR_LOWRES_seek", subscriber);
         input.unsubscribe("WAYPOINTS_seek", subscriber);
+        input.unsubscribe("SIM_OBSTACLES", subscriber);
+        input.unsubscribe("MAP_OBJECTS", subscriber);
+
         output.close();
     }
 }

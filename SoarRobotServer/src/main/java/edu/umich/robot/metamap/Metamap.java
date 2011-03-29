@@ -40,10 +40,14 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import edu.umich.robot.Controller;
 import edu.umich.robot.Robot;
+import edu.umich.robot.events.DropObjectEvent;
 import edu.umich.robot.events.ObjectAddedEvent;
 import edu.umich.robot.events.PickUpObjectEvent;
 import edu.umich.robot.events.RobotAddedEvent;
 import edu.umich.robot.events.RobotRemovedEvent;
+import edu.umich.robot.events.RoomLightEvent;
+import edu.umich.robot.events.control.DoorCloseEvent;
+import edu.umich.robot.events.control.DoorOpenEvent;
 import edu.umich.robot.metamap.Door.State;
 import edu.umich.robot.util.Pose;
 import edu.umich.robot.util.RelativePose;
@@ -109,8 +113,9 @@ public class Metamap implements RobotEventListener
         this.objects = objects;
         this.doors.putAll(doors);
 
-        for (Door door : doors.values())
+        for (Door door : doors.values()) {
             initialDoorState.put(door.getId(), door.copy());
+        }
         broadcastDoors();
         
         final map_metadata_t meta = new map_metadata_t();
@@ -239,6 +244,7 @@ public class Metamap implements RobotEventListener
         if (as == null)
             return;
         as.setRoomLightOn(on);
+        controller.getEventManager().fireEvent(new RoomLightEvent(id, on));
     }
     
     /**
@@ -364,7 +370,11 @@ public class Metamap implements RobotEventListener
      */
     public boolean dropObject(Robot robot)
     {
-        return objects.dropObject(robot);
+        boolean ret = objects.dropObject(robot);
+		if (ret) {
+			controller.getEventManager().fireEvent(new DropObjectEvent(robot));
+		}
+		return ret;
     }
 
     /**
@@ -409,6 +419,7 @@ public class Metamap implements RobotEventListener
         case CLOSED:
             door.setState(State.OPEN);
             objects.getBroadcaster().removeDoor(door);
+			controller.getEventManager().fireEvent(new DoorOpenEvent(id));
             break;
             
         case LOCKED:
@@ -434,6 +445,7 @@ public class Metamap implements RobotEventListener
         case OPEN:
             door.setState(State.CLOSED);
             objects.getBroadcaster().addDoor(door);
+			controller.getEventManager().fireEvent(new DoorCloseEvent(id));
             break;
             
         case LOCKED:

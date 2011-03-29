@@ -41,9 +41,10 @@ import april.jmat.LinAlg;
 import april.lcmtypes.laser_t;
 import april.lcmtypes.pose_t;
 import april.lcmtypes.waypoint_list_t;
+import april.lcmtypes.sim_obstacles_t;
+import edu.umich.robot.lcmtypes.map_objects_t;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.layout.IMapView;
-import edu.umich.soarrobot.SoarRobotTablet.layout.MapView;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 
 public class RobotSession extends Thread implements LCMSubscriber {
@@ -98,29 +99,23 @@ public class RobotSession extends Thread implements LCMSubscriber {
 
 			robotNames = new ArrayList<String>();
 			tcpListener.start();
-			try {
-				// This needs to be the client address.
-				String clientHost;
-				Log.d("BLAH", "deviceName is " + deviceName);
-				String clientPort = null;
-				if (deviceName.equals("generic")) {
-					clientHost = "/10.0.2.15";
-					clientPort = "12122";
-					sendMessage("emulator");
-				} else {
-					clientHost = tcpClient.getLocalAddress().toString();
-					clientPort = "12122"; // clientPort = "" +
-											// tcpClient.getLocalPort();
-					sendMessage("device");
-				}
-
-				lcmConnectionString = "udp:/" + clientHost + ":" + clientPort;
-				lcm = new LCM(lcmConnectionString);
-				subscribeAllRobots(lcm, robotNames);
-			} catch (IOException e) {
-				e.printStackTrace();
-				throw e;
+			// This needs to be the client address.
+			String clientHost;
+			Log.d("BLAH", "deviceName is " + deviceName);
+			String clientPort = null;
+			if (deviceName.equals("generic")) {
+				clientHost = "/10.0.2.15";
+				clientPort = "12122";
+				sendMessage("emulator");
+			} else {
+				clientHost = tcpClient.getLocalAddress().toString();
+				clientPort = "12122"; // clientPort = "" +
+										// tcpClient.getLocalPort();
+				sendMessage("device");
 			}
+
+			lcmConnectionString = "udp:/" + clientHost + ":" + clientPort;
+			lcm = makeLCM(lcmConnectionString, robotNames);
 			sendMessage("map");
 			sendMessage("classes");
 			sendMessage("robots");
@@ -129,6 +124,20 @@ public class RobotSession extends Thread implements LCMSubscriber {
 					Toast.LENGTH_LONG);
 			activity.getMapView().draw();
 		}
+	}
+	
+	public LCM makeLCM(String connectionString, ArrayList<String> robotNames) {
+		LCM ret;
+		try {
+			ret = new LCM(lcmConnectionString);
+			ret.subscribe("MAP_OBJECTS", this);
+			ret.subscribe("SIM_OBSTACLES", this);
+			subscribeAllRobots(ret, robotNames);
+			return ret;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	public void sendMessage(String message) {
@@ -182,12 +191,27 @@ public class RobotSession extends Thread implements LCMSubscriber {
 		} else if (command.equals("text")) {
 			activity.setPropertiesText(message.substring(space));
 		} else if (command.equals("pickup-object")) {
-			//TODO
-			// Have the robot pickup the object.
 			Scanner s = new Scanner(message.substring(space));
 			String name = s.next();
 			int id = s.nextInt();
 			activity.getMapView().pickUpObject(name, id);
+		} else if (command.equals("drop-object")) {
+			Scanner s = new Scanner(message.substring(space));
+			String name = s.next();
+			activity.getMapView().dropObject(name);
+		} else if (command.equals("door-close")) {
+			Scanner s = new Scanner(message.substring(space));
+			int id = s.nextInt();
+			activity.getMapView().doorClose(id);
+		} else if (command.equals("door-open")) {
+			Scanner s = new Scanner(message.substring(space));
+			int id = s.nextInt();
+			activity.getMapView().doorOpen(id);
+		} else if (command.equals("room-light")) {
+			Scanner s = new Scanner(message.substring(space));
+			int id = s.nextInt();
+			boolean on = s.nextBoolean();
+			activity.getMapView().roomLight(id, on);
 		}
 		IMapView mv = activity.getMapView();
 		if (mv != null) {
@@ -242,7 +266,32 @@ public class RobotSession extends Thread implements LCMSubscriber {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		} else {
+		} else if (channel.equals("MAP_OBJECTS")) {
+			try {
+				map_objects_t map_objs = new map_objects_t(ins);
+				for (int i = 0; i < map_objs.nobjects; ++i) {
+					int id = map_objs.object_ids[i];
+					double[] coords = map_objs.objects[i];
+					SimObject obj = activity.getMapView().getSimObject(id);
+					if (obj != null) {
+						obj.setLocation(new PointF((float)coords[0], (float)coords[1]));
+					}
+					// System.out.println("Object: " + id + " " + coords);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else if (channel.equals("SIM_OBSTACLES")) {
+			try {
+				sim_obstacles_t sim_obs = new sim_obstacles_t(ins);
+				//System.out.println("num circles: " + sim_obs.ncircles);
+				//System.out.println("num rects: " + sim_obs.nrects);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		else 
+		{
 			System.out.println("unknown channel: " + channel);
 		}
 		IMapView mv = activity.getMapView();
@@ -264,13 +313,8 @@ public class RobotSession extends Thread implements LCMSubscriber {
 		if (lcmConnectionString == null) {
 			return;
 		}
-		try {
-			if (lcm == null) {
-				lcm = new LCM(lcmConnectionString);
-				subscribeAllRobots(lcm, robotNames);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (lcm == null) {
+			lcm = makeLCM(lcmConnectionString, robotNames);
 		}
 	}
 

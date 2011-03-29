@@ -45,6 +45,7 @@ import com.google.common.collect.Maps;
 import edu.umich.robot.events.AbstractProgramEvent;
 import edu.umich.robot.events.AfterResetEvent;
 import edu.umich.robot.events.BeforeResetEvent;
+import edu.umich.robot.events.DropObjectEvent;
 import edu.umich.robot.events.ObjectAddedEvent;
 import edu.umich.robot.events.PickUpObjectEvent;
 import edu.umich.robot.events.RobotAddedEvent;
@@ -208,6 +209,7 @@ public class Controller
 		
         events.addListener(ObjectAddedEvent.class, server);
         events.addListener(PickUpObjectEvent.class, server);
+        events.addListener(DropObjectEvent.class, server);
     }
     
     /**

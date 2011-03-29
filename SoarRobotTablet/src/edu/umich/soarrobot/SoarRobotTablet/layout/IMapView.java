@@ -22,5 +22,14 @@ public interface IMapView {
 
 	SimObject getRobot(String string);
 
+	void dropObject(String name);
+
+	SimObject getSimObject(int id);
+
+	void doorClose(int id);
+
+	void doorOpen(int id);
+
+	void roomLight(int id, boolean on);
 
 }

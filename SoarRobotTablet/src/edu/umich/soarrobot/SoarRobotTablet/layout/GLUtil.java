@@ -8,6 +8,7 @@ import java.nio.ShortBuffer;
 import javax.microedition.khronos.opengles.GL10;
 
 import android.graphics.Color;
+import android.graphics.Point;
 import android.graphics.PointF;
 
 public class GLUtil {
@@ -88,8 +89,13 @@ public class GLUtil {
 		1, 2, 3,
 	};
 	
+	private static short[] reverseRectIndeces = {
+		0, 1, 2,
+		1, 3, 2,
+	};
+	
 	private static FloatBuffer cubeCoordsBuffer, whiteColorsBuffer, redColorsBuffer, greenColorsBuffer, blueColorsBuffer, yellowColorsBuffer, blackColorsBuffer, grayColorsBuffer;
-	private static ShortBuffer cubeIndecesBuffer, rectIndecesBuffer;
+	private static ShortBuffer cubeIndecesBuffer, rectIndecesBuffer, reverseRectIndicesBuffer;
 	private static FloatBuffer cubeNormalsBuffer, rectNormalsBuffer;
 	
 	// Member variables for cylinder
@@ -119,6 +125,10 @@ public class GLUtil {
         bb = ByteBuffer.allocateDirect(rectIndeces.length * 2);
         bb.order(ByteOrder.nativeOrder());
         rectIndecesBuffer = bb.asShortBuffer();
+        
+        bb = ByteBuffer.allocateDirect(reverseRectIndeces.length * 2);
+        bb.order(ByteOrder.nativeOrder());
+        reverseRectIndicesBuffer = bb.asShortBuffer();
 
         whiteColorsBuffer = makeColorBuffer(1.0f, 1.0f, 1.0f);
         redColorsBuffer = makeColorBuffer(1.0f, 0.0f, 0.0f);
@@ -131,10 +141,12 @@ public class GLUtil {
         cubeCoordsBuffer.put(cubeCoords);
         cubeIndecesBuffer.put(cubeIndeces);
         rectIndecesBuffer.put(rectIndeces);
+        reverseRectIndicesBuffer.put(reverseRectIndeces);
      
         cubeCoordsBuffer.position(0);
         cubeIndecesBuffer.position(0);
         rectIndecesBuffer.position(0);
+        reverseRectIndicesBuffer.position(0);
         
         bb = ByteBuffer.allocateDirect(cubeNormals.length * 4);
         bb.order(ByteOrder.nativeOrder());
@@ -367,5 +379,24 @@ public class GLUtil {
 	         
 	         gl.glPopMatrix();
 	     }
+
+	public static void drawWall(GL10 gl, Point start, Point end, float height, int color) {
+		float dx = end.x - start.x;
+		float dy = end.y - start.y;
+		float theta = (float) Math.toDegrees(Math.atan2(dy, dx));
+		float scale = (float) Math.sqrt(dx * dx + dy * dy);
+		
+		gl.glPushMatrix();
+		gl.glTranslatef(start.x, start.y, 0.0f);
+		gl.glRotatef(90.0f, -1.0f, 0.0f, 0.0f);
+		gl.glRotatef(theta, 0.0f, -1.0f, 0.0f);
+		gl.glScalef(scale, 1.0f, 1.0f);
+        gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
+        gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+        gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
+        gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, rectIndecesBuffer);
+        gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, reverseRectIndicesBuffer);
+        gl.glPopMatrix();
+	}
 	 
 }

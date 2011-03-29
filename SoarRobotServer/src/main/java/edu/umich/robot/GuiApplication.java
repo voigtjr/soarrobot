@@ -115,7 +115,7 @@ import edu.umich.robot.util.events.RobotEventListener;
  * 
  * @author voigtjr@gmail.com
  */
-public class GuiApplication implements RadioHandler
+public class GuiApplication
 {
     private static final Log logger = LogFactory.getLog(GuiApplication.class);
 
@@ -163,6 +163,12 @@ public class GuiApplication implements RadioHandler
      * The console text output for debugging feedback.
      */
     private final ConsoleView consoleView;
+    
+    /**
+     * <p>
+     * The interface for chatting with the robots.
+     */
+    private final ChatView chatView;
     
     /**
      * <p>
@@ -276,7 +282,6 @@ public class GuiApplication implements RadioHandler
         controller.addListener(AfterResetEvent.class, listener);
         controller.addListener(ControllerActivatedEvent.class, listener);
         controller.addListener(ControllerDeactivatedEvent.class, listener);
-        controller.getRadio().addRadioHandler(this);
         
         actionManager = new ActionManager(this);
         initActions();
@@ -349,7 +354,8 @@ public class GuiApplication implements RadioHandler
         robotsView = new RobotsView(this, actionManager);
         
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, 
-                viewerView, robotsView); 
+                viewerView, robotsView);
+        splitPane.setDividerLocation(0.75);
         
         viewer.addRobotSelectionChangedListener(robotsView);
         viewer.getVisCanvas().setDrawGround(true);
@@ -377,15 +383,23 @@ public class GuiApplication implements RadioHandler
         });
         
         consoleView = new ConsoleView();
+        chatView = new ChatView(this);
+        controller.getRadio().addRadioHandler(chatView);
+        
+        final JSplitPane bottomPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+        		consoleView, chatView);
+        bottomPane.setDividerLocation(200);
         
         final JSplitPane splitPane2 = new JSplitPane(JSplitPane.VERTICAL_SPLIT, 
-                splitPane, consoleView); 
+                splitPane, bottomPane); 
+        splitPane2.setDividerLocation(0.75);
         
         frame.add(splitPane2, BorderLayout.CENTER);
         
         status = new StatusBar();
         frame.add(status, BorderLayout.SOUTH);
 
+        /*
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e)
@@ -410,8 +424,8 @@ public class GuiApplication implements RadioHandler
             frame.setBounds(
                     windowPrefs.getInt("x", 0), 
                     windowPrefs.getInt("y", 0), 
-                    windowPrefs.getInt("width", 800), 
-                    windowPrefs.getInt("height", 800));
+                    windowPrefs.getInt("width", 1200), 
+                    windowPrefs.getInt("height", 900));
             splitPane.setDividerLocation(windowPrefs.getInt("divider", 500));
         }
         else
@@ -419,11 +433,14 @@ public class GuiApplication implements RadioHandler
             frame.setBounds(
                     windowPrefs.getInt("x", 0), 
                     windowPrefs.getInt("y", 0), 
-                    windowPrefs.getInt("width", 600), 
-                    windowPrefs.getInt("height", 600));
+                    windowPrefs.getInt("width", 1200), 
+                    windowPrefs.getInt("height", 900));
             splitPane.setDividerLocation(0.75);
             frame.setLocationRelativeTo(null); // center
         }
+        */
+        
+        frame.getRootPane().setBounds(0, 0, 1600, 1200);
 
         frame.getRootPane().registerKeyboardAction(new ActionListener()
                 {
@@ -540,7 +557,7 @@ public class GuiApplication implements RadioHandler
         new MoveCameraAboveAction(actionManager);
         new MoveCameraBehindAction(actionManager);
         new SimSpeedAction(actionManager);
-        new TextMessageAction(actionManager);
+        //new TextMessageAction(actionManager);
     }
     
     /**
@@ -1175,20 +1192,4 @@ public class GuiApplication implements RadioHandler
         dialog.pack();
         dialog.setVisible(true);
     }
-
-	@Override
-	public void radioMessageReceived(RadioMessage comm) {
-		if (!comm.getDestination().equalsIgnoreCase("user")) {
-			return;
-		}
-		
-		StringBuilder b = new StringBuilder();
-		for (String s : comm.getTokens()) {
-			b.append(s);
-			b.append(" ");
-		}
-		String message = (b.length() > 0) ? b.substring(0, b.length() - 1) : b.toString();
-		setStatusBarMessage(message);
-	}
-
 }
