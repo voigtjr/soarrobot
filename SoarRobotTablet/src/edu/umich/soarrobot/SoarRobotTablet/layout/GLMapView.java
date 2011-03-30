@@ -219,6 +219,30 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 				} else {
 					if (event.getPointerCount() > 1) {
 						followHeightFactor = 16.0f * (screenTouch.y + 0.1f);
+					} else if (event.getPointerCount() == 1) {
+		                   boolean selected = false;
+		                    synchronized (robots) {
+		                        for (SimObject obj : robots.values()) {
+		                            if (obj.intersectsPoint(floorTouch)) {
+		                                activity.setSelectedObject(obj);
+		                                selected = true;
+		                                break;
+		                            }
+		                        }
+		                    }
+		                    if (!selected) {
+		                        synchronized (objects) {
+
+		                            for (SimObject obj : objects.values()) {
+		                                if (obj.intersectsPoint(floorTouch, 1.0f)) {
+		                                    activity.setSelectedObject(obj);
+		                                    selected = true;
+		                                    break;
+		                                }
+		                            }
+		                        }
+		                    }
+		                    draw();
 					}
 				}
 				if (event.getPointerCount() > 1) {
@@ -253,7 +277,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 						synchronized (objects) {
 
 							for (SimObject obj : objects.values()) {
-								if (obj.intersectsPoint(floorTouch)) {
+								if (obj.intersectsPoint(floorTouch, 1.0f)) {
 									activity.setSelectedObject(obj);
 									selected = true;
 									break;
