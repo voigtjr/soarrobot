@@ -49,6 +49,11 @@ import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 
 public class RobotSession extends Thread implements LCMSubscriber {
 
+	public interface TextMessageListener
+	{
+		void textMessageReceived(String message);
+	}
+
 	SoarRobotTablet activity;
 
 	String server;
@@ -68,6 +73,8 @@ public class RobotSession extends Thread implements LCMSubscriber {
 	String lcmConnectionString;
 
 	ArrayList<String> robotNames;
+	
+	ArrayList<TextMessageListener> textMessageListeners;
 
 	Object lock = new Object();
 
@@ -76,6 +83,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 			this.activity = activity;
 			this.server = server;
 			this.port = port;
+			textMessageListeners = new ArrayList<TextMessageListener>();
 			paused = false;
 
 			String deviceName = Build.DEVICE;
@@ -124,6 +132,16 @@ public class RobotSession extends Thread implements LCMSubscriber {
 					Toast.LENGTH_LONG);
 			activity.getMapView().draw();
 		}
+	}
+	
+	public void addTextMessageListener(TextMessageListener listener)
+	{
+		textMessageListeners.add(listener);
+	}
+	
+	public void removeTextMessageListener(TextMessageListener listener)
+	{
+		textMessageListeners.remove(listener);
 	}
 	
 	public LCM makeLCM(String connectionString, ArrayList<String> robotNames) {
@@ -189,7 +207,10 @@ public class RobotSession extends Thread implements LCMSubscriber {
 				activity.getMapView().addObject(sim);
 			}
 		} else if (command.equals("text")) {
-			activity.setPropertiesText(message.substring(space));
+			for (TextMessageListener l : textMessageListeners)
+			{
+				l.textMessageReceived(message.substring(space));
+			}
 		} else if (command.equals("pickup-object")) {
 			Scanner s = new Scanner(message.substring(space));
 			String name = s.next();

@@ -21,13 +21,19 @@
  */
 package edu.umich.soarrobot.SoarRobotTablet;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import com.sun.org.apache.bcel.internal.generic.NEW;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -37,9 +43,10 @@ import android.widget.Toast;
 import edu.umich.soarrobot.SoarRobotTablet.layout.GLMapView;
 import edu.umich.soarrobot.SoarRobotTablet.layout.IMapView;
 import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession;
+import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession.TextMessageListener;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 
-public class SoarRobotTablet extends Activity
+public class SoarRobotTablet extends Activity implements TextMessageListener
 {
 
     private GLMapView mapView;
@@ -53,6 +60,14 @@ public class SoarRobotTablet extends Activity
     private SimObject selectedObject;
 
     ProgressDialog pd;
+    
+    private ArrayList<String> messageHistory = new ArrayList<String>();
+    
+    private static SoarRobotTablet instance;
+    
+    public static SoarRobotTablet getInstance() {
+    	return instance;
+    }
     
     private OnClickListener toggleFollowListener = new OnClickListener() {
 		@Override
@@ -141,6 +156,7 @@ public class SoarRobotTablet extends Activity
         try
         {
             super.onCreate(savedInstanceState);
+            instance = this;
             setContentView(R.layout.main);
             mapView = (GLMapView) findViewById(R.id.mapView);
             mapView.setActivity(this);
@@ -151,6 +167,7 @@ public class SoarRobotTablet extends Activity
             {
                 robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
                 //robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
+                robotSession.addTextMessageListener(this);
                 robotSession.start();
             }
             catch (Exception e)
@@ -166,6 +183,8 @@ public class SoarRobotTablet extends Activity
             ((Button) findViewById(R.id.zoomOut)).setOnClickListener(zoomOut);
             ((Button) findViewById(R.id.addObject)).setOnClickListener(addObject);
             ((Button) findViewById(R.id.toggleFollow)).setOnClickListener(toggleFollowListener);
+            
+            
         }
         catch (RuntimeException e)
         {
@@ -224,10 +243,12 @@ public class SoarRobotTablet extends Activity
     protected void onPause()
     {
         super.onPause();
-        if (robotSession != null)
+
+    	/*   if (robotSession != null)
         {
             robotSession.pause();
         }
+        */
     }
 
     @Override
@@ -249,5 +270,36 @@ public class SoarRobotTablet extends Activity
                 propertiesTextView.setText(text);
             }
         });
+    }
+    
+    public void textMessageReceived(final String text)
+    {
+    	messageHistory.add(text);
+    	setPropertiesText(text);
+    }
+    
+    public ArrayList<String> getTextMessageHistory()
+    {
+    	return messageHistory;
+    }
+    
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+    	getMenuInflater().inflate(R.menu.main_menu, menu);
+    	return true;
+    }
+    
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+        case R.id.showChatMenuItem:
+        	Intent i = new Intent(this, ChatActivity.class);
+        	startActivity(i);
+        	break;
+        default:
+        	break;
+        }
+    	return true;
     }
 }
