@@ -180,10 +180,14 @@ public class SimObject {
 	 * @param p The point to check.
 	 * @return true if the point <code>p</code> intersects this <code>SimObject</code>.
 	 */
-	public boolean intersectsPoint(PointF p) {
+	public boolean intersectsPoint(PointF p, float within) {
 		// Might be different for non-rectangle shapes
-		return p.x >= location.x && p.x < location.x + size.x
-				&& p.y >= location.y && p.y < location.y + size.y;
+		return p.x + within >= location.x && p.x - within < location.x + size.x
+				&& p.y + within >= location.y && p.y - within < location.y + size.y;
+	}
+	
+	public boolean intersectsPoint(PointF p) {
+	    return intersectsPoint(p, 0.0f);
 	}
 	
     public String getPropertiesString() {

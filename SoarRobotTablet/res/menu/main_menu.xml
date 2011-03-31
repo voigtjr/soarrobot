@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:checkable="false" android:enabled="true" android:titleCondensed="Chat" android:id="@+id/showChatMenuItem" android:visible="true" android:title="Chat History" android:checked="false"></item>
+</menu>

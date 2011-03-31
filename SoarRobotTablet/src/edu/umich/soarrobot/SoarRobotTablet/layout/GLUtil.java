@@ -324,6 +324,21 @@ public class GLUtil {
         gl.glPopMatrix();
 	}
 	
+	public static void drawRectLidar(GL10 gl, float x, float y, float z, float w, float h, int color)
+	{        
+	    gl.glPushMatrix();
+	        
+	    gl.glTranslatef(x, y, z);
+	    gl.glScalef(w, h, 1.0f);
+
+	    gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
+	    gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+	    gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
+	    gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, rectIndecesBuffer);
+	        
+	    gl.glPopMatrix();
+	 }
+	
 	private static FloatBuffer getColor(int color) {
 		switch (color) {
 		case Color.WHITE:

@@ -40,22 +40,32 @@
 				android:layout_toRightOf="@+id/addObject"
 				android:text="Toggle\nFollow" />
 			</RelativeLayout>
-		<edu.umich.soarrobot.SoarRobotTablet.layout.GLMapView
-			android:id="@+id/mapView"
-			android:layout_width="fill_parent"
-			android:layout_height="fill_parent"
-			android:layout_above="@+id/propertiesLayout"
-			android:layout_below="@+id/buttonsLayout" />
 		<RelativeLayout android:id="@+id/propertiesLayout"
 			android:layout_width="fill_parent"
-			android:layout_height="wrap_content"
+			android:layout_height="90px"
 			android:background="#000"
-			android:layout_above="@+id/commandsLayout">
+			android:layout_below="@+id/buttonsLayout">
 			<TextView android:id="@+id/propertiesTextView"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:textColor="#fff"
 				android:text="Hello, I am a TextView 1" />
+		</RelativeLayout>
+		<edu.umich.soarrobot.SoarRobotTablet.layout.GLMapView
+			android:id="@+id/mapView"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:layout_below="@+id/propertiesLayout"/>
+		<RelativeLayout android:id="@+id/serverLayout"
+			android:layout_width="fill_parent"
+			android:layout_height="30px"
+			android:background="#000"
+			android:layout_above="@+id/commandsLayout">
+			<TextView android:id="@+id/serverTextView"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textColor="#fff"
+				android:text="Hello! I have Server Info!" />
 		</RelativeLayout>
 		<RelativeLayout android:id="@+id/commandsLayout"
 			android:layout_width="fill_parent"
