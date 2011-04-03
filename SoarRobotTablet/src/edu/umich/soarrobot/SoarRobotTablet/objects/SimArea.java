@@ -8,20 +8,20 @@ import edu.umich.robot.metamap.AbridgedWall;
 import edu.umich.soarrobot.SoarRobotTablet.layout.GLUtil;
 
 import android.graphics.Color;
+import android.graphics.PointF;
 import android.graphics.Rect;
 
-public class SimArea
+public class SimArea extends SimObject
 {   
 	private int id;
     private Rect rect;
-    private String type;
     private boolean lightsOn;
     private boolean doorClosed;
     
     public SimArea(int id, Rect r, String type) {
-    	this.id = id;
+    	super("area", id, new PointF(r.left, r.bottom));
+    	this.size = new PointF(r.width(), -r.height());
         this.rect = r;
-        this.type = type;
         lightsOn = true;
         doorClosed = false;
     }

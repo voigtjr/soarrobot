@@ -135,6 +135,8 @@ public class RectArea implements AreaDescription
 
     private final Map<String, String> properties;
     
+    private boolean changed = true;
+    
     private RectArea(Builder builder)
     {
         this.id = builder.id;
@@ -202,4 +204,14 @@ public class RectArea implements AreaDescription
     {
         return Arrays.copyOf(xywhPixels, xywhPixels.length);
     }
+
+	@Override
+	public boolean hasChanged() {
+		return changed;
+	}
+
+	@Override
+	public void setChanged(boolean changed) {
+		this.changed = changed;
+	}
 }

@@ -51,8 +51,13 @@ public class SimObject {
 	// of one of those types.
 	private static HashMap<String, HashMap<String, String>> classes;
 	
+	static
+	{
+		classes = new HashMap<String, HashMap<String,String>>();
+		classes.put("area", new HashMap<String, String>());
+	}
+	
 	public static void init(String classesString) {
-		SimObject.classes = new HashMap<String, HashMap<String,String>>();
 		for (String classString : classesString.split(";")) {
 			Scanner s = new Scanner(classString);
 			s.useDelimiter(" ");
@@ -81,18 +86,18 @@ public class SimObject {
 	 * Instance variables
 	 */
 	
-	private String type;
-	private HashMap<String, String> attributes;
-	private PointF location;
-	private float theta;
-	private PointF size;
+	protected String type;
+	protected HashMap<String, String> attributes;
+	protected PointF location;
+	protected float theta;
+	protected PointF size;
 	private int color;
-	private int id;
-	private boolean selected;
-	private boolean visible;
+	protected int id;
+	protected boolean selected;
+	protected boolean visible;
 	
 	// These variable could fit better in a robot-themed subclass.
-	private SimObject carrying;
+	protected SimObject carrying;
 	
 	private laser_t lidar;
 	private float lidarTheta;

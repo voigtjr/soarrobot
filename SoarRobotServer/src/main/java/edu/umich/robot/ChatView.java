@@ -22,29 +22,21 @@
 package edu.umich.robot;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.DocumentFilter;
 
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.spi.LoggingEvent;
-
-import edu.umich.robot.actions.ActionManager;
 import edu.umich.robot.radio.RadioHandler;
 import edu.umich.robot.radio.RadioMessage;
 
@@ -65,6 +57,8 @@ public class ChatView extends JPanel implements RadioHandler
     private final JTextField textField;
     private final GuiApplication application;
     
+    private Point2D.Double lastClick;
+    
     private ActionListener chatActionListener = new ActionListener() {
 		@Override
 		public void actionPerformed(ActionEvent event) {
@@ -77,7 +71,17 @@ public class ChatView extends JPanel implements RadioHandler
 			String robot = application.getController().getSelectedRobotName();
 			if (robot != null)
 			{
-				application.getController().getRadio().postRadioMessage(new RadioMessage("User", robot, tokens));
+				RadioMessage.Builder b = new RadioMessage.Builder("User").destination(robot);
+				for (String token : tokens)
+				{
+					b.token(token);
+				}
+				if (lastClick.x > 0.0 && lastClick.y < 0.0)
+				{
+					b.data("x", lastClick.x);
+					b.data("y", lastClick.y);
+				}
+				application.getController().getRadio().postRadioMessage(b.build());
 				textField.setText("");
 			}
 		}
@@ -100,6 +104,8 @@ public class ChatView extends JPanel implements RadioHandler
         
         textField = new JTextField();
         textField.addActionListener(chatActionListener);
+        
+        lastClick = new Point2D.Double(-1.0f, 1.0f);
         
         this.application = application;
         
@@ -148,9 +154,7 @@ public class ChatView extends JPanel implements RadioHandler
              });
         }
         
-        scrollPane = new JScrollPane(textArea);
-        //scrollPane.setPreferredSize(new Dimension(0, 60));
-        
+        scrollPane = new JScrollPane(textArea);        
         add(scrollPane, BorderLayout.CENTER);
         add(textField, BorderLayout.SOUTH);
     }
@@ -158,5 +162,10 @@ public class ChatView extends JPanel implements RadioHandler
 	@Override
 	public void radioMessageReceived(RadioMessage comm) {
 		textArea.append(comm.getFrom() + " to " + comm.getDestination() + ": " + comm.getConcatenatedTokens(" ") + '\n');
+	}
+	
+	public void setClick(Point2D.Double click)
+	{
+		this.lastClick = click;
 	}
 }

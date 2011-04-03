@@ -48,6 +48,7 @@ public class DoorOpenCommand extends OLCommand
     void update() throws SoarCommandError
     {
         events.fireEvent(new DoorOpenEvent(id));
+        setStatus(CommandStatus.COMPLETE);
     }
 
 }

@@ -54,6 +54,7 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
     private RobotSession robotSession;
 
     public TextView propertiesTextView;
+    public TextView serverTextView;
 
     private EditText commandsEditText;
 
@@ -75,25 +76,39 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
 			mapView.toggleFollow();
 		}
 	};
+	
+	/**
+	 * 
+	 * @param message
+	 * @return True if the message was successfully sent.
+	 */
+	public boolean sendTextMessage(String message)
+	{
+    	List<String> robotNames = robotSession.getRobotNames();
+    	SimObject robot = mapView.getFollow();
+    	if (robot == null) {
+            showAlert("No robot selected.", Toast.LENGTH_SHORT);
+    		return false;
+    	}
+    	if(robotNames.size() > 0) {
+            String robotName = robot.getAttribute("name");
+            robotSession.sendMessage("text tablet " + robotName + " " + message);
+            messageHistory.add("User to " + robotName + ": " + message);
+            return true;
+    	}
+    	return false;
+	}
 
     private OnClickListener buttonListener = new OnClickListener()
     {
         @Override
         public void onClick(View v)
         {
-            // send the message
-        	List<String> robotNames = robotSession.getRobotNames();
-        	SimObject robot = mapView.getFollow();
-        	if (robot == null) {
-                showAlert("No robot selected.", Toast.LENGTH_SHORT);
-        		return;
-        	}
-        	if(robotNames.size() > 0) {
-                String message = commandsEditText.getText().toString();
-                String robotName = robot.getAttribute("name");
-                robotSession.sendMessage("text tablet " + robotName + " " + message);
-        	}
-            commandsEditText.setText("");
+            final String message = commandsEditText.getText().toString();
+            if (SoarRobotTablet.this.sendTextMessage(message))
+            {
+                commandsEditText.setText("");
+            }
         }
     };
 
@@ -161,6 +176,7 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
             mapView = (GLMapView) findViewById(R.id.mapView);
             mapView.setActivity(this);
             propertiesTextView = (TextView) findViewById(R.id.propertiesTextView);
+            serverTextView = (TextView) findViewById(R.id.serverTextView);
             commandsEditText = (EditText) findViewById(R.id.commandsEditText);
             setSelectedObject(null);
             try
@@ -179,8 +195,6 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
                     .setOnClickListener(buttonListener);
             ((Button) findViewById(R.id.pauseButton))
                     .setOnClickListener(pauseListener);
-            ((Button) findViewById(R.id.zoomIn)).setOnClickListener(zoomIn);
-            ((Button) findViewById(R.id.zoomOut)).setOnClickListener(zoomOut);
             ((Button) findViewById(R.id.addObject)).setOnClickListener(addObject);
             ((Button) findViewById(R.id.toggleFollow)).setOnClickListener(toggleFollowListener);
             
@@ -228,8 +242,7 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
         if (obj != null)
         {
             obj.setSelected(true);
-            propertiesTextView
-                    .setText("" + obj.getID() + ": " + obj.getPropertiesString());
+            propertiesTextView.setText("" + obj.getID() + ": " + obj.getPropertiesString());
         }
         else
         {
@@ -272,10 +285,21 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
         });
     }
     
+    public void setServerText(final String text)
+    {
+        runOnUiThread(new Runnable()
+        {
+            public void run()
+            {
+                serverTextView.setText(text);
+            }
+        });
+    }
+    
     public void textMessageReceived(final String text)
     {
     	messageHistory.add(text);
-    	setPropertiesText(text);
+    	setServerText(text);
     }
     
     public ArrayList<String> getTextMessageHistory()
@@ -287,6 +311,11 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
     public boolean onCreateOptionsMenu(Menu menu) {
     	getMenuInflater().inflate(R.menu.main_menu, menu);
     	return true;
+    }
+    
+    public void debig(String message)
+    {
+    	messageHistory.add("DEBUG: " + message);
     }
     
     @Override

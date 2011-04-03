@@ -91,4 +91,16 @@ public interface AreaDescription
      * @return
      */
     public int[] getPixelRect();
+
+    /**
+     * 
+     * @return True if this AreaDescription has changed.
+     */
+    public boolean hasChanged();
+    
+    /**
+     * Sets the changed state of this AreaDescription.
+     * @param changed
+     */
+    public void setChanged(boolean changed);
 }

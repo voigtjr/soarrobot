@@ -49,6 +49,7 @@ public class SetRoomLightCommand extends OLCommand
     void update() throws SoarCommandError
     {
         events.fireEvent(new SetRoomLightEvent(on));
+        setStatus(CommandStatus.COMPLETE);
     }
 
 }

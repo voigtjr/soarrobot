@@ -46,24 +46,39 @@ public class TextMessageAction extends AbstractRobotAction
     public void actionPerformed(ActionEvent e)
     {
     	String robot = getApplication().getController().getSelectedRobotName();
+    	
     	if (robot == null) {
     		JOptionPane.showMessageDialog(getApplication().getTopLevelAncestor(), "No Robot Selected.");
     		return;
     	}
+    	
     	String message = (String) JOptionPane.showInputDialog("Enter message:");
+    	
     	if (message == null || message.length() == 0) {
     		return;
     	}
+    	
     	String[] ar = message.split(" ");
+    	
     	if (ar.length == 0) {
     		JOptionPane.showMessageDialog(getApplication().getTopLevelAncestor(), "Bad message: \"" + message + "\"");
     		return;
     	}
+    	
     	ArrayList<String> tokens = new ArrayList<String>();
+    	
     	for (String s : ar) {
     		tokens.add(s);
     	}
-    	RadioMessage comm = new RadioMessage("GUI", robot, tokens);
+    	
+    	RadioMessage.Builder radioBuilder = new RadioMessage.Builder("GUI");
+    	
+    	for (String token : tokens)
+    	{
+    		radioBuilder.token(token);
+    	}
+    	
+    	RadioMessage comm = radioBuilder.build();
         getApplication().getController().getRadio().postRadioMessage(comm);
         update();
     }

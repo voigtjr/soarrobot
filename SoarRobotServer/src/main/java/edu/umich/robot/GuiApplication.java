@@ -32,6 +32,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -375,7 +376,12 @@ public class GuiApplication
                         controller.addObject(objectToAdd, ray.intersectPlaneXY());
                         objectToAdd = null;
                         ret = true;
-                    } 
+                    }
+                    else
+                    {
+                    	double[] click = ray.intersectPlaneXY();
+                    	chatView.setClick(new Point2D.Double(click[0], click[1]));
+                    }
                 }
                 status.setMessage(String.format("%3.1f,%3.1f", ray.intersectPlaneXY()[0], ray.intersectPlaneXY()[1]));
                 return ret;

@@ -23,8 +23,10 @@ package edu.umich.robot.radio;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -54,7 +56,7 @@ public class RadioMessage
     static RadioMessage newCommunication(String from, String destination,
             List<String> tokens)
     {
-        return new RadioMessage(from, destination, tokens);
+        return new RadioMessage(from, destination, tokens, new HashMap<String, Object>());
     }
 
     /**
@@ -78,6 +80,8 @@ public class RadioMessage
         private final List<String> tokens = new ArrayList<String>();
 
         private String destination;
+        
+        private final Map<String, Object> data = new HashMap<String, Object>();
 
         public Builder(String from)
         {
@@ -95,6 +99,18 @@ public class RadioMessage
             tokens.add(token);
             return this;
         }
+        
+        public Builder tokens(List<String> tokens)
+        {
+        	this.tokens.addAll(tokens);
+            return this;
+        }
+        
+        public Builder data(String key, Object value)
+        {
+        	data.put(key, value);
+        	return this;
+        }
 
         public RadioMessage build()
         {
@@ -111,7 +127,7 @@ public class RadioMessage
             if (tokens.isEmpty())
                 return null;
 
-            return new RadioMessage(from, destination, tokens);
+            return new RadioMessage(from, destination, tokens, data);
         }
     }
 
@@ -122,14 +138,17 @@ public class RadioMessage
     private final List<String> tokens;
 
     private final String destination;
-
-    public RadioMessage(String from, String destination, List<String> tokens)
+    
+    private final Map<String, Object> data;
+    
+    public RadioMessage(String from, String destination, List<String> tokens, Map<String, Object> data)
     {
         this.id = counter.getAndIncrement();
         this.from = from;
         this.destination = destination;
         this.tokens = Collections
                 .unmodifiableList(new ArrayList<String>(tokens));
+        this.data = Collections.unmodifiableMap(data);
     }
 
     /**

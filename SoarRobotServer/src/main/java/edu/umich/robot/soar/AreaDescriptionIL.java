@@ -21,7 +21,9 @@
  */
 package edu.umich.robot.soar;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import lcm.lcm.LCM;
 
@@ -29,6 +31,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import sml.Identifier;
+import sml.StringElement;
+import sml.WMElement;
 import april.lcmtypes.waypoint_list_t;
 import april.lcmtypes.waypoint_t;
 import april.util.TimeUtil;
@@ -38,6 +42,7 @@ import com.google.common.collect.Lists;
 import edu.umich.robot.RobotOutput;
 import edu.umich.robot.metamap.AreaDescription;
 import edu.umich.robot.metamap.AreaState;
+import edu.umich.robot.metamap.Door;
 import edu.umich.robot.metamap.Gateway;
 import edu.umich.robot.metamap.Wall;
 import edu.umich.soar.IntWme;
@@ -62,6 +67,8 @@ public class AreaDescriptionIL extends InputLinkElement
     private final StringWme lightwme;
 
     private final RobotOutput output;
+    
+    private final List<Identifier> gatewayWmes = Lists.newArrayList();
 
     private final List<PointWithDistanceIL> pointDataList = Lists.newArrayList();
 
@@ -131,6 +138,7 @@ public class AreaDescriptionIL extends InputLinkElement
 
             pointDataList.add(pointData);
             destroyList.add(gatewaywme);
+            gatewayWmes.add(gatewaywme);
         }
 
         // walls
@@ -176,17 +184,20 @@ public class AreaDescriptionIL extends InputLinkElement
         if (ad != null)
         {
             warned = false;
-            if (ad.getId() != idwme.getValue())
+            if (ad.getId() != idwme.getValue() || ad.hasChanged())
             {
                 for (Identifier old : destroyList)
                     old.DestroyWME();
                 destroyList.clear();
                 pointDataList.clear();
+                gatewayWmes.clear();
 
                 newArea(ad);
+                ad.setChanged(false);
             }
             
             updateLight(as);
+            updateDoors(ad);
         }
         else
         {
@@ -205,5 +216,37 @@ public class AreaDescriptionIL extends InputLinkElement
     {
         lightwme.update(as.isLit(false) ? IOConstants.TRUE : IOConstants.FALSE);
     }
-
+    
+    private void updateDoors(AreaDescription ad)
+    {
+    	Map<Long, Identifier> gatewayIdToDoorWme = new HashMap<Long, Identifier>();
+    	for (Identifier gatewayWme : gatewayWmes)
+    	{
+			WMElement door = gatewayWme.FindByAttribute(IOConstants.DOOR, 0);
+			if (door == null || !door.IsIdentifier()) {
+				continue;
+			}
+			Identifier doorwme = door.ConvertToIdentifier();
+			Long gatewayID = doorwme.FindByAttribute(IOConstants.ID, 0).ConvertToIntElement().GetValue();
+			gatewayIdToDoorWme.put(gatewayID, doorwme);
+    	}
+    	for (Gateway gateway : ad.getGateways())
+    	{
+    		Door door = gateway.getDoor();
+    		Long id = (long) door.getId();
+    		Identifier doorWme = gatewayIdToDoorWme.get(id);
+    		if (doorWme == null)
+    		{
+    			continue;
+    		}
+    		StringElement wmeState = doorWme.FindByAttribute(IOConstants.STATE, 0).ConvertToStringElement();
+    		String wmeStateValue = wmeState.GetValue();
+    		String doorStateValue = door.getState().toString().toLowerCase();
+    		if (!wmeStateValue.equals(doorStateValue))
+    		{
+    			wmeState.DestroyWME();
+                StringWme.newInstance(doorWme, IOConstants.STATE, doorStateValue);
+    		}
+    	}
+    }
 }

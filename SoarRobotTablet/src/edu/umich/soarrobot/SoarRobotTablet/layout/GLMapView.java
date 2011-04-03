@@ -219,30 +219,6 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 				} else {
 					if (event.getPointerCount() > 1) {
 						followHeightFactor = 16.0f * (screenTouch.y + 0.1f);
-					} else if (event.getPointerCount() == 1) {
-		                   boolean selected = false;
-		                    synchronized (robots) {
-		                        for (SimObject obj : robots.values()) {
-		                            if (obj.intersectsPoint(floorTouch)) {
-		                                activity.setSelectedObject(obj);
-		                                selected = true;
-		                                break;
-		                            }
-		                        }
-		                    }
-		                    if (!selected) {
-		                        synchronized (objects) {
-
-		                            for (SimObject obj : objects.values()) {
-		                                if (obj.intersectsPoint(floorTouch, 1.0f)) {
-		                                    activity.setSelectedObject(obj);
-		                                    selected = true;
-		                                    break;
-		                                }
-		                            }
-		                        }
-		                    }
-		                    draw();
 					}
 				}
 				if (event.getPointerCount() > 1) {
@@ -266,7 +242,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 					boolean selected = false;
 					synchronized (robots) {
 						for (SimObject obj : robots.values()) {
-							if (obj.intersectsPoint(floorTouch)) {
+							if (obj.intersectsPoint(floorTouch, 1.0f)) {
 								activity.setSelectedObject(obj);
 								selected = true;
 								break;
@@ -285,6 +261,21 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 							}
 						}
 					}
+                    if (!selected)
+                    {
+                    	synchronized(areas)
+                    	{
+                    		for (SimArea area : areas.values())
+                    		{
+                    			if (area.intersectsPoint(floorTouch))
+                    			{
+                    				activity.setSelectedObject(area);
+                    				selected = true;
+                    				break;
+                    			}
+                    		}
+                    	}
+                    }
 					draw();
 				} catch (NullPointerException e) { // Don't know why this is happening
                     e.printStackTrace();
@@ -580,12 +571,11 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 			}
 		}
 		
-		/*
 		synchronized (lastFloorTouch) {
-			GLUtil.drawRect(gl, lastFloorTouch.x, lastFloorTouch.y, -0.01f, 0.5f, 0.5f, Color.GRAY);
+			GLUtil.drawRect(gl, lastFloorTouch.x - 0.05f, lastFloorTouch.y - 0.25f, -0.01f, 0.1f, 0.5f, Color.GRAY);
+			GLUtil.drawRect(gl, lastFloorTouch.x - 0.25f, lastFloorTouch.y - 0.05f, -0.01f, 0.5f, 0.1f, Color.GRAY);
 		}
-		*/
-
+		
 		} catch (ConcurrentModificationException e) {
 			e.printStackTrace();
 		}
