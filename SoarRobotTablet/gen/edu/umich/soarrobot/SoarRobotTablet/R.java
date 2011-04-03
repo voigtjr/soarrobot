@@ -14,6 +14,7 @@ public final class R {
         public static final int icon=0x7f020000;
     }
     public static final class id {
+        public static final int actionsButton=0x7f060009;
         public static final int addObject=0x7f060007;
         public static final int buttonsLayout=0x7f060005;
         public static final int chatCommandsButton=0x7f060003;
@@ -21,16 +22,16 @@ public final class R {
         public static final int chatCommandsLayout=0x7f060001;
         public static final int chatLogLayout=0x7f060000;
         public static final int chatLogText=0x7f060002;
-        public static final int commandsButton=0x7f06000f;
-        public static final int commandsEditText=0x7f060010;
-        public static final int commandsLayout=0x7f06000d;
-        public static final int mapView=0x7f06000b;
+        public static final int commandsButton=0x7f060010;
+        public static final int commandsEditText=0x7f060011;
+        public static final int commandsLayout=0x7f06000e;
+        public static final int mapView=0x7f06000c;
         public static final int pauseButton=0x7f060006;
-        public static final int propertiesLayout=0x7f060009;
-        public static final int propertiesTextView=0x7f06000a;
-        public static final int serverLayout=0x7f06000c;
-        public static final int serverTextView=0x7f06000e;
-        public static final int showChatMenuItem=0x7f060011;
+        public static final int propertiesLayout=0x7f06000a;
+        public static final int propertiesTextView=0x7f06000b;
+        public static final int serverLayout=0x7f06000d;
+        public static final int serverTextView=0x7f06000f;
+        public static final int showChatMenuItem=0x7f060012;
         public static final int toggleFollow=0x7f060008;
     }
     public static final class layout {

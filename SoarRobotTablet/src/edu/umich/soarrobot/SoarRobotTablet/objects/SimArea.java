@@ -1,5 +1,6 @@
 package edu.umich.soarrobot.SoarRobotTablet.objects;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.microedition.khronos.opengles.GL10;
@@ -17,20 +18,27 @@ public class SimArea extends SimObject
     private Rect rect;
     private boolean lightsOn;
     private boolean doorClosed;
+    private boolean isDoorway;
     
     public SimArea(int id, Rect r, String type) {
     	super("area", id, new PointF(r.left, r.bottom));
+    	this.id = id;
     	this.size = new PointF(r.width(), -r.height());
         this.rect = r;
+        this.isDoorway = type.equals("door");
         lightsOn = true;
         doorClosed = false;
     }
     
     public void draw(GL10 gl) {
-    	int color = lightsOn ? Color.WHITE : Color.GRAY;
+    	int color = doorClosed ? Color.DKGRAY : (lightsOn ? Color.WHITE : Color.DKGRAY);
     	if (doorClosed) {
-    		GLUtil.drawCube(gl, rect.left, rect.bottom, 0.0f, rect.right - rect.left,
-    				rect.top - rect.bottom, 1.0f, color);
+    		float width = rect.right - rect.left;
+    		float height = rect.top - rect.bottom;
+    		float centerX = rect.left + width / 2.0f;
+    		float centerY = rect.bottom + height / 2.0f;
+    		GLUtil.drawCube(gl, centerX, centerY, -0.5f, width,
+    				height, 1.0f, color);
     	} else {
     		GLUtil.drawRect(gl, rect.left, rect.bottom, 0.0f, rect.right - rect.left,
     				rect.top - rect.bottom, color);
@@ -50,6 +58,7 @@ public class SimArea extends SimObject
     }
     
     public void setDoorClosed(boolean doorClosed) {
+    	if (!isDoorway) return;
     	this.doorClosed = doorClosed;
     }
     
@@ -59,5 +68,33 @@ public class SimArea extends SimObject
     
     public Rect getRect() {
     	return rect;
+    }
+    
+    public String getPropertiesString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(type + " id=" + getID() + "; x=" + location.x + "; y=" + location.y + "; ");
+        sb.append("lights=" + (lightsOn ? "on" : "off") + "; ");
+        if (isDoorway)
+        {
+        	sb.append("door-closed=" + doorClosed + "; ");
+        }
+        for (String str : attributes.keySet()) {
+            sb.append(str + "=" + attributes.get(str) + "; ");
+        }
+        return sb.toString();
+    }
+    
+    @Override
+    public ArrayList<TemplateAction> getActions() {
+    	ArrayList<TemplateAction> ret = super.getActions();
+    	if (isDoorway)
+    	{
+    		ArrayList<TemplateAction> all = new ArrayList<TemplateAction>();
+    		all.addAll(ret);
+    		all.add(new TemplateAction("area", "open-door", true, true));
+    		all.add(new TemplateAction("area", "close-door", true, true));
+    		return all;
+    	}
+    	return ret;
     }
 }

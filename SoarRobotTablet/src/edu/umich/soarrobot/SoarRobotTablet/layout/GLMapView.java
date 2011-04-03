@@ -62,6 +62,8 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     public static final int PX_PER_METER = 32;
     private static final float ZOOM_AMOUNT = 5.0f;
     private static float FRUSTUM_FRONT = 3.0f;
+    private static final float FOLLOW_HEIGHT_DEFAULT = 4.0f;
+    private static final float ZOOM_DEFAULT = -30.0f;
     
     // Variables that determine how the camera follows a robot
     private static final float FOLLOW_LOOK_AT_HEIGHT = 2.0f;
@@ -106,7 +108,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         SurfaceHolder sh = getHolder();
         sh.addCallback(this);
         camera = new PointF(0.0f, 0.0f);
-        zoom = -40.0f;
+        zoom = ZOOM_DEFAULT;
         lastFloorTouch = new PointF(-1.0f, -1.0f);
         lastScreenTouch = new PointF(-1.0f, -1.0f);
         objects = new HashMap<Integer, SimObject>();
@@ -227,19 +229,19 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 					}
 				} else {
 					if (event.getPointerCount() > 1) {
-						followHeightFactor = 16.0f * (screenTouch.y + 0.1f);
+						// followHeightFactor = 16.0f * (screenTouch.y + 0.1f);
 					} else if (event.getPointerCount() == 1) {
 					    float deltaHeight = (screenTouch.y - lastScreenTouch.y);
 					    followHeightFactor += deltaHeight * followHeightFactor * 3.0f;
 					    
 					    if (followHeightFactor <= 1.0f) {
 					        followHeightFactor = 1.0f;
+					    } else if (followHeightFactor > 10.0f) {
+					        followHeightFactor = 10.0f;
 					    }
-					    Log.d("HeightFac", "value = " + followHeightFactor);
-					    /*
-					     * screenTouch is not being used because it is limited to 0 and 1
-					     * which leads to undesirable results. getX() is used instead.
-					     */
+
+					    // screenTouch is not being used because it is limited to 0 and 1
+					    // which leads to undesirable results. getX() is used instead.
 					    cameraOffsetX -= (event.getX() - lastX) / 200.0f;
 	                    lastX = event.getX();
 	                    if (cameraOffsetX > Math.PI * 2.0f) {
@@ -311,6 +313,10 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
                     			}
                     		}
                     	}
+                    }
+                    if (!selected)
+                    {
+                    	activity.setSelectedObject(null);
                     }
 					draw();
 				} catch (NullPointerException e) { // Don't know why this is happening
@@ -526,16 +532,18 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 		}
 		synchronized (walls) {
 			walls.clear();
-			for (int x = 0; x + 1 < max.x; ++x)
+			for (int x = 0; x < max.x; ++x)
 			{
-				for (int y = 0; y - 1 > max.y; --y)
+				for (int y = 0; y > max.y; --y)
 				{
 					// Check to the right and to the bottom.
-					if (open[x][-y] != open[x+1][-y])
+					if ((x + 1 < max.x && open[x][-y] != open[x+1][-y])
+							|| (x + 1 == max.x && open[x][-y]))
 					{
 						walls.add(new SimWall(new Point(x + 1, y - 1), new Point(x + 1, y)));
 					}
-					if (open[x][-y] != open[x][-(y-1)])
+					if ((y - 1 > max.y && open[x][-y] != open[x][-(y-1)])
+							|| (y - 1 == max.y && open[x][-y]))
 					{
 						walls.add(new SimWall(new Point(x, y - 1), new Point(x + 1, y - 1)));
 					}
@@ -559,6 +567,8 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     public void resetCameraOffset() {
         cameraOffsetX = 0.0f;
         cameraOffsetY = 0.0f;
+        zoom = ZOOM_DEFAULT;
+        followHeightFactor = FOLLOW_HEIGHT_DEFAULT;
     }
     
     public void setNextClass(CharSequence nextClass)
@@ -798,5 +808,10 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 			return;
 		}
 		a.setLightsOn(on);
+	}
+	
+	public PointF getLastTouch()
+	{
+		return lastFloorTouch;
 	}
 }

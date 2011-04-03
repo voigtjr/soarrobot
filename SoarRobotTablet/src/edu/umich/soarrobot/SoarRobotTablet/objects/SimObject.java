@@ -29,6 +29,7 @@
 
 package edu.umich.soarrobot.SoarRobotTablet.objects;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 import javax.microedition.khronos.opengles.GL10;
@@ -41,6 +42,39 @@ import edu.umich.soarrobot.SoarRobotTablet.layout.GLUtil;
 
 public class SimObject {
 	
+	public static class TemplateAction
+	{
+		private String type;
+		private String text;
+		private boolean includeID;
+		private boolean includeXY;
+		public TemplateAction(String type, String text, boolean includeID, boolean indluceXY)
+		{
+			this.type = type;
+			this.text = text;
+			this.includeID = includeID;
+			this.includeXY = indluceXY;
+		}
+		
+		public String getType() { return type; }
+		public String getText() { return text; }
+		public boolean getIncludeID() { return includeID; }
+		public boolean getIncludeXY() { return includeXY; }
+		
+		public String getCommand(SimObject obj, PointF xy) {
+			StringBuilder b = new StringBuilder(text + " " + type);
+			if (includeID)
+			{
+				b.append(" " + obj.getID());
+			}
+			if (includeXY)
+			{
+				b.append(" " + xy.x + " " + xy.y);
+			}
+			return b.toString();
+		}
+	}
+	
 	/*
 	 * Static variables and methods
 	 */
@@ -50,11 +84,31 @@ public class SimObject {
 	// Value is of type String or Float, or an array
 	// of one of those types.
 	private static HashMap<String, HashMap<String, String>> classes;
+	private static HashMap<String, ArrayList<TemplateAction>> templateActions = new HashMap<String, ArrayList<TemplateAction>>();
+	
+	private static void addTemplateAction(TemplateAction ta)
+	{
+		String clazz = ta.getType();
+		ArrayList<TemplateAction> actions = templateActions.get(clazz);
+		if (actions == null)
+		{
+			actions = new ArrayList<TemplateAction>();
+			templateActions.put(clazz, actions);
+		}
+		actions.add(ta);
+	}
 	
 	static
 	{
 		classes = new HashMap<String, HashMap<String,String>>();
 		classes.put("area", new HashMap<String, String>());
+		
+		// Default actions for each class
+		addTemplateAction(new TemplateAction("area", "go-to", true, false));
+		addTemplateAction(new TemplateAction("area", "turn-light-on", true, false));
+		addTemplateAction(new TemplateAction("area", "turn-light-off", true, false));
+		addTemplateAction(new TemplateAction("area", "drop-off-object", true, true));
+		addTemplateAction(new TemplateAction("green-cube", "pick-up", true, true));
 	}
 	
 	public static void init(String classesString) {
@@ -197,12 +251,11 @@ public class SimObject {
 	
     public String getPropertiesString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("x:" + location.x + "  y:" + location.y + " ");
+        sb.append(type + " id=" + getID() + "; x=" + location.x + "; y=" + location.y + "; ");
         for (String str : attributes.keySet()) {
-            sb.append(str + ":" + attributes.get(str) + "  ");
+            sb.append(str + "=" + attributes.get(str) + "; ");
         }
         return sb.toString();
-          
     }
     
     private static void drawLidar(laser_t lidar, PointF lidarLocation, float lidarTheta, GL10 gl, int color) {
@@ -375,5 +428,11 @@ public class SimObject {
     
     public SimObject getCarrying() {
     	return carrying;
+    }
+    
+    public ArrayList<TemplateAction> getActions()
+    {
+    	ArrayList<TemplateAction> ret = templateActions.get(type);
+    	return ret;
     }
 }

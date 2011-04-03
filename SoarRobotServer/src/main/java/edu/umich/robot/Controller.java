@@ -50,14 +50,18 @@ import edu.umich.robot.events.ObjectAddedEvent;
 import edu.umich.robot.events.PickUpObjectEvent;
 import edu.umich.robot.events.RobotAddedEvent;
 import edu.umich.robot.events.RobotRemovedEvent;
+import edu.umich.robot.events.RoomLightEvent;
 import edu.umich.robot.events.SoarStartedEvent;
 import edu.umich.robot.events.SoarStoppedEvent;
 import edu.umich.robot.events.TimeScaleChangedEvent;
 import edu.umich.robot.events.control.AbstractControlEvent;
 import edu.umich.robot.events.control.AbstractDriveEvent;
+import edu.umich.robot.events.control.DoorCloseEvent;
+import edu.umich.robot.events.control.DoorOpenEvent;
 import edu.umich.robot.events.control.DriveEStopEvent;
 import edu.umich.robot.gp.Gamepad;
 import edu.umich.robot.metamap.AreaDescription;
+import edu.umich.robot.metamap.AreaState;
 import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.MetamapFactory;
 import edu.umich.robot.metamap.VirtualObject;
@@ -210,6 +214,9 @@ public class Controller
         events.addListener(ObjectAddedEvent.class, server);
         events.addListener(PickUpObjectEvent.class, server);
         events.addListener(DropObjectEvent.class, server);
+        events.addListener(DoorOpenEvent.class, server);
+        events.addListener(DoorCloseEvent.class, server);
+        events.addListener(RoomLightEvent.class, server);
     }
     
     /**
@@ -762,6 +769,11 @@ public class Controller
     
     public List<AreaDescription> getAreaList() {
     	return metamap.getAreaList();
+    }
+    
+    public AreaState getAreaState(int id)
+    {
+    	return metamap.getAreaState(id);
     }
     
     public Collection<VirtualObjectTemplate> getTemplates() {

@@ -7,9 +7,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
+import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -27,6 +29,8 @@ import edu.umich.robot.metamap.AbridgedAreaDescription;
 import edu.umich.robot.metamap.AbridgedGateway;
 import edu.umich.robot.metamap.AbridgedWall;
 import edu.umich.robot.metamap.AreaDescription;
+import edu.umich.robot.metamap.Door;
+import edu.umich.robot.metamap.Door.State;
 import edu.umich.robot.metamap.Gateway;
 import edu.umich.robot.metamap.RectArea;
 import edu.umich.robot.metamap.VirtualObject;
@@ -166,6 +170,66 @@ public class Server implements RobotEventListener, RadioHandler {
 					sb.append(" ; ");
 				}
 			}
+			
+			// Also include information on which doors are closed
+			// (They are open by default)
+			Set<Integer> closedAreas = new HashSet<Integer>();
+			for (AreaDescription ad : controller.getAreaList()) {
+				int  currentAreaId = ad.getId();
+				for (Gateway gateway : ad.getGateways())
+				{
+					Door door = gateway.getDoor();
+					State doorState = door.getState();
+					if (doorState != State.CLOSED)
+					{
+						continue;
+					}
+					for (int toId : gateway.getTo())
+					{
+						if (toId == currentAreaId)
+						{
+							continue;
+						}
+						closedAreas.add(toId);
+					}
+				}
+			}
+			for (AreaDescription ad : controller.getAreaList())
+			{
+				int thisId = ad.getId();
+				if (closedAreas.contains(thisId))
+				{
+					String type = ad.getProperties().get("type");
+					if (type != null && type == "door")
+					{
+						sb.append("\ndoor-close " + thisId);
+					}
+				}
+			}
+			
+			// Also include information about which light are off
+			// (They are on by default)
+			for (AreaDescription ad : controller.getAreaList())
+			{
+				int thisId = ad.getId();
+				if (!controller.getAreaState(thisId).isRoomLightOn())
+				{
+					sb.append("\nroom-light " + thisId + " " + false);
+				}
+			}
+			for (AreaDescription ad : controller.getAreaList())
+			{
+				int thisId = ad.getId();
+				if (closedAreas.contains(thisId))
+				{
+					String type = ad.getProperties().get("type");
+					if (type != null && type == "door")
+					{
+						sb.append("\ndoor-close " + thisId);
+					}
+				}
+			}
+			
 			return "map " + sb.toString();
 		}
 

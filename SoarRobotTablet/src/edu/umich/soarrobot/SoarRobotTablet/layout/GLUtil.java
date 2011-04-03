@@ -94,7 +94,16 @@ public class GLUtil {
 		1, 3, 2,
 	};
 	
-	private static FloatBuffer cubeCoordsBuffer, whiteColorsBuffer, redColorsBuffer, greenColorsBuffer, blueColorsBuffer, yellowColorsBuffer, blackColorsBuffer, grayColorsBuffer;
+	private static FloatBuffer cubeCoordsBuffer,
+			whiteColorsBuffer,
+			redColorsBuffer, 
+			greenColorsBuffer, 
+			blueColorsBuffer, 
+			yellowColorsBuffer, 
+			blackColorsBuffer, 
+			grayColorsBuffer,
+			darkGrayColorsBuffer;
+	
 	private static ShortBuffer cubeIndecesBuffer, rectIndecesBuffer, reverseRectIndicesBuffer;
 	private static FloatBuffer cubeNormalsBuffer, rectNormalsBuffer;
 	
@@ -137,6 +146,7 @@ public class GLUtil {
         yellowColorsBuffer = makeColorBuffer(1.0f, 1.0f, 0.0f);
         blackColorsBuffer = makeColorBuffer(0.0f, 0.0f, 0.0f);
         grayColorsBuffer = makeColorBuffer(0.5f, 0.5f, 0.5f);
+        darkGrayColorsBuffer = makeColorBuffer(0.3f, 0.3f, 0.3f);
      
         cubeCoordsBuffer.put(cubeCoords);
         cubeIndecesBuffer.put(cubeIndeces);
@@ -354,7 +364,9 @@ public class GLUtil {
 		case Color.BLACK:
 			return blackColorsBuffer;
 		case Color.GRAY:
-			return grayColorsBuffer;
+			return grayColorsBuffer;		
+		case Color.DKGRAY:
+				return darkGrayColorsBuffer;
 		}
 		return whiteColorsBuffer;
 	}

@@ -31,6 +31,7 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.PointF;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -45,6 +46,7 @@ import edu.umich.soarrobot.SoarRobotTablet.layout.IMapView;
 import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession;
 import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession.TextMessageListener;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject.TemplateAction;
 
 public class SoarRobotTablet extends Activity implements TextMessageListener
 {
@@ -77,6 +79,42 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
 		}
 	};
 	
+	private OnClickListener actionsButtonListener = new OnClickListener() {
+		@Override
+		public void onClick(View v) {
+			final SimObject sel = SoarRobotTablet.this.selectedObject;
+			if (sel == null)
+			{
+				return;
+			}
+			final List<TemplateAction> actions = sel.getActions();
+			if (actions == null)
+			{
+				return;
+			}
+			AlertDialog.Builder builder = new AlertDialog.Builder(SoarRobotTablet.this);
+			builder.setTitle("Actions");
+			ArrayList<String> commandNames = new ArrayList<String>();
+			for (TemplateAction ta : actions)
+			{
+				commandNames.add(ta.getText());
+			}
+			builder.setItems((CharSequence[]) commandNames.toArray(new String[0]), new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					TemplateAction action = actions.get(which);
+					if (action != null)
+					{
+						PointF lastTouch = SoarRobotTablet.this.mapView.getLastTouch();
+						SoarRobotTablet.this.commandsEditText.setText(action.getCommand(sel, lastTouch));
+					}
+				}
+			});
+			AlertDialog dialog = builder.create();
+			dialog.show();
+		}
+	};
+	
 	/**
 	 * 
 	 * @param message
@@ -93,7 +131,7 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
     	if(robotNames.size() > 0) {
             String robotName = robot.getAttribute("name");
             robotSession.sendMessage("text tablet " + robotName + " " + message);
-            messageHistory.add("User to " + robotName + ": " + message);
+            messageHistory.add("User to " + robotName + ": \"" + message + "\"");
             return true;
     	}
     	return false;
@@ -181,8 +219,8 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
             setSelectedObject(null);
             try
             {
-                //robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
-                robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
+                robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
+                //robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
                 robotSession.addTextMessageListener(this);
                 robotSession.start();
             }
@@ -197,6 +235,7 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
                     .setOnClickListener(pauseListener);
             ((Button) findViewById(R.id.addObject)).setOnClickListener(addObject);
             ((Button) findViewById(R.id.toggleFollow)).setOnClickListener(toggleFollowListener);
+            ((Button) findViewById(R.id.actionsButton)).setOnClickListener(actionsButtonListener);
             
             
         }
@@ -242,7 +281,7 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
         if (obj != null)
         {
             obj.setSelected(true);
-            propertiesTextView.setText("" + obj.getID() + ": " + obj.getPropertiesString());
+            propertiesTextView.setText(obj.getPropertiesString());
         }
         else
         {
