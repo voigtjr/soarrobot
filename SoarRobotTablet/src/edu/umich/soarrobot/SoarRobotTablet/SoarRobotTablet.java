@@ -181,8 +181,8 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
             setSelectedObject(null);
             try
             {
-                robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
-                //robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
+                //robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
+                robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
                 robotSession.addTextMessageListener(this);
                 robotSession.start();
             }

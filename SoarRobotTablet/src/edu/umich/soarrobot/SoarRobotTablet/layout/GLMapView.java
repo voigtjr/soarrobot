@@ -42,6 +42,9 @@ import android.opengl.GLSurfaceView;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.GLU;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.GestureDetector.OnDoubleTapListener;
+import android.view.GestureDetector.OnGestureListener;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
@@ -79,6 +82,10 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private Point windowSize; // The size of the window in pixel coordinates.
     private PointF frustumSize; // The size of the window in "real-world" coordinates.
     private float followHeightFactor;
+    private float cameraOffsetX;
+    private float cameraOffsetY;
+    private float lastX;
+    private long lastTouchDownTime;
     
     private FloatBuffer positionBuffer;
 
@@ -111,6 +118,8 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         fingerDown = false;
         followHeightFactor = 4.0f;
         walls = new ArrayList<SimWall>();
+        cameraOffsetX = 0.0f;
+        cameraOffsetY = 0.0f;
         
         setRenderer(this);
         //setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
@@ -187,7 +196,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     {
         requestRender();
     }
-
+    
     @Override
     public boolean onTouchEvent(MotionEvent event)
     {
@@ -219,6 +228,26 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 				} else {
 					if (event.getPointerCount() > 1) {
 						followHeightFactor = 16.0f * (screenTouch.y + 0.1f);
+					} else if (event.getPointerCount() == 1) {
+					    float deltaHeight = (screenTouch.y - lastScreenTouch.y);
+					    followHeightFactor += deltaHeight * followHeightFactor * 3.0f;
+					    
+					    if (followHeightFactor <= 1.0f) {
+					        followHeightFactor = 1.0f;
+					    }
+					    Log.d("HeightFac", "value = " + followHeightFactor);
+					    /*
+					     * screenTouch is not being used because it is limited to 0 and 1
+					     * which leads to undesirable results. getX() is used instead.
+					     */
+					    cameraOffsetX -= (event.getX() - lastX) / 200.0f;
+	                    lastX = event.getX();
+	                    if (cameraOffsetX > Math.PI * 2.0f) {
+	                        cameraOffsetX -= Math.PI * 2.0f;
+	                    } else if (cameraOffsetX < 0.0f) {
+	                        cameraOffsetX += Math.PI * 2.0f;
+	                    }
+	                    //lastScreenTouch.y = screenTouch.y;
 					}
 				}
 				if (event.getPointerCount() > 1) {
@@ -232,6 +261,13 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         else if (action == MotionEvent.ACTION_DOWN)
         {
         	fingerDown = true;
+        	lastX = event.getX();
+        	
+        	if (event.getEventTime() - lastTouchDownTime < 200) {
+        	    resetCameraOffset();
+        	}
+        	lastTouchDownTime = event.getEventTime();
+        	
             if (nextObjectClass != null)
             {
                 activity.getRobotSession().sendMessage("object " + nextObjectClass + " " + floorTouch.x + " " + floorTouch.y);
@@ -520,6 +556,11 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         draw();
     }
 
+    public void resetCameraOffset() {
+        cameraOffsetX = 0.0f;
+        cameraOffsetY = 0.0f;
+    }
+    
     public void setNextClass(CharSequence nextClass)
     {
         nextObjectClass = nextClass.toString();
@@ -706,8 +747,8 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 			} else {
 				camera = following.getLocation();
 				float theta = (float) Math.toRadians(following.getTheta());
-				PointF c = new PointF((float) (camera.x + Math.cos(theta)
-						* zoom / 2.0f), (float) (camera.y + Math.sin(theta)
+				PointF c = new PointF((float) (camera.x + (Math.cos(theta + cameraOffsetX))
+						* zoom / 2.0f), (float) (camera.y + (Math.sin(theta + cameraOffsetX))
 						* zoom / 2.0f));
 				return c;
 			}
