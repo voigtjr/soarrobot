@@ -430,10 +430,14 @@ public class Server implements RobotEventListener, RadioHandler {
 
 	@Override
 	public void radioMessageReceived(RadioMessage comm) {
-		if (!comm.getDestination().equalsIgnoreCase("user")) {
+		
+		/*
+		if (comm.getDestination() == null || !comm.getDestination().equalsIgnoreCase("user")) {
 			return;
 		}
-		sendMessage("text " + comm.getFrom() + ": \"" + comm.getConcatenatedTokens(" ") + "\"");
+		*/
+		
+		sendMessage("text " + comm.getFrom() + " to " + comm.getDestination() + ": \"" + comm.getConcatenatedTokens(" ") + "\"");
 	}
 
 }

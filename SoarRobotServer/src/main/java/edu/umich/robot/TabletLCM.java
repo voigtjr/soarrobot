@@ -9,7 +9,8 @@ import lcm.lcm.LCMSubscriber;
 
 public class TabletLCM
 {
-	private static final long MIN_INTERVAL = 100L;
+	//private static final long MIN_INTERVAL = 100L;
+	private static final long MIN_INTERVAL = 0L;
 	
     private final LCM input;
     private final LCM output;
