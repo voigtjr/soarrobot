@@ -54,6 +54,7 @@ import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimArea;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimWall;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimWallTop;
 
 public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMapView
 {
@@ -78,6 +79,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private HashMap<String, SimObject> robots;
     private HashMap<Integer, SimArea> areas; // Map from id onto area.
     private ArrayList<SimWall> walls;
+    private ArrayList<SimWallTop> walltops;
     private String nextObjectClass;
     private int follow; // Which robot to follow
     private boolean topDown;
@@ -88,6 +90,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private float cameraOffsetY;
     private float lastX;
     private long lastTouchDownTime;
+    private boolean [][]open;
     
     private FloatBuffer positionBuffer;
 
@@ -120,6 +123,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         fingerDown = false;
         followHeightFactor = 4.0f;
         walls = new ArrayList<SimWall>();
+        walltops = new ArrayList<SimWallTop>();
         cameraOffsetX = 0.0f;
         cameraOffsetY = 0.0f;
         
@@ -503,7 +507,6 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 
     private void makeWalls() {
     	Point max = new Point(0, 0);
-    	boolean [][] open;
 		synchronized (areas) {
 			for (SimArea area : areas.values())
 			{
@@ -517,7 +520,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 					max.x = r.right;
 				}
 			}
-			open = new boolean[max.x][-max.y];
+            open = new boolean[max.x+1][-max.y+1];
 			for (SimArea area : areas.values())
 			{
 				Rect r = area.getRect();
@@ -549,6 +552,26 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 					}
 				}
 			}
+			// Draw the walls along the edge of the map
+			for (int x = 0; x < max.x + 1; ++x) {
+			    walls.add(new SimWall(new Point(x, 0), new Point(x+1, 0)));
+			    walls.add(new SimWall(new Point(x, max.y-1), new Point(x+1, max.y-1)));
+			}
+			for (int y = 0; y > max.y-1; --y) {
+			    walls.add(new SimWall(new Point(0, y), new Point(0, y-1)));
+			    walls.add(new SimWall(new Point(max.x+1, y), new Point(max.x+1, y-1)));
+			}
+		}
+		synchronized (walltops) 
+		{
+		    walltops.clear();
+		    for (int x = 0; x < max.x+1; ++x) {
+		        for (int y = 0; y > max.y-1; --y) {
+		            if (open[x][-y] == false) {
+		                walltops.add(new SimWallTop(new Point(x, y), new Point(x+1, y-1)));
+		            }
+		        }
+		    }
 		}
 	}
 
@@ -608,6 +631,12 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 			{
 				wall.draw(gl);
 			}
+		}
+		
+		synchronized(walltops) {
+		    for (SimWallTop wallTop : walltops) {
+		        wallTop.draw(gl);
+		    }
 		}
 		
 		synchronized (objects) {

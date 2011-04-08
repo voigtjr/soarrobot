@@ -407,6 +407,10 @@ public class GLUtil {
 	         gl.glPopMatrix();
 	     }
 
+	 /* * * * * * * * * * * *
+	  * Wall related stuff  *
+	  * * * * * * * * * * * **/
+	 
 	public static void drawWall(GL10 gl, Point start, Point end, float height, int color) {
 		float dx = end.x - start.x;
 		float dy = end.y - start.y;
@@ -424,6 +428,23 @@ public class GLUtil {
         gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, rectIndecesBuffer);
         gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, reverseRectIndicesBuffer);
         gl.glPopMatrix();
+	}
+	
+	
+	public static void drawWallTop(GL10 gl, Point start, Point end, int color) {
+	    float dx = end.x - start.x;
+	    float dy = end.y - start.y;
+	  
+	    gl.glPushMatrix();
+	    
+	    gl.glTranslatef(start.x, start.y, -1.0f);
+	    gl.glScalef(dx, dy, 1.0f);
+	    gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
+	    gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+	    gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
+	    gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, reverseRectIndicesBuffer);
+	    
+	    gl.glPopMatrix();
 	}
 	 
 }
