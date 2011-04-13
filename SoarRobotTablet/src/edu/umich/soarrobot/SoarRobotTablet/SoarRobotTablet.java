@@ -68,6 +68,10 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
     
     private static SoarRobotTablet instance;
     
+    private final CharSequence[] drawOptionsSequence = {"Red Lidar", "Blue Lidar", "Yellow Waypoint"};
+    private boolean[] checkedOptions = {true, true, true};
+    
+    
     public static SoarRobotTablet getInstance() {
     	return instance;
     }
@@ -365,9 +369,67 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
         	Intent i = new Intent(this, ChatActivity.class);
         	startActivity(i);
         	break;
+        case R.id.DrawOptions:
+            // Temp values for saving options in case user cancels
+            boolean tempRed = mapView.isDrawRedLidar();
+            boolean tempBlue = mapView.isDrawBlueLidar();
+            boolean tempYellow = mapView.isDrawYellowWaypoint();
+            setCheckedOptions();
+            AlertDialog.Builder builder = new AlertDialog.Builder(SoarRobotTablet.this)
+                    .setTitle("Draw Options").setCancelable(false)
+                    .setMultiChoiceItems(drawOptionsSequence, checkedOptions, new DialogInterface.OnMultiChoiceClickListener()
+                    {
+                        
+                        @Override
+                        public void onClick(DialogInterface arg0, int arg1, boolean arg2)
+                        {
+                            switch(arg1) {
+                            case 0:
+                                mapView.setDrawRedLidar(arg2);
+                                break;
+                            case 1:
+                                mapView.setDrawBlueLidar(arg2);
+                                break;
+                            case 2:
+                                mapView.setDrawYellowWaypoint(arg2);
+                                break;
+                            default:
+                                    break;
+                            }
+                        }
+                    })
+                    .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                        
+                        @Override
+                        public void onClick(DialogInterface arg0, int arg1)
+                        {
+                            
+                        }
+                    })
+                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+
+                        @Override
+                        public void onClick(DialogInterface arg0, int arg1)
+                        {
+                            arg0.cancel();
+                        }
+                        
+                    });
+            
+            builder.show();
+            
+            break;
         default:
         	break;
         }
     	return true;
+    }
+
+    // Currently hard coded. Red / Blue / Yellow
+    private void setCheckedOptions()
+    {
+        checkedOptions[0] = mapView.isDrawRedLidar();
+        checkedOptions[1] = mapView.isDrawBlueLidar();
+        checkedOptions[2] = mapView.isDrawYellowWaypoint();
     }
 }

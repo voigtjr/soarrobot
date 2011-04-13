@@ -91,6 +91,10 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private float lastX;
     private long lastTouchDownTime;
     private boolean [][]open;
+    // Booleans for drawing objects or not, defaulted to true
+    private boolean drawRedLidar;
+    private boolean drawBlueLidar;
+    private boolean drawYellowWaypoint;
     
     private FloatBuffer positionBuffer;
 
@@ -126,6 +130,9 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         walltops = new ArrayList<SimWallTop>();
         cameraOffsetX = 0.0f;
         cameraOffsetY = 0.0f;
+        setDrawRedLidar(true);
+        setDrawBlueLidar(true);
+        setDrawYellowWaypoint(true);
         
         setRenderer(this);
         //setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
@@ -843,4 +850,37 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 	{
 		return lastFloorTouch;
 	}
+	
+	// Getter and Setter for draw options
+    public void setDrawRedLidar(boolean drawRedLidar)
+    {
+        this.drawRedLidar = drawRedLidar;
+    }
+
+    public boolean isDrawRedLidar()
+    {
+        return drawRedLidar;
+    }
+
+    public void setDrawBlueLidar(boolean drawBlueLidar)
+    {
+        this.drawBlueLidar = drawBlueLidar;
+    }
+
+    public boolean isDrawBlueLidar()
+    {
+        return drawBlueLidar;
+    }
+
+    public void setDrawYellowWaypoint(boolean drawYellowWaypoint)
+    {
+        this.drawYellowWaypoint = drawYellowWaypoint;
+    }
+
+    public boolean isDrawYellowWaypoint()
+    {
+        return drawYellowWaypoint;
+    }
 }
+
+

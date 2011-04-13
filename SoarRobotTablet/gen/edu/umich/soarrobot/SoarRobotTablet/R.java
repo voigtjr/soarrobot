@@ -14,6 +14,7 @@ public final class R {
         public static final int icon=0x7f020000;
     }
     public static final class id {
+        public static final int DrawOptions=0x7f060013;
         public static final int actionsButton=0x7f060009;
         public static final int addObject=0x7f060007;
         public static final int buttonsLayout=0x7f060005;
