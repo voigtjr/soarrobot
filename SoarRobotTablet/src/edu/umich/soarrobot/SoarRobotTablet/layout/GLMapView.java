@@ -53,6 +53,7 @@ import edu.umich.robot.metamap.AbridgedAreaDescriptions;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimArea;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimRobot;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimWall;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimWallTop;
 
@@ -76,7 +77,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private PointF lastScreenTouch;
     private boolean fingerDown;
     private HashMap<Integer, SimObject> objects;
-    private HashMap<String, SimObject> robots;
+    private HashMap<String, SimRobot> robots;
     private HashMap<Integer, SimArea> areas; // Map from id onto area.
     private ArrayList<SimWall> walls;
     private ArrayList<SimWallTop> walltops;
@@ -91,10 +92,6 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private float lastX;
     private long lastTouchDownTime;
     private boolean [][]open;
-    // Booleans for drawing objects or not, defaulted to true
-    private boolean drawRedLidar;
-    private boolean drawBlueLidar;
-    private boolean drawYellowWaypoint;
     
     private FloatBuffer positionBuffer;
 
@@ -119,10 +116,9 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         lastFloorTouch = new PointF(-1.0f, -1.0f);
         lastScreenTouch = new PointF(-1.0f, -1.0f);
         objects = new HashMap<Integer, SimObject>();
-        robots = new HashMap<String, SimObject>();
+        robots = new HashMap<String, SimRobot>();
         areas = new HashMap<Integer, SimArea>();
         nextObjectClass = null;
-        follow = robots.size();
         topDown = true;
         fingerDown = false;
         followHeightFactor = 4.0f;
@@ -130,9 +126,6 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         walltops = new ArrayList<SimWallTop>();
         cameraOffsetX = 0.0f;
         cameraOffsetY = 0.0f;
-        setDrawRedLidar(true);
-        setDrawBlueLidar(true);
-        setDrawYellowWaypoint(true);
         
         setRenderer(this);
         //setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
@@ -162,40 +155,6 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     	synchronized (objects) {
     		return objects.get(objectID);
     	}
-    }
-
-    public void addRobot(SimObject robot)
-    {
-    	synchronized (robots) {
-            robots.put(robot.getAttribute("name"), robot);
-            ++follow;
-		}
-    }
-
-    public void removeRobot(String name)
-    {
-    	synchronized (robots) {
-            robots.remove(name);
-		}
-    }
-
-    public void removeRobot(SimObject robot)
-    {
-    	synchronized (robots) {
-            robots.remove(robot.getAttribute("name"));
-            --follow;
-            if (follow < 0) {
-            	follow = 0;
-            	topDown = true;
-            }
-		}
-    }
-
-    public SimObject getRobot(String name)
-    {
-    	synchronized (robots) {
-            return robots.get(name);
-		}
     }
     
 	@Override
@@ -653,7 +612,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 		}
 		
 		synchronized (robots) {
-			for (SimObject robot : robots.values()) {
+			for (SimRobot robot : robots.values()) {
 				robot.draw(gl);
 			}
 		}
@@ -776,12 +735,12 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 	 * or null if this isn't following anything.
 	 * @return
 	 */
-	public SimObject getFollow() {
+	public SimRobot getFollow() {
 		synchronized (robots) {
 			if (follow >= robots.size()) {
 				return null;
 			}
-			return (SimObject) robots.values().toArray()[follow];
+			return (SimRobot) robots.values().toArray()[follow];
 		}
 	}
 	
@@ -805,17 +764,17 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 	public void pickUpObject(String robotName, int id) {
 		SimObject robot = robots.get(robotName);
 		SimObject pickedUp = objects.get(id);
-		robot.setCarrying(pickedUp);
+		((SimRobot) robot).setCarrying(pickedUp);
 		pickedUp.setVisible(false);
 	}
 	
 	@Override
 	public void dropObject(String robotName) {
 		SimObject robot = robots.get(robotName);
-		SimObject dropped = robot.getCarrying();
+		SimObject dropped = ((SimRobot) robot).getCarrying();
 		if (dropped != null) {
 			dropped.setVisible(true);
-			robot.setCarrying(null);
+			((SimRobot) robot).setCarrying(null);
 		}
 	}
 
@@ -850,36 +809,39 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 	{
 		return lastFloorTouch;
 	}
-	
-	// Getter and Setter for draw options
-    public void setDrawRedLidar(boolean drawRedLidar)
+    
+    public void addRobot(SimRobot robot)
     {
-        this.drawRedLidar = drawRedLidar;
+        synchronized (robots) {
+            robots.put(robot.getAttribute("name"), robot);
+            ++follow;
+        }
     }
 
-    public boolean isDrawRedLidar()
+    public void removeRobot(String name)
     {
-        return drawRedLidar;
+        synchronized (robots) {
+            robots.remove(name);
+        }
     }
 
-    public void setDrawBlueLidar(boolean drawBlueLidar)
+    public void removeRobot(SimObject robot)
     {
-        this.drawBlueLidar = drawBlueLidar;
+        synchronized (robots) {
+            robots.remove(robot.getAttribute("name"));
+            --follow;
+            if (follow < 0) {
+                follow = 0;
+                topDown = true;
+            }
+        }
     }
 
-    public boolean isDrawBlueLidar()
+    public SimRobot getRobot(String name)
     {
-        return drawBlueLidar;
-    }
-
-    public void setDrawYellowWaypoint(boolean drawYellowWaypoint)
-    {
-        this.drawYellowWaypoint = drawYellowWaypoint;
-    }
-
-    public boolean isDrawYellowWaypoint()
-    {
-        return drawYellowWaypoint;
+        synchronized (robots) {
+            return robots.get(name);
+        }
     }
 }
 
