@@ -17,8 +17,10 @@ public class SimWall {
 		this.end = end;
 	}
 	
-	public void draw(GL10 gl)
+	public void draw(GL10 gl, boolean drawWalls)
 	{
-		GLUtil.drawWall(gl, start, end, 1.0f, Color.GRAY);
+	    if (drawWalls) {
+	        GLUtil.drawWall(gl, start, end, 1.0f, Color.GRAY);
+	    }
 	}
 }

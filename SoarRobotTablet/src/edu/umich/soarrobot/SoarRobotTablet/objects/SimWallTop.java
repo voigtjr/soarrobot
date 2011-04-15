@@ -15,7 +15,7 @@ public class SimWallTop {
         this.end = end;
     }
     
-    public void draw(GL10 gl) {
-        GLUtil.drawWallTop(gl, start, end, Color.GRAY);
+    public void draw(GL10 gl, boolean drawWalls) {
+        GLUtil.drawWallTop(gl, start, end, Color.GRAY, drawWalls);
     }
 }

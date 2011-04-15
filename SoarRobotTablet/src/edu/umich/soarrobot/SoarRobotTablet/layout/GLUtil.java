@@ -431,13 +431,15 @@ public class GLUtil {
 	}
 	
 	
-	public static void drawWallTop(GL10 gl, Point start, Point end, int color) {
+	public static void drawWallTop(GL10 gl, Point start, Point end, int color, boolean drawWalls) {
+	    // if DrawWalls is
+	    
 	    float dx = end.x - start.x;
 	    float dy = end.y - start.y;
 	  
 	    gl.glPushMatrix();
 	    
-	    gl.glTranslatef(start.x, start.y, -1.0f);
+	    gl.glTranslatef(start.x, start.y, (drawWalls) ? -1.0f : 0.0f);
 	    gl.glScalef(dx, dy, 1.0f);
 	    gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
 	    gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));

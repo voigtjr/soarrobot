@@ -30,11 +30,6 @@ public class SimRobot extends SimObject
     
     private waypoint_list_t waypoints;
     private int follow; // Which robot to follow
-    
-    // Booleans for drawing objects or not, defaulted to true
-    private boolean drawRedLidar;
-    private boolean drawBlueLidar;
-    private boolean drawYellowWaypoint;
 
     public SimRobot(String type, int id, PointF location)
     {
@@ -44,23 +39,19 @@ public class SimRobot extends SimObject
         lowresLidar = null;
         waypoints = null;
         robots = new HashMap<String, SimRobot>();
-        
-        setDrawRedLidar(true);
-        setDrawBlueLidar(true);
-        setDrawYellowWaypoint(true);
     }
     
-    public void draw(GL10 gl) {
+    public void draw(GL10 gl, boolean drawRed, boolean drawBlue, boolean drawYellow) {
         if (!visible) {
             return;
         }
-        if (drawRedLidar) {
+        if (drawRed) {
             drawLidar(lidar, lidarLocation, lidarTheta, gl, Color.RED);
         }
-        if (drawBlueLidar) {
+        if (drawBlue) {
             drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, gl, Color.BLUE);
         }
-        if (drawYellowWaypoint) {
+        if (drawYellow) {
             drawWaypoints(gl, Color.YELLOW);
         }
         drawRobot(gl);
@@ -150,37 +141,6 @@ public class SimRobot extends SimObject
             c.restore();
             */
         }
-    }
-    
-    // Getter and Setter for draw options
-    public void setDrawRedLidar(boolean drawRedLidar)
-    {
-        this.drawRedLidar = drawRedLidar;
-    }
-
-    public boolean isDrawRedLidar()
-    {
-        return drawRedLidar;
-    }
-
-    public void setDrawBlueLidar(boolean drawBlueLidar)
-    {
-        this.drawBlueLidar = drawBlueLidar;
-    }
-
-    public boolean isDrawBlueLidar()
-    {
-        return drawBlueLidar;
-    }
-
-    public void setDrawYellowWaypoint(boolean drawYellowWaypoint)
-    {
-        this.drawYellowWaypoint = drawYellowWaypoint;
-    }
-
-    public boolean isDrawYellowWaypoint()
-    {
-        return drawYellowWaypoint;
     }
     
     public void setLidar(laser_t lidar)

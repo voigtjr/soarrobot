@@ -93,6 +93,12 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
     private long lastTouchDownTime;
     private boolean [][]open;
     
+    // Booleans for drawing objects or not, defaulted to true
+    private boolean drawRedLidar;
+    private boolean drawBlueLidar;
+    private boolean drawYellowWaypoint;
+    private boolean drawWalls;
+    
     private FloatBuffer positionBuffer;
 
     public GLMapView(Context context)
@@ -126,6 +132,11 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         walltops = new ArrayList<SimWallTop>();
         cameraOffsetX = 0.0f;
         cameraOffsetY = 0.0f;
+        
+        drawRedLidar = true;
+        drawBlueLidar = true;
+        drawYellowWaypoint = true;
+        drawWalls = true;
         
         setRenderer(this);
         //setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
@@ -595,13 +606,13 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 		synchronized (walls) {
 			for (SimWall wall : walls)
 			{
-				wall.draw(gl);
+				wall.draw(gl, drawWalls);
 			}
 		}
 		
 		synchronized(walltops) {
 		    for (SimWallTop wallTop : walltops) {
-		        wallTop.draw(gl);
+		        wallTop.draw(gl, drawWalls);
 		    }
 		}
 		
@@ -613,7 +624,7 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
 		
 		synchronized (robots) {
 			for (SimRobot robot : robots.values()) {
-				robot.draw(gl);
+				robot.draw(gl, drawRedLidar, drawBlueLidar, drawYellowWaypoint);
 			}
 		}
 		
@@ -842,6 +853,45 @@ public class GLMapView extends GLSurfaceView implements Callback, Renderer, IMap
         synchronized (robots) {
             return robots.get(name);
         }
+    }
+    
+    // Getters and Setters for draw options
+    public void setDrawRedLidar(boolean drawRedLidar)
+    {
+        this.drawRedLidar = drawRedLidar;
+    }
+
+    public boolean isDrawRedLidar()
+    {
+        return drawRedLidar;
+    }
+
+    public void setDrawBlueLidar(boolean drawBlueLidar)
+    {
+        this.drawBlueLidar = drawBlueLidar;
+    }
+
+    public boolean isDrawBlueLidar()
+    {
+        return drawBlueLidar;
+    }
+
+    public void setDrawYellowWaypoint(boolean drawYellowWaypoint)
+    {
+        this.drawYellowWaypoint = drawYellowWaypoint;
+    }
+
+    public boolean isDrawYellowWaypoint()
+    {
+        return drawYellowWaypoint;
+    }
+    
+    public void setDrawWalls(boolean drawWalls) {
+        this.drawWalls = drawWalls;
+    }
+    
+    public boolean isDrawWalls() {
+        return drawWalls;
     }
 }
 
