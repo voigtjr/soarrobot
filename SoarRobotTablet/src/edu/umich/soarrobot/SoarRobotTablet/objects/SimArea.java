@@ -19,6 +19,7 @@ public class SimArea extends SimObject
     private boolean lightsOn;
     private boolean doorClosed;
     private boolean isDoorway;
+    private float position;
     
     public SimArea(int id, Rect r, String type) {
     	super("area", id, new PointF(r.left, r.bottom));
@@ -26,18 +27,35 @@ public class SimArea extends SimObject
     	this.size = new PointF(r.width(), -r.height());
         this.rect = r;
         this.isDoorway = type.equals("door");
+        this.position = 0.0f;
         lightsOn = true;
         doorClosed = false;
     }
     
     public void draw(GL10 gl) {
-    	int color = doorClosed ? Color.DKGRAY : (lightsOn ? Color.WHITE : Color.DKGRAY);
+    	int color = (position < 0.5f && isDoorway) ? Color.DKGRAY : (lightsOn ? Color.WHITE : Color.DKGRAY);
     	if (doorClosed) {
+    	    position -= 0.04f;
+    	    if (position <= -0.5f) {
+    	        position = -0.5f;
+    	    }
+    	} else {
+    	    position += 0.04f;
+    	    if (position >= 0.5f) {
+    	        position = 0.5f;
+    	    }
+    	}
+    	/*
+    	 * -0.5f - door is closed
+    	 * 0.5f - door is open
+    	 * */
+    	
+    	if (position < 0.5f && isDoorway) {
     		float width = rect.right - rect.left;
     		float height = rect.top - rect.bottom;
     		float centerX = rect.left + width / 2.0f;
     		float centerY = rect.bottom + height / 2.0f;
-    		GLUtil.drawCube(gl, centerX, centerY, -0.5f, width,
+    		GLUtil.drawCube(gl, centerX, centerY, position, width,
     				height, 1.0f, color);
     	} else {
     		GLUtil.drawRect(gl, rect.left, rect.bottom, 0.0f, rect.right - rect.left,

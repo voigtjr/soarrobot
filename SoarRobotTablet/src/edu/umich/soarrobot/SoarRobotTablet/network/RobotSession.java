@@ -46,6 +46,7 @@ import edu.umich.robot.lcmtypes.map_objects_t;
 import edu.umich.soarrobot.SoarRobotTablet.SoarRobotTablet;
 import edu.umich.soarrobot.SoarRobotTablet.layout.IMapView;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimRobot;
 
 public class RobotSession extends Thread implements LCMSubscriber {
 
@@ -184,7 +185,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 				float x = s.nextFloat();
 				float y = s.nextFloat();
 				float theta = s.nextFloat();
-				SimObject robot = new SimObject("splinter", -1, new PointF(x, y));
+				SimRobot robot = new SimRobot("splinter", -1, new PointF(x, y));
 				robot.setTheta(theta);
 				robot.setAttribute("name", name);
 				activity.getMapView().addRobot(robot);
@@ -263,27 +264,27 @@ public class RobotSession extends Thread implements LCMSubscriber {
 		} else if (channel.startsWith("SIM_LIDAR_FRONT_seek")) {
 			try {
 				laser_t l = new laser_t(ins);
-				SimObject robot = activity.getMapView().getRobot(
+				SimObject robot = (SimRobot) activity.getMapView().getRobot(
 						channel.split("_")[3]);
-				robot.setLidar(l);
+				((SimRobot) robot).setLidar(l);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		} else if (channel.startsWith("LIDAR_LOWRES_seek")) {
 			try {
 				laser_t l = new laser_t(ins);
-				SimObject robot = activity.getMapView().getRobot(
+				SimObject robot = (SimRobot) activity.getMapView().getRobot(
 						channel.split("_")[2]);
-				robot.setLowresLidar(l);
+				((SimRobot) robot).setLowresLidar(l);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		} else if (channel.startsWith("WAYPOINTS_seek")) {
 			try {
 				waypoint_list_t w = new waypoint_list_t(ins);
-				SimObject robot = activity.getMapView().getRobot(
+				SimObject robot = (SimRobot) activity.getMapView().getRobot(
 						channel.split("_")[1]);
-				robot.setWaypoints(w);
+				((SimRobot) robot).setWaypoints(w);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

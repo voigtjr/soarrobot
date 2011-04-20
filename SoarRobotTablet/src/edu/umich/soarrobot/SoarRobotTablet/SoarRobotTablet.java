@@ -47,6 +47,7 @@ import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession;
 import edu.umich.soarrobot.SoarRobotTablet.network.RobotSession.TextMessageListener;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject;
 import edu.umich.soarrobot.SoarRobotTablet.objects.SimObject.TemplateAction;
+import edu.umich.soarrobot.SoarRobotTablet.objects.SimRobot;
 
 public class SoarRobotTablet extends Activity implements TextMessageListener
 {
@@ -67,6 +68,10 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
     private ArrayList<String> messageHistory = new ArrayList<String>();
     
     private static SoarRobotTablet instance;
+    
+    private final CharSequence[] drawOptionsSequence = {"Raw Lidar", "Binned Lidar", "Waypoint", "Walls"};
+    private boolean[] checkedOptions = {true, true, true, true};
+    
     
     public static SoarRobotTablet getInstance() {
     	return instance;
@@ -219,8 +224,8 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
             setSelectedObject(null);
             try
             {
-                robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
-                //robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
+                //robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
+                robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
                 robotSession.addTextMessageListener(this);
                 robotSession.start();
             }
@@ -365,9 +370,75 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
         	Intent i = new Intent(this, ChatActivity.class);
         	startActivity(i);
         	break;
+        case R.id.DrawOptions:
+            // Temp values for saving options in case user cancels
+            final boolean tempRed = mapView.isDrawRedLidar();
+            final boolean tempBlue = mapView.isDrawBlueLidar();
+            final boolean tempYellow = mapView.isDrawYellowWaypoint();
+            final boolean tempWalls = mapView.isDrawWalls();
+            setCheckedOptions();
+            AlertDialog.Builder builder = new AlertDialog.Builder(SoarRobotTablet.this)
+                    .setTitle("Draw Options").setCancelable(false)
+                    .setMultiChoiceItems(drawOptionsSequence, checkedOptions, new DialogInterface.OnMultiChoiceClickListener()
+                    {
+                        
+                        @Override
+                        public void onClick(DialogInterface arg0, int arg1, boolean arg2)
+                        {
+                            switch(arg1) {
+                            case 0:
+                                mapView.setDrawRedLidar(arg2);
+                                break;
+                            case 1:
+                               mapView.setDrawBlueLidar(arg2);
+                                break;
+                            case 2:
+                                mapView.setDrawYellowWaypoint(arg2);
+                                break;
+                            case 3:
+                                mapView.setDrawWalls(arg2);
+                                break;
+                            default:
+                                    break;
+                            }
+                        }
+                    })
+                    .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                        
+                        @Override
+                        public void onClick(DialogInterface arg0, int arg1)
+                        {
+                            
+                        }
+                    })
+                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+
+                        @Override
+                        public void onClick(DialogInterface arg0, int arg1)
+                        {
+                            arg0.cancel();
+                            mapView.setDrawRedLidar(tempRed);
+                            mapView.setDrawBlueLidar(tempBlue);
+                            mapView.setDrawYellowWaypoint(tempYellow);
+                            mapView.setDrawWalls(tempWalls);
+                        }
+                        
+                    });
+            builder.show();                
+
+            break;
         default:
         	break;
         }
     	return true;
+    }
+
+    // Currently hard coded. Red / Blue / Yellow
+    private void setCheckedOptions()
+    {
+        checkedOptions[0] = mapView.isDrawRedLidar();
+        checkedOptions[1] = mapView.isDrawBlueLidar();
+        checkedOptions[2] = mapView.isDrawYellowWaypoint();
+        checkedOptions[3] = mapView.isDrawWalls();
     }
 }

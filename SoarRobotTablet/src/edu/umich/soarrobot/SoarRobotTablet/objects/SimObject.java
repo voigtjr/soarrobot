@@ -151,17 +151,6 @@ public class SimObject {
 	protected boolean visible;
 	
 	// These variable could fit better in a robot-themed subclass.
-	protected SimObject carrying;
-	
-	private laser_t lidar;
-	private float lidarTheta;
-	private PointF lidarLocation;
-
-    private laser_t lowresLidar;
-    private float lowresLidarTheta;
-    private PointF lowresLidarLocation;
-    
-    private waypoint_list_t waypoints;
 	
 	/*
 	 * Instance methods
@@ -180,11 +169,8 @@ public class SimObject {
 		this.location = location;
 		this.theta = 0.0f;
 		this.visible = true;
-		this.carrying = null;
+
 		selected = false;
-		lidar = null;
-		lowresLidar = null;
-		waypoints = null;
 		
 		// Set default values
 		color = Color.BLACK;
@@ -215,19 +201,11 @@ public class SimObject {
      */
     public void draw(GL10 gl)
     {
-    	if (!visible) {
-    		return;
-    	}
-        drawLidar(lidar, lidarLocation, lidarTheta, gl, Color.RED);
-        drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, gl, Color.BLUE);
-        drawWaypoints(gl, Color.YELLOW);
-		if (type.equals("splinter")) {
-			//GLUtil.drawCylinder(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, Color.GRAY, theta);
-		    drawRobot(gl);
-
-		} else {
-			GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, color);
-		}
+        if (!visible) {
+            return;
+        }
+        
+		GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, color);
 	}
 	
 	/*
@@ -257,92 +235,6 @@ public class SimObject {
         }
         return sb.toString();
     }
-    
-    private static void drawLidar(laser_t lidar, PointF lidarLocation, float lidarTheta, GL10 gl, int color) {
-        if (lidar == null) {
-            return;
-        }
-        //c.save();
-        gl.glMatrixMode(GL10.GL_MODELVIEW);
-        gl.glPushMatrix();
-        //c.translate(lidarLocation.x, lidarLocation.y);
-        //c.rotate(-lidarTheta);
-        gl.glTranslatef(lidarLocation.x, lidarLocation.y, 0.0f);
-        gl.glRotatef(lidarTheta, 0.0f, 0.0f, 1.0f);
-        //p.setStyle(Style.FILL);
-        for (int i = 0; i < lidar.nranges; ++i) {
-            float range = lidar.ranges[i];
-            float angle = lidar.rad0 + lidar.radstep * i;
-            float dx = (float)Math.cos(angle) * range;
-            float dy = (float)Math.sin(angle) * range;
-            GLUtil.drawCube(gl, -0.05f + dx, -0.05f + dy, -0.5f, 0.1f, 0.1f, 0.1f, color);
-            /*
-            c.save();
-            c.translate(dx, dy);
-            c.drawCircle(0.0f, 0.0f, 0.1f, p);
-            c.restore();
-            */
-        }
-        gl.glPopMatrix();
-        //c.restore();
-    }
-    
-    private void drawWaypoints(GL10 gl, int color) {
-        if (waypoints == null) {
-            return;
-        }
-        for (waypoint_t w : waypoints.waypoints) {
-        	GLUtil.drawCube(gl, (float) w.xLocal - 0.05f, (float) w.yLocal - 0.05f, -0.5f, 0.1f, 0.1f, 0.1f, color);
-        	/*
-            c.save();
-            c.translate((float)w.xLocal, (float)-w.yLocal);
-            c.drawCircle(0.0f, 0.0f, 0.1f, p);
-            c.restore();
-            */
-        }
-    }
-    
-    private void drawRobot(GL10 gl) {
-        //GLUtil.drawCylinder(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, Color.GRAY, theta);
-        GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 0.3f, Color.BLUE, theta); // Body
-        GLUtil.drawCube(gl, location.x, location.y, -0.75f, size.x * 0.4f, size.y * 0.4f, 0.125f, Color.GRAY, theta); // Head
-        GLUtil.drawWheel(gl, 
-                location.x + 0.4f * (size.x) * (float) Math.cos(Math.toRadians(theta) - Math.PI/4), 
-                location.y + 0.6f * (size.y) * (float) Math.sin(Math.toRadians(theta) - Math.PI/4),
-                -0.3f, 
-                0.15f, 
-                0.15f, 
-                0.15f, 
-                Color.BLACK, 
-                theta);
-        GLUtil.drawWheel(gl, 
-                location.x - 0.4f * (size.x) * (float) Math.cos(Math.toRadians(-theta) - Math.PI/4), 
-                location.y + 0.6f * (size.y) * (float) Math.sin(Math.toRadians(-theta) - Math.PI/4),
-                -0.3f, 
-                0.15f, 
-                0.15f, 
-                0.15f, 
-                Color.BLACK, 
-                theta);      
-        GLUtil.drawWheel(gl, 
-                location.x - 0.4f * (size.x + 0.22f) * (float) Math.cos(Math.toRadians(theta) - Math.PI/3), 
-                location.y - 0.6f * (size.y + 0.22f) * (float) Math.sin(Math.toRadians(theta) - Math.PI/3),
-                -0.3f, 
-                0.15f, 
-                0.15f, 
-                0.15f, 
-                Color.BLACK, 
-                theta);
-        GLUtil.drawWheel(gl, 
-                location.x + 0.4f * (size.x + 0.22f) * (float) Math.cos(Math.toRadians(-theta) - Math.PI/3), 
-                location.y - 0.6f * (size.y + 0.22f) * (float) Math.sin(Math.toRadians(-theta) - Math.PI/3),
-                -0.3f, 
-                0.15f, 
-                0.15f, 
-                0.15f, 
-                Color.BLACK, 
-                theta);     
-    }
 	
 	/*
 	 * Accessor methods.
@@ -358,9 +250,7 @@ public class SimObject {
 	
 	public String getAttribute(String attribute) {
 		return attributes.get(attribute);
-	}
-	
-	
+	}	
 	
 	public void setAttribute(String attribute, String value) {
 		attributes.put(attribute, value);
@@ -394,25 +284,6 @@ public class SimObject {
 	public int getID() {
 		return id;
 	}
-
-    public void setLidar(laser_t lidar)
-    {
-       this.lidar = lidar;
-       lidarTheta = theta;
-       lidarLocation = location;
-    }
-    
-    public void setLowresLidar(laser_t lidar)
-    {
-       this.lowresLidar = lidar;
-       lowresLidarTheta = theta;
-       lowresLidarLocation = location;
-    }
-
-    public void setWaypoints(waypoint_list_t w)
-    {
-        waypoints = w;
-    }
     
     public void setVisible(boolean visible) {
     	this.visible = visible;
@@ -420,14 +291,6 @@ public class SimObject {
     
     public boolean isVisible() {
     	return visible;
-    }
-    
-    public void setCarrying(SimObject carrying) {
-    	this.carrying = carrying;
-    }
-    
-    public SimObject getCarrying() {
-    	return carrying;
     }
     
     public ArrayList<TemplateAction> getActions()
