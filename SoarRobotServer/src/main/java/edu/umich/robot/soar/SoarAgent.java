@@ -483,7 +483,7 @@ public class SoarAgent implements RobotController, RadioHandler
 
 	@Override
 	public void radioMessageReceived(RadioMessage comm) {
-		radioMessages.put((long) radioMessages.size(), comm);
+		radioMessages.put((long) comm.getId(), comm);
 	}
 
 }

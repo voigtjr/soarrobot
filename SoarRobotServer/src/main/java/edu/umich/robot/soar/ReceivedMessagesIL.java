@@ -33,6 +33,7 @@ import sml.Identifier;
 import com.google.common.collect.Lists;
 
 import edu.umich.robot.radio.RadioMessage;
+import edu.umich.soar.FloatWme;
 import edu.umich.soar.IntWme;
 import edu.umich.soar.StringWme;
 
@@ -62,7 +63,25 @@ public class ReceivedMessagesIL extends InputLinkElement
                 next = (next == null) ? messageRoot
                         .CreateIdWME(IOConstants.FIRST) : next
                         .CreateIdWME(IOConstants.NEXT);
-                StringWme.newInstance(next, IOConstants.WORD, word);
+                // Make each owrd an int or float wme if possible.
+                // TODO make more efficient? regexs?
+                try
+                {
+                	int ival = Integer.parseInt(word);
+                	IntWme.newInstance(next, IOConstants.WORD, ival);
+                }
+                catch (NumberFormatException e)
+                {
+                	try
+                	{
+                		double dval = Double.parseDouble(word);
+                		FloatWme.newInstance(next, IOConstants.WORD, dval);
+                	}
+                	catch (NumberFormatException ex)
+                	{
+                		StringWme.newInstance(next, IOConstants.WORD, word);
+                	}
+                }
             }
             StringWme.newInstance(next, IOConstants.NEXT, IOConstants.NIL);
         }
