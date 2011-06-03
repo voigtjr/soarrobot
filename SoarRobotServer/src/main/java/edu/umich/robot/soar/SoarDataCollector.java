@@ -266,12 +266,14 @@ public class SoarDataCollector
             Scanner epmemStatsScanner = new Scanner(agent.getSoarAgent().ExecuteCommandLine("epmem -S"));
             long epmemStores = epmemStatsScanner.skip(".+: ").nextLong(); // Time == Stores (more or less)
             epmemStatsScanner.nextLine();
+            epmemStatsScanner.nextLine(); // SQLite version
             long epmemBytes = epmemStatsScanner.skip(".+: ").nextLong(); 
             
             Scanner smemTimeScanner = new Scanner(agent.getSoarAgent().ExecuteCommandLine("smem -t"));
             double smemTime = smemTimeScanner.skip(".+: ").nextDouble(); 
     
             Scanner smemStatsScanner = new Scanner(agent.getSoarAgent().ExecuteCommandLine("smem -S"));
+            smemStatsScanner.nextLine(); // SQLite version
             long smemBytes = smemStatsScanner.skip(".+: ").nextLong();
             smemStatsScanner.nextLine();
             smemStatsScanner.nextLine(); // Memory Highwater
