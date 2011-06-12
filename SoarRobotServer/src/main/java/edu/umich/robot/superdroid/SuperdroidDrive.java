@@ -22,8 +22,8 @@
 package edu.umich.robot.superdroid;
 
 import lcm.lcm.LCM;
-import april.lcmtypes.differential_drive_command_t;
-import april.util.TimeUtil;
+import april_voigt.lcmtypes.differential_drive_command_t;
+import april_voigt.util.TimeUtil;
 import edu.umich.robot.util.Misc;
 import edu.umich.robot.util.Updatable;
 

@@ -24,7 +24,7 @@ package edu.umich.robot.util;
 import java.util.Collections;
 import java.util.List;
 
-import april.jmat.LinAlg;
+import april_voigt.jmat.LinAlg;
 
 /**
  * @author voigtjr@gmail.com

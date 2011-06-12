@@ -66,11 +66,12 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
     ProgressDialog pd;
     
     private ArrayList<String> messageHistory = new ArrayList<String>();
+    private ArrayList<Integer> seenAreas = new ArrayList<Integer>();
     
     private static SoarRobotTablet instance;
     
-    private final CharSequence[] drawOptionsSequence = {"Raw Lidar", "Binned Lidar", "Waypoint", "Walls"};
-    private boolean[] checkedOptions = {true, true, true, true};
+    private final CharSequence[] drawOptionsSequence = {"Raw Lidar", "Binned Lidar", "Waypoint", "Walls", "Only Seen Areas"};
+    private boolean[] checkedOptions = new boolean[5];
     
     
     public static SoarRobotTablet getInstance() {
@@ -224,8 +225,8 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
             setSelectedObject(null);
             try
             {
-                //robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
-                robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
+                robotSession = new RobotSession(this, "141.212.109.139", 12122); // Miller's ip
+                //robotSession = new RobotSession(this, "141.212.109.194", 12122); // Kevin's ip
                 robotSession.addTextMessageListener(this);
                 robotSession.start();
             }
@@ -300,12 +301,9 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
     protected void onPause()
     {
         super.onPause();
-
-    	/*   if (robotSession != null)
-        {
-            robotSession.pause();
-        }
-        */
+        
+        // For now, to avoid unexpected state-related bugs.
+        System.exit(0);
     }
 
     @Override
@@ -344,6 +342,32 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
     {
     	messageHistory.add(text);
     	setServerText(text);
+    	int i1 = text.indexOf('"');
+    	int i2 = text.lastIndexOf('"');
+    	if (i1 == -1 || i2 == -1)
+    	{
+    		return;
+    	}
+    	String[] tokens = text.substring(i1 + 1, i2).split(" ");
+    	if (tokens.length < 3)
+    	{
+    		return;
+    	}
+    	if (tokens[0].equals("i-see"))
+    	{
+    		if (tokens[1].equals("area"))
+    		{
+    			try
+    			{
+    				Integer areaId = Integer.valueOf(tokens[2]);
+    				mapView.setViewSeen(areaId, true);
+    			}
+    			catch (NumberFormatException e)
+    			{
+    				e.printStackTrace();
+    			}
+    		}
+    	}
     }
     
     public ArrayList<String> getTextMessageHistory()
@@ -371,14 +395,9 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
         	startActivity(i);
         	break;
         case R.id.DrawOptions:
-            // Temp values for saving options in case user cancels
-            final boolean tempRed = mapView.isDrawRedLidar();
-            final boolean tempBlue = mapView.isDrawBlueLidar();
-            final boolean tempYellow = mapView.isDrawYellowWaypoint();
-            final boolean tempWalls = mapView.isDrawWalls();
             setCheckedOptions();
             AlertDialog.Builder builder = new AlertDialog.Builder(SoarRobotTablet.this)
-                    .setTitle("Draw Options").setCancelable(false)
+                    .setTitle("Draw Options").setCancelable(true)
                     .setMultiChoiceItems(drawOptionsSequence, checkedOptions, new DialogInterface.OnMultiChoiceClickListener()
                     {
                         
@@ -398,8 +417,11 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
                             case 3:
                                 mapView.setDrawWalls(arg2);
                                 break;
+                            case 4:
+                                mapView.setOnlySeenAreas(arg2);
+                                break;
                             default:
-                                    break;
+                                break;
                             }
                         }
                     })
@@ -410,19 +432,6 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
                         {
                             
                         }
-                    })
-                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-
-                        @Override
-                        public void onClick(DialogInterface arg0, int arg1)
-                        {
-                            arg0.cancel();
-                            mapView.setDrawRedLidar(tempRed);
-                            mapView.setDrawBlueLidar(tempBlue);
-                            mapView.setDrawYellowWaypoint(tempYellow);
-                            mapView.setDrawWalls(tempWalls);
-                        }
-                        
                     });
             builder.show();                
 
@@ -436,9 +445,10 @@ public class SoarRobotTablet extends Activity implements TextMessageListener
     // Currently hard coded. Red / Blue / Yellow
     private void setCheckedOptions()
     {
-        checkedOptions[0] = mapView.isDrawRedLidar();
-        checkedOptions[1] = mapView.isDrawBlueLidar();
-        checkedOptions[2] = mapView.isDrawYellowWaypoint();
-        checkedOptions[3] = mapView.isDrawWalls();
+        checkedOptions[0] = mapView.getDrawRedLidar();
+        checkedOptions[1] = mapView.getDrawBlueLidar();
+        checkedOptions[2] = mapView.getDrawYellowWaypoint();
+        checkedOptions[3] = mapView.getDrawWalls();
+        checkedOptions[4] = mapView.getOnlySeenAreas();
     }
 }

@@ -24,9 +24,9 @@ package edu.umich.robot.util;
 import java.util.Arrays;
 import java.util.List;
 
-import april.jmat.LinAlg;
-import april.jmat.MathUtil;
-import april.lcmtypes.pose_t;
+import april_voigt.jmat.LinAlg;
+import april_voigt.jmat.MathUtil;
+import april_voigt.lcmtypes.pose_t;
 
 import com.google.common.collect.Lists;
 

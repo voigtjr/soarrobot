@@ -60,6 +60,12 @@ public interface RobotOutput
      * @return
      */
     Laser getLaser();
+    
+    /**
+     * 
+     * @return Hi-res laser data
+     */
+    Laser getLaserHiRes();
 
     /**
      * Get the current area description. This is immutable definitions like room

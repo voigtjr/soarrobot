@@ -9,23 +9,56 @@ import edu.umich.robot.metamap.AbridgedWall;
 import edu.umich.soarrobot.SoarRobotTablet.layout.GLUtil;
 
 import android.graphics.Color;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
+import android.graphics.RectF;
 
 public class SimArea extends SimObject
 {   
 	private int id;
     private Rect rect;
+    private RectF scaledRect;
     private boolean lightsOn;
     private boolean doorClosed;
     private boolean isDoorway;
     private float position;
     
+    // Scaling factor
+    private static float metersPerUnit;
+    private static Point imageOrigin;
+
+	public static void setMetersPerUnit(float metersPerUnit) {
+		SimArea.metersPerUnit = metersPerUnit;
+	}
+	
+	public static void setImageOrigin(Point origin) {
+		SimArea.imageOrigin = origin;
+	}
+	
+	public static RectF scaleRect(Rect r)
+	{
+		return new RectF(
+				(r.left - imageOrigin.x) * metersPerUnit,
+				(r.top + imageOrigin.y) * metersPerUnit,
+				(r.right - imageOrigin.x) * metersPerUnit,
+				(r.bottom + imageOrigin.y) * metersPerUnit);
+	}
+	
+	public static PointF scalePoint(Point p)
+	{
+		return new PointF(
+				(p.x - imageOrigin.x) * metersPerUnit,
+				(p.y + imageOrigin.y) * metersPerUnit);
+	}
+    
     public SimArea(int id, Rect r, String type) {
-    	super("area", id, new PointF(r.left, r.bottom));
+    	super("area", id, null);
     	this.id = id;
-    	this.size = new PointF(r.width(), -r.height());
         this.rect = r;
+        this.scaledRect = scaleRect(r);
+        this.location = new PointF(scaledRect.left, scaledRect.bottom);
+    	this.size = new PointF(scaledRect.width(), -scaledRect.height());
         this.isDoorway = type.equals("door");
         this.position = 0.0f;
         lightsOn = true;
@@ -33,7 +66,7 @@ public class SimArea extends SimObject
     }
     
     public void draw(GL10 gl) {
-    	int color = (position < 0.5f && isDoorway) ? Color.DKGRAY : (lightsOn ? Color.WHITE : Color.DKGRAY);
+    	String color = (position < 0.5f && isDoorway) ? GLUtil.DARK_GRAY : (lightsOn ? GLUtil.WHITE : GLUtil.DARK_GRAY);
     	if (doorClosed) {
     	    position -= 0.04f;
     	    if (position <= -0.5f) {
@@ -51,15 +84,15 @@ public class SimArea extends SimObject
     	 * */
     	
     	if (position < 0.5f && isDoorway) {
-    		float width = rect.right - rect.left;
-    		float height = rect.top - rect.bottom;
-    		float centerX = rect.left + width / 2.0f;
-    		float centerY = rect.bottom + height / 2.0f;
+    		float width = scaledRect.right - scaledRect.left;
+    		float height = scaledRect.top - scaledRect.bottom;
+    		float centerX = scaledRect.left + width / 2.0f;
+    		float centerY = scaledRect.bottom + height / 2.0f;
     		GLUtil.drawCube(gl, centerX, centerY, position, width,
     				height, 1.0f, color);
     	} else {
-    		GLUtil.drawRect(gl, rect.left, rect.bottom, 0.0f, rect.right - rect.left,
-    				rect.top - rect.bottom, color);
+    		GLUtil.drawRect(gl, scaledRect.left, scaledRect.bottom, 0.0f, scaledRect.right - scaledRect.left,
+    				scaledRect.top - scaledRect.bottom, color);
     	}
     }
     

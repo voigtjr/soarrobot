@@ -98,8 +98,10 @@ public class RobotSession extends Thread implements LCMSubscriber {
 						+ tcpClient.getLocalPort());
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
+				activity.showAlert(e.getMessage(), Toast.LENGTH_LONG);
 			} catch (IOException e) {
-				e.printStackTrace();
+	             e.printStackTrace();
+			    activity.showAlert(e.getMessage(), Toast.LENGTH_LONG);
 			}
 
 			if (tcpClient == null) {
@@ -155,6 +157,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 			return ret;
 		} catch (IOException e) {
 			e.printStackTrace();
+			activity.showAlert(e.getLocalizedMessage(), Toast.LENGTH_SHORT);
 		}
 		return null;
 	}
@@ -343,6 +346,7 @@ public class RobotSession extends Thread implements LCMSubscriber {
 	public Thread tcpListener = new Thread() {
 		public void run() {
 			while (true) {
+			    boolean error = false;
 				try {
 					synchronized (RobotSession.this.lock) {
 						String message = tcpScanner.next();
@@ -350,8 +354,23 @@ public class RobotSession extends Thread implements LCMSubscriber {
 					}
 				} catch (NoSuchElementException e) {
 					e.printStackTrace();
+					activity.showAlert(e.getLocalizedMessage(), Toast.LENGTH_LONG);
+					error = true;
 				} catch (Exception e) {
 					e.printStackTrace();
+					activity.showAlert(e.getLocalizedMessage(), Toast.LENGTH_LONG);
+					error = true;
+				}
+				if (error)
+				{
+				    try
+				    {
+				        Thread.sleep(5000);
+				    }
+				    catch (InterruptedException e)
+				    {
+				        e.printStackTrace();
+				    }
 				}
 			}
 		};

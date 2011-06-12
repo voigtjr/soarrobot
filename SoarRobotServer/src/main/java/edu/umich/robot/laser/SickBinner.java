@@ -6,8 +6,8 @@ import java.util.List;
 import lcm.lcm.LCM;
 import lcm.lcm.LCMDataInputStream;
 import lcm.lcm.LCMSubscriber;
-import april.lcmtypes.laser_t;
-import april.util.TimeUtil;
+import april_voigt.lcmtypes.laser_t;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -124,6 +124,11 @@ public class SickBinner
         if (last == -1)
             return null;
         return new ImmutableList.Builder<Float>().addAll(binned).build();
+    }
+    
+    public laser_t getLaser()
+    {
+        return laser;
     }
     
     public static void main(String[] args)

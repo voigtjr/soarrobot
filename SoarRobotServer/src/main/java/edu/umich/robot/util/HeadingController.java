@@ -21,9 +21,9 @@
  */
 package edu.umich.robot.util;
 
-import april.jmat.LinAlg;
-import april.jmat.MathUtil;
-import april.lcmtypes.pose_t;
+import april_voigt.jmat.LinAlg;
+import april_voigt.jmat.MathUtil;
+import april_voigt.lcmtypes.pose_t;
 
 /**
  * @author voigtjr@gmail.com

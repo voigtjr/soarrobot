@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import sml.Agent;
 import sml.smlAgentEventId;
 import sml.Kernel.AgentEventInterface;
-import april.config.Config;
+import april_voigt.config.Config;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;

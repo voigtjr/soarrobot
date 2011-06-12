@@ -21,7 +21,7 @@
  */
 package edu.umich.robot.util;
 
-import april.util.TimeUtil;
+import april_voigt.util.TimeUtil;
 
 /**
  * @author voigtjr@gmail.com

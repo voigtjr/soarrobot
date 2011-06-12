@@ -31,8 +31,8 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import lcm.lcm.LCM;
-import april.lcmtypes.map_metadata_t;
-import april.util.TimeUtil;
+import april_voigt.lcmtypes.map_metadata_t;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;

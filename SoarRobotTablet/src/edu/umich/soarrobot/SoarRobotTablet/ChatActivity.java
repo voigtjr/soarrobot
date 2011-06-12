@@ -50,6 +50,7 @@ public class ChatActivity extends Activity implements TextMessageListener {
 	@Override
 	public void textMessageReceived(String message) {
 		tv.append(message + "\n");
+		root.textMessageReceived(message);
 	}
 
 }

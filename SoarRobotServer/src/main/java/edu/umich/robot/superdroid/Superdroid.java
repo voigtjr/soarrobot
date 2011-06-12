@@ -21,6 +21,7 @@
  */
 package edu.umich.robot.superdroid;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -28,7 +29,8 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import april.util.TimeUtil;
+import april_voigt.lcmtypes.laser_t;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -67,6 +69,7 @@ import edu.umich.robot.metamap.AreaState;
 import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.radio.Radio;
+import edu.umich.robot.slam.SoarSlam;
 import edu.umich.robot.util.HeadingController;
 import edu.umich.robot.util.PIDController;
 import edu.umich.robot.util.Pose;
@@ -123,6 +126,9 @@ public class Superdroid implements Robot
 
     private final int PERIOD = 33;
     
+    // Slam
+    private SoarSlam slam;
+    
     public Superdroid(String name, Radio radio, Metamap metamap) 
     {
         this.name = name;
@@ -141,6 +147,17 @@ public class Superdroid implements Robot
         
         long period = properties.get(SuperdroidProperties.UPDATE_PERIOD);
         commandTask = schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
+        
+        // Initalize slam.
+        // Will throw an exception if the default config file isn't found.
+        try
+        {
+            slam = new SoarSlam();
+        }
+        catch (IOException e)
+        {
+            slam = null;
+        }
     }
     
     public RobotType getType()
@@ -220,6 +237,11 @@ public class Superdroid implements Robot
         public Laser getLaser()
         {
             return lidar.getLaserLowRes();
+        }
+        
+        public Laser getLaserHiRes()
+        {
+            return lidar.getLaserHiRes();
         }
 
         public Radio getRadio()

@@ -23,8 +23,8 @@ package edu.umich.robot.laser;
 
 import java.util.List;
 
-import april.lcmtypes.laser_t;
-import april.util.TimeUtil;
+import april_voigt.lcmtypes.laser_t;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.collect.ImmutableList;
 

@@ -15,8 +15,8 @@ import orc.OrcStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april.lcmtypes.differential_drive_command_t;
-import april.lcmtypes.pose_t;
+import april_voigt.lcmtypes.differential_drive_command_t;
+import april_voigt.lcmtypes.pose_t;
 import edu.umich.robot.util.Odometry;
 import edu.umich.robot.util.OdometryPoint;
 import edu.umich.robot.util.properties.IntegerPropertyProvider;

@@ -29,9 +29,9 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april.config.Config;
-import april.jmat.LinAlg;
-import april.lcmtypes.pose_t;
+import april_voigt.config.Config;
+import april_voigt.jmat.LinAlg;
+import april_voigt.lcmtypes.pose_t;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;

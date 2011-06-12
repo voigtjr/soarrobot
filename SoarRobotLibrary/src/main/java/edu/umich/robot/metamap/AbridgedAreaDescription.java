@@ -12,11 +12,11 @@ import com.google.common.collect.ImmutableList;
 public class AbridgedAreaDescription
 {
     public final int id;
-    public final List<Double> xywh;
+    public final List<Integer> xywh;
     public final String type;
     public final List<AbridgedGateway> gateways;
     
-    public AbridgedAreaDescription(int id, ImmutableList<Double> xywh, String type, ImmutableList<AbridgedGateway> gateways)
+    public AbridgedAreaDescription(int id, ImmutableList<Integer> xywh, String type, ImmutableList<AbridgedGateway> gateways)
     {
         this.id = id;
         this.xywh = xywh;

@@ -28,7 +28,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import april.util.TimeUtil;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -232,7 +232,12 @@ public class Splinter implements Robot
         {
             return lidar.getLaserLowRes();
         }
-
+        
+        public Laser getLaserHiRes()
+        {
+            return lidar.getLaserHiRes();
+        }
+        
         public Pose getPose()
         {
             return new Pose(pose.getPose());

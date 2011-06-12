@@ -28,6 +28,8 @@ import java.util.concurrent.TimeUnit;
 
 import lcm.lcm.LCM;
 
+import april_voigt.lcmtypes.laser_t;
+
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -157,5 +159,38 @@ public class Lidar
     public void shutdown()
     {
         schexec.shutdown();
+    }
+
+    public Laser getLaserHiRes()
+    {
+        if (sim != null)
+        {
+            return buildLaser(sim.getLaser());
+        }
+        if (sick != null)
+        {
+            return buildLaser(sick.getLaser());
+        }
+        
+        // TODO merge urg and sim / sick types
+        /*
+        if (urg != null)
+        {
+            return buildLaser(urg.getLaser());
+        }
+        */
+        
+        return null;
+    }
+    
+    private static Laser buildLaser(laser_t laser)
+    {
+        Laser.Builder lb = new Laser.Builder(laser.rad0, laser.radstep);
+        for (int i = 0; i < laser.nranges; ++i)
+        {
+            float value = Math.min(laser.ranges[i], Float.MAX_VALUE);
+            lb.add(value);
+        }
+        return lb.build();
     }
 }

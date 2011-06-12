@@ -33,9 +33,9 @@ import org.apache.commons.logging.LogFactory;
 import sml.Identifier;
 import sml.StringElement;
 import sml.WMElement;
-import april.lcmtypes.waypoint_list_t;
-import april.lcmtypes.waypoint_t;
-import april.util.TimeUtil;
+import april_voigt.lcmtypes.waypoint_list_t;
+import april_voigt.lcmtypes.waypoint_t;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.collect.Lists;
 

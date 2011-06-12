@@ -6,9 +6,9 @@ import java.util.List;
 import lcm.lcm.LCM;
 import lcm.lcm.LCMDataInputStream;
 import lcm.lcm.LCMSubscriber;
-import april.lcmtypes.laser_t;
-import april.lcmtypes.urg_range_t;
-import april.util.TimeUtil;
+import april_voigt.lcmtypes.laser_t;
+import april_voigt.lcmtypes.urg_range_t;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;

@@ -30,7 +30,7 @@ import java.util.concurrent.Future;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april.config.Config;
+import april_voigt.config.Config;
 
 import sml.Agent;
 import sml.Kernel;

@@ -28,7 +28,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 
-import april.config.Config;
+import april_voigt.config.Config;
 
 /**
  * @author voigtjr@gmail.com

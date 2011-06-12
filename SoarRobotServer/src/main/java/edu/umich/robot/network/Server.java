@@ -163,6 +163,9 @@ public class Server implements RobotEventListener, RadioHandler {
 		// Return map description
 		if (command.equalsIgnoreCase("map")) {
 			StringBuilder sb = new StringBuilder();
+			sb.append("" + controller.getMetersPerPixel() + " ; ");
+			int[] origin = controller.getImageOrigin();
+			sb.append(origin[0] + " " + origin [1] + " ; ");
 			for (AreaDescription ad : controller.getAreaList()) {
 				if (ad instanceof RectArea) {
 					AbridgedAreaDescription aad = abridgeAreaDescription((RectArea) ad);
@@ -337,8 +340,17 @@ public class Server implements RobotEventListener, RadioHandler {
 
 	public static AbridgedAreaDescription abridgeAreaDescription(RectArea sa) {
 		ImmutablePose p = sa.getPose();
+		int[] xywh_ar = sa.getPixelRect();
+		/*
 		ImmutableList<Double> xywh = new ImmutableList.Builder<Double>().add(
 				p.getX(), p.getY(), p.getVX(), -p.getVY()).build();
+		*/
+		ImmutableList<Integer> xywh = new ImmutableList.Builder<Integer>().add(
+				(Integer) xywh_ar[0],
+				(Integer) xywh_ar[1],
+				(Integer) xywh_ar[2],
+				(Integer) xywh_ar[3]).build();
+
 		ImmutableList.Builder<AbridgedGateway> gatewaysBuilder = new ImmutableList.Builder<AbridgedGateway>();
 		for (Gateway g : sa.getGateways()) {
 			gatewaysBuilder.add(abridgeGateway(g));

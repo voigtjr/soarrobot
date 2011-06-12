@@ -26,7 +26,7 @@ import java.awt.Dimension;
 
 import javax.swing.JPanel;
 
-import april.vis.VisCanvas;
+import april_voigt.vis.VisCanvas;
 
 /**
  * @author voigtjr@gmail.com

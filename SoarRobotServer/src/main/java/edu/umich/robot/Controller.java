@@ -21,6 +21,7 @@
  */
 package edu.umich.robot;
 
+import java.awt.Point;
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketException;
@@ -33,11 +34,11 @@ import java.util.Map;
 import sml.Kernel;
 import sml.Kernel.SystemEventInterface;
 import sml.smlSystemEventId;
-import april.config.Config;
-import april.sim.SimObject;
-import april.sim.Simulator;
-import april.sim.TimeScalable;
-import april.util.TimeUtil;
+import april_voigt.config.Config;
+import april_voigt.sim.SimObject;
+import april_voigt.sim.Simulator;
+import april_voigt.sim.TimeScalable;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -256,7 +257,7 @@ public class Controller
         sd.simulated = true;
         
         Config rconfig = new Config();
-        rconfig.setString("class", "april.sim.SimSplinter");
+        rconfig.setString("class", "april_voigt.sim.SimSplinter");
         rconfig.setDoubles("initialPosition", Misc
                 .toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
@@ -289,7 +290,7 @@ public class Controller
         sd.simulated = true;
 
         Config rconfig = new Config();
-        rconfig.setString("class", "april.sim.SimSplinter"); // TODO: still using SimSplinter for superdroid
+        rconfig.setString("class", "april_voigt.sim.SimSplinter"); // TODO: still using SimSplinter for superdroid
         rconfig.setDoubles("initialPosition", Misc
                 .toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
@@ -305,7 +306,7 @@ public class Controller
             return; // TODO warn
 
         Config lconfig = new Config();
-        lconfig.setString("class", "april.sim.SimLaser");
+        lconfig.setString("class", "april_voigt.sim.SimLaser");
         lconfig.setString("pose", sd.name);
         lconfig.setDoubles("position", new double[] { 0, 0, 0.4 });
         lconfig.setDoubles("rollpitchyaw_degrees", new double[] { 0, 0, 0 });
@@ -778,6 +779,16 @@ public class Controller
     
     public Collection<VirtualObjectTemplate> getTemplates() {
     	return metamap.getTemplates();
+    }
+    
+    public double getMetersPerPixel()
+    {
+    	return metamap.getMetersPerPixel();
+    }
+    
+    public int[] getImageOrigin()
+    {
+    	return metamap.getImageOrigin();
     }
     
     public Radio getRadio() {

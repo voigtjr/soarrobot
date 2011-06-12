@@ -46,18 +46,18 @@ public class SimRobot extends SimObject
             return;
         }
         if (drawRed) {
-            drawLidar(lidar, lidarLocation, lidarTheta, gl, Color.RED);
+            drawLidar(lidar, lidarLocation, lidarTheta, gl, GLUtil.RED);
         }
         if (drawBlue) {
-            drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, gl, Color.BLUE);
+            drawLidar(lowresLidar, lowresLidarLocation, lowresLidarTheta, gl, GLUtil.BLUE);
         }
         if (drawYellow) {
-            drawWaypoints(gl, Color.YELLOW);
+            drawWaypoints(gl, GLUtil.YELLOW);
         }
         drawRobot(gl);
     }
 
-    private static void drawLidar(laser_t lidar, PointF lidarLocation, float lidarTheta, GL10 gl, int color) {
+    private static void drawLidar(laser_t lidar, PointF lidarLocation, float lidarTheta, GL10 gl, String color) {
         if (lidar == null) {
             return;
         }
@@ -87,9 +87,8 @@ public class SimRobot extends SimObject
     }
     
     private void drawRobot(GL10 gl) {
-        //GLUtil.drawCylinder(gl, location.x, location.y, -0.5f, size.x, size.y, 1.0f, Color.GRAY, theta);
-        GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 0.3f, Color.BLUE, theta); // Body
-        GLUtil.drawCube(gl, location.x, location.y, -0.75f, size.x * 0.4f, size.y * 0.4f, 0.125f, Color.GRAY, theta); // Head
+        GLUtil.drawCube(gl, location.x, location.y, -0.5f, size.x, size.y, 0.3f, GLUtil.BLUE, theta); // Body
+        GLUtil.drawCube(gl, location.x, location.y, -0.75f, size.x * 0.4f, size.y * 0.4f, 0.125f, GLUtil.LIGHT_GRAY, theta); // Head
         GLUtil.drawWheel(gl, 
                 location.x + 0.4f * (size.x) * (float) Math.cos(Math.toRadians(theta) - Math.PI/4), 
                 location.y + 0.6f * (size.y) * (float) Math.sin(Math.toRadians(theta) - Math.PI/4),
@@ -97,7 +96,7 @@ public class SimRobot extends SimObject
                 0.15f, 
                 0.15f, 
                 0.15f, 
-                Color.BLACK, 
+                GLUtil.BLACK, 
                 theta);
         GLUtil.drawWheel(gl, 
                 location.x - 0.4f * (size.x) * (float) Math.cos(Math.toRadians(-theta) - Math.PI/4), 
@@ -106,7 +105,7 @@ public class SimRobot extends SimObject
                 0.15f, 
                 0.15f, 
                 0.15f, 
-                Color.BLACK, 
+                GLUtil.BLACK, 
                 theta);      
         GLUtil.drawWheel(gl, 
                 location.x - 0.4f * (size.x + 0.22f) * (float) Math.cos(Math.toRadians(theta) - Math.PI/3), 
@@ -115,7 +114,7 @@ public class SimRobot extends SimObject
                 0.15f, 
                 0.15f, 
                 0.15f, 
-                Color.BLACK, 
+                GLUtil.BLACK, 
                 theta);
         GLUtil.drawWheel(gl, 
                 location.x + 0.4f * (size.x + 0.22f) * (float) Math.cos(Math.toRadians(-theta) - Math.PI/3), 
@@ -124,11 +123,11 @@ public class SimRobot extends SimObject
                 0.15f, 
                 0.15f, 
                 0.15f, 
-                Color.BLACK, 
+                GLUtil.BLACK, 
                 theta);     
     }
     
-    private void drawWaypoints(GL10 gl, int color) {
+    private void drawWaypoints(GL10 gl, String color) {
         if (waypoints == null) {
             return;
         }

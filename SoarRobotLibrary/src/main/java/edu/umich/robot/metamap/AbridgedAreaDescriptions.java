@@ -30,15 +30,15 @@ public class AbridgedAreaDescriptions
         scanner.next("r");
 
         int id = Integer.valueOf(scanner.next()).intValue();
-        ImmutableList.Builder<Double> xywh = new ImmutableList.Builder<Double>();
+        ImmutableList.Builder<Integer> xywh = new ImmutableList.Builder<Integer>();
         String next = nextString(scanner);
-        xywh.add(Double.valueOf(next));
+        xywh.add(Integer.valueOf(next));
         next = nextString(scanner);
-        xywh.add(Double.valueOf(next));
+        xywh.add(Integer.valueOf(next));
         next = nextString(scanner);
-        xywh.add(Double.valueOf(next));
+        xywh.add(Integer.valueOf(next));
         next = nextString(scanner);
-        xywh.add(Double.valueOf(next));
+        xywh.add(Integer.valueOf(next));
         
         next = nextString(scanner);
         String type = next;
@@ -77,7 +77,7 @@ public class AbridgedAreaDescriptions
     }
     
     public static void main(String[] args) {
-    	ImmutableList<Double> xywh = new ImmutableList.Builder<Double>().add(1.0, 2.0, 3.0, 4.0).build();
+    	ImmutableList<Integer> xywh = new ImmutableList.Builder<Integer>().add(1, 2, 3, 4).build();
     	ImmutableList<Double> xy = new ImmutableList.Builder<Double>().add(5.0, 6.0).build();
     	ImmutableList<AbridgedGateway> gateways = new ImmutableList.Builder<AbridgedGateway>().add(new AbridgedGateway(7, xy)).build();
     	AbridgedAreaDescription aad = new AbridgedAreaDescription(0, xywh, "door", gateways);

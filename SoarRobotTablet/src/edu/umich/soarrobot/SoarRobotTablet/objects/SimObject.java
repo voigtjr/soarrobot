@@ -145,7 +145,7 @@ public class SimObject {
 	protected PointF location;
 	protected float theta;
 	protected PointF size;
-	private int color;
+	private String color;
 	protected int id;
 	protected boolean selected;
 	protected boolean visible;
@@ -173,11 +173,15 @@ public class SimObject {
 		selected = false;
 		
 		// Set default values
-		color = Color.BLACK;
+		color = GLUtil.BLACK;
 		if (attributes.containsKey("color")) {
 			try {
 				String colorString = (String) attributes.get("color");
-				color = Color.parseColor(colorString);
+				int c = Color.parseColor(colorString);
+				float r = Color.red(c) / (float) 0xFF;
+				float g = Color.green(c) / (float) 0xFF;
+				float b = Color.blue(c) / (float) 0xFF;
+				color = "rgb(" + r + "," + g + "," + b + ")";
 			} catch (ClassCastException e) {
 				e.printStackTrace();
 			} catch (IllegalArgumentException e) {

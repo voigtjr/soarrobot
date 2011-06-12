@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april.util.TimeUtil;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.collect.Lists;
 

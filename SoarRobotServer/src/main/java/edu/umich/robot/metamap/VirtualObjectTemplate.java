@@ -25,7 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import april.config.Config;
+import april_voigt.config.Config;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;

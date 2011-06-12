@@ -30,8 +30,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import lcm.lcm.LCM;
-import april.lcmtypes.sim_obstacles_t;
-import april.util.TimeUtil;
+import april_voigt.lcmtypes.sim_obstacles_t;
+import april_voigt.util.TimeUtil;
 
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;

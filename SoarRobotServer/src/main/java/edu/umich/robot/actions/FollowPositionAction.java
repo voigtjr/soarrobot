@@ -23,7 +23,7 @@ package edu.umich.robot.actions;
 
 import java.awt.event.ActionEvent;
 
-import april.viewer.ViewRobot.FollowMode;
+import april_voigt.viewer.ViewRobot.FollowMode;
 
 /**
  * @author voigtjr@gmail.com

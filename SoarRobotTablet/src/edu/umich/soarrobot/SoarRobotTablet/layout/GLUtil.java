@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
+import java.util.HashMap;
 
 import javax.microedition.khronos.opengles.GL10;
 
@@ -94,16 +95,7 @@ public class GLUtil {
 		1, 3, 2,
 	};
 	
-	private static FloatBuffer cubeCoordsBuffer,
-			whiteColorsBuffer,
-			redColorsBuffer, 
-			greenColorsBuffer, 
-			blueColorsBuffer, 
-			yellowColorsBuffer, 
-			blackColorsBuffer, 
-			grayColorsBuffer,
-			darkGrayColorsBuffer;
-	
+	private static FloatBuffer cubeCoordsBuffer;	
 	private static ShortBuffer cubeIndecesBuffer, rectIndecesBuffer, reverseRectIndicesBuffer;
 	private static FloatBuffer cubeNormalsBuffer, rectNormalsBuffer;
 	
@@ -118,6 +110,16 @@ public class GLUtil {
 	private static ShortBuffer cylinderIndecesBuffer;
 	private static FloatBuffer cylinderNormalsBuffer;
 	
+	public static final String RED =        "rgb(1.0f,0.0f,0.0f)";
+	public static final String GREEN =      "rgb(0.0f,1.0f,0.0f)";
+	public static final String BLUE =       "rgb(0.0f,0.0f,1.0f)";
+	public static final String DARK_BLUE =  "rgb(0.0f,0.0f,0.8f)";
+	public static final String YELLOW =     "rgb(1.0f,1.0f,0.0f)";
+	public static final String WHITE =      "rgb(1.0f,1.0f,1.0f)";
+	public static final String BLACK =      "rgb(0.0f,0.0f,0.0f)";
+	public static final String GRAY =       "rgb(0.5f,0.5f,0.5f)";
+	public static final String LIGHT_GRAY = "rgb(0.8f,0.8f,0.8f)";
+	public static final String DARK_GRAY =  "rgb(0.4f,0.4f,0.4f)";
 	
 	static {
         // float has 4 bytes, coordinate * 4 bytes
@@ -138,15 +140,6 @@ public class GLUtil {
         bb = ByteBuffer.allocateDirect(reverseRectIndeces.length * 2);
         bb.order(ByteOrder.nativeOrder());
         reverseRectIndicesBuffer = bb.asShortBuffer();
-
-        whiteColorsBuffer = makeColorBuffer(1.0f, 1.0f, 1.0f);
-        redColorsBuffer = makeColorBuffer(1.0f, 0.0f, 0.0f);
-        greenColorsBuffer = makeColorBuffer(0.0f, 1.0f, 0.0f);
-        blueColorsBuffer = makeColorBuffer(0.0f, 0.0f, 1.0f);
-        yellowColorsBuffer = makeColorBuffer(1.0f, 1.0f, 0.0f);
-        blackColorsBuffer = makeColorBuffer(0.0f, 0.0f, 0.0f);
-        grayColorsBuffer = makeColorBuffer(0.5f, 0.5f, 0.5f);
-        darkGrayColorsBuffer = makeColorBuffer(0.3f, 0.3f, 0.3f);
      
         cubeCoordsBuffer.put(cubeCoords);
         cubeIndecesBuffer.put(cubeIndeces);
@@ -245,6 +238,45 @@ public class GLUtil {
 	    return point;
 	}
 	
+	private final static HashMap<String, FloatBuffer> colorBufferMap = new HashMap<String, FloatBuffer>();
+	
+	public static String colorString(float r, float g, float b)
+	{
+		return "rgb(" + r + "," + g + "," + b + ")";
+	}
+	
+	private static FloatBuffer getColorBuffer(String color)
+	{
+		if (colorBufferMap.containsKey(color))
+		{
+			return colorBufferMap.get(color);
+		};
+		
+		int l_paren = color.indexOf('(');
+		int r_paren = color.indexOf(')');
+		if (!color.startsWith("rgb") || l_paren == -1 || r_paren == -1)
+		{
+			return null;
+		}
+		String rgb = color.substring(l_paren + 1, r_paren);
+		String[] colors = rgb.split(",");
+		if (colors.length != 3)
+		{
+			return null;
+		}
+		try {
+			float r = Float.parseFloat(colors[0]);
+			float g = Float.parseFloat(colors[1]);
+			float b = Float.parseFloat(colors[2]);
+			FloatBuffer ret = makeColorBuffer(r, g, b);
+			colorBufferMap.put(color, ret);
+			return ret;
+		}
+		catch (NumberFormatException e) {
+			return null;
+		}
+	}
+	
 	private static FloatBuffer makeColorBuffer(float r, float g, float b) {
         float[] colors = new float[8 * (CYLINDER_RESOLUTION + 1)];
         assignColors(colors, r, g, b);
@@ -257,25 +289,7 @@ public class GLUtil {
 	}
 	
 	private static void assignColors(float[] ar, float r, float g, float b) {
-		r += 0.2f;
-		g += 0.2f;
-		b += 0.2f;
-		if (r > 1.0f) r = 1.0f;
-		if (g > 1.0f) g = 1.0f;
-		if (b > 1.0f) b = 1.0f;
-		for (int i = 0; i < ar.length / 8; ++i) {
-			ar[i * 4] = r;
-			ar[i * 4 + 1] = g;
-			ar[i * 4 + 2] = b;
-			ar[i * 4 + 3] = 1.0f;
-		}
-		r -= 0.4f;
-		g -= 0.4f;
-		b -= 0.4f;
-		if (r < 0.0f) r = 0.0f;
-		if (g < 0.0f) g = 0.0f;
-		if (b < 0.0f) b = 0.0f;
-		for (int i = ar.length / 8; i < ar.length / 4; ++i) {
+		for (int i = 0; i < ar.length / 4; ++i) {
 			ar[i * 4] = r;
 			ar[i * 4 + 1] = g;
 			ar[i * 4 + 2] = b;
@@ -292,7 +306,7 @@ public class GLUtil {
 	 * @param g
 	 * @param b
 	 */
-	public static void drawCube(GL10 gl, float x, float y, float z, float w, float h, float d, int color, float theta)
+	public static void drawCube(GL10 gl, float x, float y, float z, float w, float h, float d, String color, float theta)
 	{
         gl.glPushMatrix();
 
@@ -302,14 +316,14 @@ public class GLUtil {
         gl.glTranslatef(-0.5f, -0.5f, -0.5f);
         
         gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
-        gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+        gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColorBuffer(color));
         gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
         gl.glDrawElements(GL10.GL_TRIANGLES, 12 * 3, GL10.GL_UNSIGNED_SHORT, cubeIndecesBuffer);
         
         gl.glPopMatrix();
 	}
 	
-	public static void drawCube(GL10 gl, float x, float y, float z, float w, float h, float d, int color)
+	public static void drawCube(GL10 gl, float x, float y, float z, float w, float h, float d, String color)
 	{
 		drawCube(gl, x, y, z, w, h, d, color, 0.0f);
 	}
@@ -319,7 +333,7 @@ public class GLUtil {
 	 * Rectangle *
 	 *************/
 	
-	public static void drawRect(GL10 gl, float x, float y, float z, float w, float h, int color)
+	public static void drawRect(GL10 gl, float x, float y, float z, float w, float h, String color)
 	{        
         gl.glPushMatrix();
         
@@ -327,14 +341,14 @@ public class GLUtil {
         gl.glScalef(w, h, 1.0f);
 
         gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
-        gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+        gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColorBuffer(color));
         gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
         gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, rectIndecesBuffer);
         
         gl.glPopMatrix();
 	}
 	
-	public static void drawRectLidar(GL10 gl, float x, float y, float z, float w, float h, int color)
+	public static void drawRectLidar(GL10 gl, float x, float y, float z, float w, float h, String color)
 	{        
 	    gl.glPushMatrix();
 	        
@@ -342,41 +356,18 @@ public class GLUtil {
 	    gl.glScalef(w, h, 1.0f);
 
 	    gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
-	    gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+	    gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColorBuffer(color));
 	    gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
 	    gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, rectIndecesBuffer);
 	        
 	    gl.glPopMatrix();
 	 }
 	
-	private static FloatBuffer getColor(int color) {
-		switch (color) {
-		case Color.WHITE:
-			return whiteColorsBuffer;
-		case Color.RED:
-			return redColorsBuffer;
-		case Color.GREEN:
-			return greenColorsBuffer;
-		case Color.BLUE:
-			return blueColorsBuffer;
-		case Color.YELLOW:
-			return yellowColorsBuffer;
-		case Color.BLACK:
-			return blackColorsBuffer;
-		case Color.GRAY:
-			return grayColorsBuffer;		
-		case Color.DKGRAY:
-				return darkGrayColorsBuffer;
-		}
-		return whiteColorsBuffer;
-	}
-	
 	/************
 	 * Cylinder *
 	 ************/
 	
-	
-	 public static void drawCylinder(GL10 gl, float x, float y, float z, float w, float h, float d, int color, float theta) {
+	 public static void drawCylinder(GL10 gl, float x, float y, float z, float w, float h, float d, String color, float theta) {
 	     gl.glPushMatrix();
 	     
 	     gl.glTranslatef(x, y, z);
@@ -384,14 +375,14 @@ public class GLUtil {
 	     gl.glRotatef(theta, 0.0f, 1.0f, 0.0f);
 	     
 	     gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cylinderCoordsBuffer);
-	     gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+	     gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColorBuffer(color));
 	     gl.glNormalPointer(GL10.GL_FLOAT, 0, cylinderNormalsBuffer);
 	     gl.glDrawElements(GL10.GL_TRIANGLES, 12 * CYLINDER_RESOLUTION, GL10.GL_UNSIGNED_SHORT, cylinderIndecesBuffer);	    
 	     
 	     gl.glPopMatrix();
 	 }
 	 
-	 public static void drawWheel(GL10 gl, float x, float y, float z, float w, float h, float d, int color, float theta) {
+	 public static void drawWheel(GL10 gl, float x, float y, float z, float w, float h, float d, String color, float theta) {
 	         gl.glPushMatrix();
 	         
 	         gl.glTranslatef(x, y, z);
@@ -400,7 +391,7 @@ public class GLUtil {
 	         gl.glRotatef(theta, 0.0f, 1.0f, 0.0f);
 	         
 	         gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cylinderCoordsBuffer);
-	         gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+	         gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColorBuffer(color));
 	         gl.glNormalPointer(GL10.GL_FLOAT, 0, cylinderNormalsBuffer);
 	         gl.glDrawElements(GL10.GL_TRIANGLES, 12 * CYLINDER_RESOLUTION, GL10.GL_UNSIGNED_SHORT, cylinderIndecesBuffer);     
 	         
@@ -411,7 +402,7 @@ public class GLUtil {
 	  * Wall related stuff  *
 	  * * * * * * * * * * * **/
 	 
-	public static void drawWall(GL10 gl, Point start, Point end, float height, int color) {
+	public static void drawWall(GL10 gl, PointF start, PointF end, float height, String color) {
 		float dx = end.x - start.x;
 		float dy = end.y - start.y;
 		float theta = (float) Math.toDegrees(Math.atan2(dy, dx));
@@ -423,30 +414,11 @@ public class GLUtil {
 		gl.glRotatef(theta, 0.0f, -1.0f, 0.0f);
 		gl.glScalef(scale, 1.0f, 1.0f);
         gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
-        gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
+        gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColorBuffer(color));
         gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
         gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, rectIndecesBuffer);
         gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, reverseRectIndicesBuffer);
         gl.glPopMatrix();
-	}
-	
-	
-	public static void drawWallTop(GL10 gl, Point start, Point end, int color, boolean drawWalls) {
-	    // if DrawWalls is
-	    
-	    float dx = end.x - start.x;
-	    float dy = end.y - start.y;
-	  
-	    gl.glPushMatrix();
-	    
-	    gl.glTranslatef(start.x, start.y, (drawWalls) ? -1.0f : 0.0f);
-	    gl.glScalef(dx, dy, 1.0f);
-	    gl.glVertexPointer(3, GL10.GL_FLOAT, 0, cubeCoordsBuffer);
-	    gl.glColorPointer(4, GL10.GL_FLOAT, 0, getColor(color));
-	    gl.glNormalPointer(GL10.GL_FLOAT, 0, cubeNormalsBuffer);
-	    gl.glDrawElements(GL10.GL_TRIANGLES, 2 * 3, GL10.GL_UNSIGNED_SHORT, reverseRectIndicesBuffer);
-	    
-	    gl.glPopMatrix();
 	}
 	 
 }
