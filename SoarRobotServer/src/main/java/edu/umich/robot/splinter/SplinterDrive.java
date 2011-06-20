@@ -22,8 +22,8 @@
 package edu.umich.robot.splinter;
 
 import lcm.lcm.LCM;
-import april_voigt.lcmtypes.differential_drive_command_t;
-import april_voigt.util.TimeUtil;
+import april.util.TimeUtil;
+import edu.umich.robot.lcmtypes.differential_drive_command_t;
 import edu.umich.robot.util.Misc;
 import edu.umich.robot.util.SimBattery;
 import edu.umich.robot.util.Updatable;

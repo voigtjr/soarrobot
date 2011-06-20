@@ -31,8 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april_voigt.config.Config;
-import april_voigt.config.ConfigUtil;
+import april.config.Config;
+import april.config.ConfigUtil;
 
 import com.google.common.util.concurrent.MoreExecutors;
 

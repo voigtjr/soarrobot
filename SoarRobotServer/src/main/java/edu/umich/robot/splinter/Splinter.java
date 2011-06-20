@@ -28,7 +28,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import april_voigt.util.TimeUtil;
+import april.util.TimeUtil;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -191,7 +191,7 @@ public class Splinter implements Robot
             {
                 if (controller != null)
                 {
-                    long now = TimeUtil.mstime();
+                    long now = TimeUtil.utime();
                     if (last != 0)
                     {
                         double dt = (now - last) / (double)TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS);

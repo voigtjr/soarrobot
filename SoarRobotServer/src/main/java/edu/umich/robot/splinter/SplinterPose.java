@@ -9,7 +9,7 @@ import lcm.lcm.LCMSubscriber;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april_voigt.lcmtypes.pose_t;
+import april.lcmtypes.pose_t;
 import edu.umich.robot.util.PoseProvider;
 import edu.umich.robot.util.Poses;
 

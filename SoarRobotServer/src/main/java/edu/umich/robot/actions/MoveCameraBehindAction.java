@@ -42,7 +42,8 @@ public class MoveCameraBehindAction extends AbstractRobotAction
 
     public void actionPerformed(ActionEvent e)
     {
-        getApplication().snapCamera(0);
+        // TODO SoarApril
+        // getApplication().snapCamera(0);
     }
 
 }

@@ -32,13 +32,13 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import lcm.lcm.LCM;
-import april_voigt.lcmtypes.waypoint_list_t;
-import april_voigt.lcmtypes.waypoint_t;
-import april_voigt.util.TimeUtil;
+import april.util.TimeUtil;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umich.robot.lcmtypes.waypoint_list_t;
+import edu.umich.robot.lcmtypes.waypoint_t;
 import edu.umich.robot.util.Pose;
 
 /**

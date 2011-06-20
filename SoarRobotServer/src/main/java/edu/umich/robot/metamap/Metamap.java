@@ -31,8 +31,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import lcm.lcm.LCM;
-import april_voigt.lcmtypes.map_metadata_t;
-import april_voigt.util.TimeUtil;
+import april.util.TimeUtil;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -48,6 +47,7 @@ import edu.umich.robot.events.RobotRemovedEvent;
 import edu.umich.robot.events.RoomLightEvent;
 import edu.umich.robot.events.control.DoorCloseEvent;
 import edu.umich.robot.events.control.DoorOpenEvent;
+import edu.umich.robot.lcmtypes.map_metadata_t;
 import edu.umich.robot.metamap.Door.State;
 import edu.umich.robot.util.Pose;
 import edu.umich.robot.util.RelativePose;

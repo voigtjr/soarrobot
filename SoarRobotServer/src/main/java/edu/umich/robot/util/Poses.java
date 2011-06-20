@@ -26,9 +26,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april_voigt.jmat.LinAlg;
-import april_voigt.jmat.MathUtil;
-import april_voigt.lcmtypes.pose_t;
+import april.jmat.LinAlg;
+import april.jmat.MathUtil;
+import april.lcmtypes.pose_t;
 
 /**
  * @author voigtjr@gmail.com

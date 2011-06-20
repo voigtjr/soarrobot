@@ -21,7 +21,7 @@
  */
 package edu.umich.robot.util;
 
-import april_voigt.util.TimeUtil;
+import april.util.TimeUtil;
 
 /**
  * @author voigtjr@gmail.com
@@ -34,17 +34,17 @@ public class WallClock
 
     public void start()
     {
-        offset += TimeUtil.mstime() - stopTime;
+        offset += TimeUtil.utime() - stopTime;
     }
     
     public void stop()
     {
-        stopTime = TimeUtil.mstime();
+        stopTime = TimeUtil.utime();
     }
     
     public long getMillis()
     {
-        return TimeUtil.mstime() - offset;
+        return TimeUtil.utime() - offset;
     }
 
     public void reset()

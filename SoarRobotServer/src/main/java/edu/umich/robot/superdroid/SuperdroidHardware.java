@@ -8,15 +8,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import april_voigt.jmat.LinAlg;
-import april_voigt.lcmtypes.differential_drive_command_t;
-import april_voigt.lcmtypes.pose_t;
-import april_voigt.util.TimeUtil;
-
 import lcm.lcm.LCM;
 import lcm.lcm.LCMDataInputStream;
 import lcm.lcm.LCMSubscriber;
+import april.jmat.LinAlg;
+import april.lcmtypes.pose_t;
+import april.util.TimeUtil;
 import edu.umich.grrc.GrrcSuperdroid;
+import edu.umich.robot.lcmtypes.differential_drive_command_t;
 
 public class SuperdroidHardware
 {

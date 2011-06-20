@@ -316,8 +316,11 @@ public class Server implements RobotEventListener, RadioHandler {
 				ar.add(tokens[i]);
 			}
 			RadioMessage message = new RadioMessage.Builder(tokens[1]).destination(tokens[2]).tokens(ar).build();
-			controller.getRadio().postRadioMessage(message);
-			return "text " + message.getDestination() + " received: \"" + message.getConcatenatedTokens(" ") + "\"";
+			if (message != null)
+			{
+			    controller.getRadio().postRadioMessage(message);
+			    return "text " + message.getDestination() + " received: \"" + message.getConcatenatedTokens(" ") + "\"";
+			}
 		}
 
 		return "text Invalid command: " + command;

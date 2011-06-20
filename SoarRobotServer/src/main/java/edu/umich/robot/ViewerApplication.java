@@ -43,12 +43,11 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april_voigt.config.Config;
-import april_voigt.config.ConfigFile;
-import april_voigt.config.ConfigUtil;
-import april_voigt.viewer.ViewRobot;
-import april_voigt.viewer.ViewTrajectory;
-import april_voigt.viewer.Viewer;
+import april.config.Config;
+import april.config.ConfigFile;
+import april.config.ConfigUtil;
+import april.viewer.ViewRobot;
+import april.viewer.Viewer;
 import edu.umich.robot.util.Configs;
 import edu.umich.robot.util.swing.SwingTools;
 
@@ -128,7 +127,9 @@ public class ViewerApplication
 
         viewerView = new ViewerView(viewer.getVisCanvas());
         
-        viewer.getVisCanvas().setDrawGround(true);
+        // TODO
+        // This is left over from SoarApril
+        // viewer.getVisCanvas().setDrawGround(true);
 
         frame.add(viewerView, BorderLayout.CENTER);
         
@@ -170,7 +171,9 @@ public class ViewerApplication
             addViewRobot(s);
             addViewLidars(s);
             addViewWaypoints(s);
-            addViewTrajectory(s);
+            
+            // TODO SoarApril
+            // addViewTrajectory(s);
         }
     }
     
@@ -183,15 +186,15 @@ public class ViewerApplication
     {
         config.setStrings("viewer.viewobjects", new String[] { "obstacles", "walls", "areas" });
         
-        config.setString("viewer.obstacles.class", "april_voigt.viewer.ViewObstaclesReadOnly");
+        config.setString("viewer.obstacles.class", "april.viewer.ViewObstaclesReadOnly");
         
-        config.setString("viewer.walls.class", "april_voigt.viewer.ViewWalls");
+        config.setString("viewer.walls.class", "april.viewer.ViewWalls");
         Application.addImageData(config, "viewer.walls.obstacles.");
         
 //        config.setString("viewer.floor.class", "april.viewer.ViewFloor"); // need to add floor to viewobjects list
 //        addImageData(config, "viewer.floor.obstacles.");
 
-        config.setString("viewer.areas.class", "april_voigt.viewer.ViewAreaDescriptions");
+        config.setString("viewer.areas.class", "april.viewer.ViewAreaDescriptions");
 
 //        config.setString("viewer.skybox.class", "april.viewer.ViewSkybox"); // need to add skybox to viewobjects list
 //        config.setString("viewer.skybox.north_image", "north.jpg");
@@ -214,18 +217,18 @@ public class ViewerApplication
     private ViewRobot addViewRobot(String name)
     {
         Config config = new Config();
-        config.setString("class", "april_voigt.viewer.ViewRobot");
+        config.setString("class", "april.viewer.ViewRobot");
         addPositionInfo(config, "avatar.", new double[] { 0, 0, 0 },
                 new double[] { 0, 0, 0 }, null);
 
         Configs.toLog(logger, config);
-        return (ViewRobot)viewer.addObject(name, config);
+        return (ViewRobot) viewer.addObject(name, config);
     }
 
     private void addViewLidars(String name)
     {
         Config config = new Config();
-        config.setString("class", "april_voigt.viewer.ViewLaser");
+        config.setString("class", "april.viewer.ViewLaser");
         config.setString("pose", name);
         config.setStrings("channels", new String[] { "SIM_LIDAR_FRONT",
                 "SICK_LIDAR_FRONT", "LIDAR_LOWRES", });
@@ -243,22 +246,25 @@ public class ViewerApplication
     private void addViewWaypoints(String name)
     {
         Config config = new Config();
-        config.setString("class", "april_voigt.viewer.ViewWaypoints");
+        config.setString("class", "april.viewer.ViewWaypoints");
         config.setString("channel", "WAYPOINTS_" + name);
 
         Configs.toLog(logger, config);
         viewer.addObject(name + "waypoints", config);
     }
 
+    // TODO SoarApril
+    /*
     private ViewTrajectory addViewTrajectory(String name)
     {
         Config config = new Config();
-        config.setString("class", "april_voigt.viewer.ViewTrajectory");
+        config.setString("class", "april.viewer.ViewTrajectory");
         config.setString("pose", name);
 
         Configs.toLog(logger, config);
         return (ViewTrajectory)viewer.addObject(name + "trajectory", config);
     }
+    */
 
     public static void main(final String[] args)
     {

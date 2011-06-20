@@ -24,7 +24,7 @@ package edu.umich.robot.soar;
 import org.apache.commons.logging.LogFactory;
 
 import sml.Identifier;
-import april_voigt.jmat.LinAlg;
+import april.jmat.LinAlg;
 import edu.umich.robot.RobotOutput;
 import edu.umich.robot.events.control.AbstractDriveEvent;
 import edu.umich.robot.events.control.DriveAngularEvent;

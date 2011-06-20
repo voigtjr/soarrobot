@@ -33,13 +33,13 @@ import org.apache.commons.logging.LogFactory;
 import sml.Identifier;
 import sml.StringElement;
 import sml.WMElement;
-import april_voigt.lcmtypes.waypoint_list_t;
-import april_voigt.lcmtypes.waypoint_t;
-import april_voigt.util.TimeUtil;
+import april.util.TimeUtil;
 
 import com.google.common.collect.Lists;
 
 import edu.umich.robot.RobotOutput;
+import edu.umich.robot.lcmtypes.waypoint_list_t;
+import edu.umich.robot.lcmtypes.waypoint_t;
 import edu.umich.robot.metamap.AreaDescription;
 import edu.umich.robot.metamap.AreaState;
 import edu.umich.robot.metamap.Door;

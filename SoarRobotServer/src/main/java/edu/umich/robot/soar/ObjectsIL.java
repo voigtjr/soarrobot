@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april_voigt.util.TimeUtil;
+import april.util.TimeUtil;
 
 import com.google.common.collect.Lists;
 
@@ -119,14 +119,14 @@ public class ObjectsIL extends InputLinkElement
                 Long it = invisibleTimestamps.get(e.getKey());
                 if (it == null)
                 {
-                    invisibleTimestamps.put(e.getKey(), TimeUtil.mstime());
+                    invisibleTimestamps.put(e.getKey(), TimeUtil.utime());
                     e.getValue().setVisible(false);
                     if (logger.isDebugEnabled())
                         logger.debug("Object " + e.getKey() + " went invisible.");
                 }
                 else
                 {
-                    long ms = TimeUtil.mstime() - it;
+                    long ms = TimeUtil.utime() - it;
 
                     if (ms > lingerMillis)
                     {

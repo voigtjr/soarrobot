@@ -21,7 +21,7 @@
  */
 package edu.umich.robot.util;
 
-import april_voigt.jmat.MathUtil;
+import april.jmat.MathUtil;
 
 /**
  * Simple PID controller.

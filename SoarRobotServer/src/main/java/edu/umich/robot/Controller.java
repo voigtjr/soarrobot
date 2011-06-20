@@ -21,7 +21,6 @@
  */
 package edu.umich.robot;
 
-import java.awt.Point;
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketException;
@@ -34,11 +33,12 @@ import java.util.Map;
 import sml.Kernel;
 import sml.Kernel.SystemEventInterface;
 import sml.smlSystemEventId;
-import april_voigt.config.Config;
-import april_voigt.sim.SimObject;
-import april_voigt.sim.Simulator;
-import april_voigt.sim.TimeScalable;
-import april_voigt.util.TimeUtil;
+import april.config.Config;
+import april.sim.SimObject;
+import april.sim.Simulator;
+import april.util.GetOpt;
+import april.util.TimeUtil;
+import april.vis.VisObject;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -168,6 +168,21 @@ public class Controller
             this.collisions = collisions;
         }
         
+        public SimObject makeVisObject(Config config)
+        {
+            String className = config.requireString("class");
+            try
+            {
+                Class cls = Class.forName(className);
+                SimObject o = (SimObject) cls.getConstructor(Simulator.class, String.class, Config.class).newInstance(this, name, config);
+                return o;
+            } catch (Exception ex)
+            {
+                System.out.println("RobotData: Unable to create " + name + ": " + ex);
+                return null;
+            }
+        }
+        
         final RobotType type;
         final String name;
         final Pose initialPose;
@@ -192,7 +207,11 @@ public class Controller
         soar.registerForSystemEvent(smlSystemEventId.smlEVENT_SYSTEM_START, soarHandler, null);
         soar.registerForSystemEvent(smlSystemEventId.smlEVENT_SYSTEM_STOP, soarHandler, null);
         
-        sim = new Simulator(config);
+        String configPath = config.getPath(null);
+        GetOpt getOpt = new GetOpt();
+        getOpt.addString('\0', "config", configPath, "Path to configuration file.");
+        //sim = new Simulator(config);
+        sim = new Simulator(getOpt);
         metamap = new MetamapFactory(config).build();
         metamap.setController(this);
         events.addListener(RobotAddedEvent.class, metamap);
@@ -257,10 +276,12 @@ public class Controller
         sd.simulated = true;
         
         Config rconfig = new Config();
-        rconfig.setString("class", "april_voigt.sim.SimSplinter");
+        rconfig.setString("class", "april.sim.SimSplinter");
         rconfig.setDoubles("initialPosition", Misc
                 .toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
+        SimObject ss = sd.makeVisObject(rconfig);
+        
         SimObject ss = sim.addObject(sd.name, rconfig);
         if (ss != null)
             sd.simObjs.add(ss);
@@ -290,7 +311,7 @@ public class Controller
         sd.simulated = true;
 
         Config rconfig = new Config();
-        rconfig.setString("class", "april_voigt.sim.SimSplinter"); // TODO: still using SimSplinter for superdroid
+        rconfig.setString("class", "april.sim.SimSplinter"); // TODO: still using SimSplinter for superdroid
         rconfig.setDoubles("initialPosition", Misc
                 .toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
@@ -306,7 +327,7 @@ public class Controller
             return; // TODO warn
 
         Config lconfig = new Config();
-        lconfig.setString("class", "april_voigt.sim.SimLaser");
+        lconfig.setString("class", "april.sim.SimLaser");
         lconfig.setString("pose", sd.name);
         lconfig.setDoubles("position", new double[] { 0, 0, 0.4 });
         lconfig.setDoubles("rollpitchyaw_degrees", new double[] { 0, 0, 0 });

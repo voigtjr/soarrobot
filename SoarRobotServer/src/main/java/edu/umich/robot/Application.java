@@ -26,8 +26,8 @@ import javax.swing.SwingUtilities;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april_voigt.config.Config;
-import april_voigt.config.ConfigUtil;
+import april.config.Config;
+import april.config.ConfigUtil;
 import edu.umich.robot.util.swing.SwingTools;
 
 /**

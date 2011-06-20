@@ -26,7 +26,7 @@ import java.awt.Dimension;
 
 import javax.swing.JPanel;
 
-import april_voigt.vis.VisCanvas;
+import april.vis.VisCanvas;
 
 /**
  * @author voigtjr@gmail.com
@@ -42,7 +42,8 @@ public class ViewerView extends JPanel
         this.add(visCanvas, BorderLayout.CENTER);
 
         // FIXME: not drawing grid causes major lighting error
-        visCanvas.setDrawGrid(false);
+        // TODO left over from SoarApril
+        // visCanvas.setDrawGrid(false);
 
         this.setVisible(true);
     }

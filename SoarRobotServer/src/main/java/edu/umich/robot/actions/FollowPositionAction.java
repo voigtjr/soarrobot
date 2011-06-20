@@ -23,8 +23,6 @@ package edu.umich.robot.actions;
 
 import java.awt.event.ActionEvent;
 
-import april_voigt.viewer.ViewRobot.FollowMode;
-
 /**
  * @author voigtjr@gmail.com
  */
@@ -44,7 +42,8 @@ public class FollowPositionAction extends AbstractRobotAction
 
     public void actionPerformed(ActionEvent e)
     {
-        getApplication().setFollowMode(FollowMode.FOLLOW_XY);
+        // TODO SoarApril
+        // getApplication().setFollowMode(FollowMode.FOLLOW_XY);
     }
 
 }

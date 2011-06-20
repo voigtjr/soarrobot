@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <launchConfiguration type="org.eclipse.jdt.launching.localJavaApplication">
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
-<listEntry value="/soarrobot/src/main/java/edu/umich/robot/Application.java"/>
+<listEntry value="/SoarRobotServer/src/main/java/edu/umich/robot/Application.java"/>
 </listAttribute>
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
 <listEntry value="1"/>
@@ -11,5 +11,5 @@
 </mapAttribute>
 <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="edu.umich.robot.Application"/>
 <stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="--config config/basic/atrium-1.txt"/>
-<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="soarrobot"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="SoarRobotServer"/>
 </launchConfiguration>

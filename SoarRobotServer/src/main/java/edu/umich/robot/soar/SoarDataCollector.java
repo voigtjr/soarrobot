@@ -39,7 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import sml.ClientAnalyzedXML;
-import april_voigt.config.Config;
+import april.config.Config;
 
 import com.google.common.base.Joiner;
 import com.google.common.util.concurrent.MoreExecutors;

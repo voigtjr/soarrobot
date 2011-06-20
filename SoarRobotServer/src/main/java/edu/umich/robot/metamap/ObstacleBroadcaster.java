@@ -30,13 +30,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import lcm.lcm.LCM;
-import april_voigt.lcmtypes.sim_obstacles_t;
-import april_voigt.util.TimeUtil;
+import april.util.TimeUtil;
 
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import edu.umich.robot.lcmtypes.map_objects_t;
+import edu.umich.robot.lcmtypes.sim_obstacles_t;
 import edu.umich.robot.util.Pose;
 
 /**

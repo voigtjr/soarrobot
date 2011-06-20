@@ -29,9 +29,9 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april_voigt.config.Config;
-import april_voigt.jmat.LinAlg;
-import april_voigt.lcmtypes.pose_t;
+import april.config.Config;
+import april.jmat.LinAlg;
+import april.lcmtypes.pose_t;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -73,7 +73,11 @@ class VirtualObjectManager
     VirtualObjectManager(Config config, IdGenerator idg)
     {
         this.idg = idg;
-        this.config = (config != null) ? config.copy() : null;
+        
+        // april_voigt's implementation of config had a copy() method -- hope this doesn't break anything
+        // this.config = (config != null) ? config.copy() : null;
+        this.config = (config != null) ? config : null;
+        
         initialize();
     }
     

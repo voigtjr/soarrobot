@@ -30,7 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import april_voigt.config.Config;
+import april.config.Config;
 
 import com.google.common.collect.Lists;
 

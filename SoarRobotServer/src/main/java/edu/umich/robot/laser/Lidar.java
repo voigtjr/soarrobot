@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import lcm.lcm.LCM;
 
-import april_voigt.lcmtypes.laser_t;
+import april.lcmtypes.laser_t;
 
 import com.google.common.util.concurrent.MoreExecutors;
 

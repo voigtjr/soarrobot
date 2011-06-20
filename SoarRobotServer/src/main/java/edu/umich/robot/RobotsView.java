@@ -48,8 +48,8 @@ import javax.swing.event.ListSelectionListener;
 
 import org.jdesktop.swingx.JXTable;
 
-import april_voigt.viewer.ViewRobot;
-import april_voigt.viewer.Viewer.RobotSelectionChangedListener;
+import april.viewer.ViewRobot;
+import april.viewer.Viewer.RobotSelectionChangedListener;
 
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;

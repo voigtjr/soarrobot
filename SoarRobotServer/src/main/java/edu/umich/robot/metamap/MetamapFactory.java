@@ -28,7 +28,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import april_voigt.config.Config;
+import april.config.Config;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;

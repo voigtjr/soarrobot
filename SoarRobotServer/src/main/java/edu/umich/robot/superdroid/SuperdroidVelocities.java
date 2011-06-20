@@ -22,11 +22,11 @@
 package edu.umich.robot.superdroid;
 
 import lcm.lcm.LCM;
-import april_voigt.jmat.LinAlg;
-import april_voigt.jmat.MathUtil;
-import april_voigt.lcmtypes.differential_drive_command_t;
-import april_voigt.lcmtypes.pose_t;
-import april_voigt.util.TimeUtil;
+import april.jmat.LinAlg;
+import april.jmat.MathUtil;
+import april.lcmtypes.pose_t;
+import april.util.TimeUtil;
+import edu.umich.robot.lcmtypes.differential_drive_command_t;
 import edu.umich.robot.util.PIDController;
 import edu.umich.robot.util.PoseProvider;
 import edu.umich.robot.util.VelocitiesController;
