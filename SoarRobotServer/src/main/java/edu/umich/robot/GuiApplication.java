@@ -64,7 +64,6 @@ import april.config.Config;
 import april.config.ConfigFile;
 import april.config.ConfigUtil;
 import april.jmat.geom.GRay3D;
-import april.viewer.ViewRobot;
 import april.viewer.Viewer;
 import april.vis.VisCanvas;
 import april.vis.VisCanvasEventAdapter;
@@ -93,6 +92,8 @@ import edu.umich.robot.actions.SoarParametersAction;
 import edu.umich.robot.actions.SoarStepAction;
 import edu.umich.robot.actions.SoarToggleAction;
 import edu.umich.robot.actions.TextMessageAction;
+import edu.umich.robot.april.SoarViewRobot;
+import edu.umich.robot.april.ViewTrajectory;
 import edu.umich.robot.events.AfterResetEvent;
 import edu.umich.robot.events.ControllerActivatedEvent;
 import edu.umich.robot.events.ControllerDeactivatedEvent;
@@ -174,18 +175,14 @@ public class GuiApplication
      */
     private static class RobotData
     {
-        public RobotData(ViewRobot vr /* , ViewTrajectory vt */ )
+        public RobotData(SoarViewRobot vr, ViewTrajectory vt)
         {
             this.vr = vr;
-            
-            // TODO SoarApril
-            //this.vt = vt;
+            this.vt = vt;
         }
         
-        final ViewRobot vr;
-        
-        // TODO SoarApril
-        //final ViewTrajectory vt;
+        final SoarViewRobot vr;
+        final ViewTrajectory vt;
     }
 
     /**
@@ -272,7 +269,7 @@ public class GuiApplication
         controller = new Controller(config, new Gamepad());
         controller.initializeGamepad();
 
-        viewer = new Viewer(config);
+        viewer = new Viewer(config, frame);
         // This puts us in full 3d mode by default. The Viewer GUI doesn't
         // reflect this in its right click drop-down, a bug.
         viewer.getVisCanvas().getViewManager().setInterfaceMode(3);
@@ -585,7 +582,7 @@ public class GuiApplication
      * 
      * @return
      */
-    private ViewRobot getRobot()
+    private SoarViewRobot getRobot()
     {
         String name = controller.getSelectedRobotName();
         if (name == null)
@@ -601,7 +598,7 @@ public class GuiApplication
      * @param mode
      *            New follow mode.
      */
-    // TODO left over from SoarApril
+    // TODO SoarApril
     /*
     public void setFollowMode(FollowMode mode)
     {
@@ -620,7 +617,7 @@ public class GuiApplication
      * @param mode
      *            See robot.moveCameraToRobot
      */
-    // TODO left over from SoarApril
+    // TODO SoarApril
     /*
     public void snapCamera(int mode)
     {
@@ -886,14 +883,12 @@ public class GuiApplication
             {
                 RobotAddedEvent e = (RobotAddedEvent) event;
 
-                ViewRobot vr = addViewRobot(e.getRobot().getName(), e.getRobot().getType());
+                SoarViewRobot vr = addViewRobot(e.getRobot().getName(), e.getRobot().getType());
                 addViewLidars(e.getRobot().getName());
                 addViewWaypoints(e.getRobot().getName());
-                
-                // TODO SoarApril
-                // ViewTrajectory vt = addViewTrajectory(e.getRobot().getName());
-                
-                robotData.put(e.getRobot().getName(), new RobotData(vr /* , vt */));
+                ViewTrajectory vt = addViewTrajectory(e.getRobot().getName());
+
+                robotData.put(e.getRobot().getName(), new RobotData(vr, vt));
             }
             
             // TODO SoarApril
@@ -923,19 +918,19 @@ public class GuiApplication
     {
         config.setStrings("viewer.viewobjects", new String[] { "obstacles", "walls", "areas" });
         
-        config.setString("viewer.obstacles.class", "april.viewer.ViewObstaclesReadOnly");
+        config.setString("viewer.obstacles.class", "edu.umich.robot.april.ViewObstaclesReadOnly");
         
-        config.setString("viewer.walls.class", "april.viewer.ViewWalls");
+        config.setString("viewer.walls.class", "edu.umich.robot.april.ViewWalls");
         Application.addImageData(config, "viewer.walls.obstacles.");
         
         // The following code enables other viewing options.
         
-//        config.setString("viewer.floor.class", "april.viewer.ViewFloor"); // need to add floor to viewobjects list
+//        config.setString("viewer.floor.class", "edu.umich.robot.april.ViewFloor"); // need to add floor to viewobjects list
 //        addImageData(config, "viewer.floor.obstacles.");
 
-        config.setString("viewer.areas.class", "april.viewer.ViewAreaDescriptions");
+        config.setString("viewer.areas.class", "edu.umich.robot.april.ViewAreaDescriptions");
 
-        config.setString("viewer.skybox.class", "april.viewer.ViewSkybox"); // need to add skybox to viewobjects list
+        config.setString("viewer.skybox.class", "edu.umich.robot.april.ViewSkybox"); // need to add skybox to viewobjects list
         config.setString("viewer.skybox.north_image", "../common/north.jpg");
         config.setString("viewer.skybox.south_image", "../common/south.jpg");
         config.setString("viewer.skybox.east_image", "../common/east.jpg");
@@ -979,10 +974,10 @@ public class GuiApplication
      * 
      * @return The viewer object representing the robot.
      */
-    private ViewRobot addViewRobot(String name, RobotType type)
+    private SoarViewRobot addViewRobot(String name, RobotType type)
     {
         Config config = new Config();
-        config.setString("class", "april.viewer.ViewRobot");
+        config.setString("class", "edu.umich.robot.april.SoarViewRobot");
         addPositionInfo(config, "avatar.", new double[] { 0, 0, 0 },
                 new double[] { 0, 0, 0 }, null);
 
@@ -990,7 +985,7 @@ public class GuiApplication
             config.setBoolean("model4", true);
         
         Configs.toLog(logger, config);
-        return (ViewRobot)viewer.addObject(name, config);
+        return (SoarViewRobot) viewer.addObject(name, config);
     }
 
     /**
@@ -1030,10 +1025,11 @@ public class GuiApplication
     private void addViewWaypoints(String name)
     {
         Config config = new Config();
-        config.setString("class", "april.viewer.ViewWaypoints");
+        config.setString("class", "edu.umich.robot.april.ViewWaypoints");
         config.setString("channel", "WAYPOINTS_" + name);
 
         Configs.toLog(logger, config);
+        
         viewer.addObject(name + "waypoints", config);
     }
 
@@ -1048,7 +1044,7 @@ public class GuiApplication
     private ViewTrajectory addViewTrajectory(String name)
     {
         Config config = new Config();
-        config.setString("class", "april.viewer.ViewTrajectory");
+        config.setString("class", "edu.umich.robot.april.ViewTrajectory");
         config.setString("pose", name);
 
         Configs.toLog(logger, config);

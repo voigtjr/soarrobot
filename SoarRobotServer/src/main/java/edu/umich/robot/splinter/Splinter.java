@@ -194,7 +194,7 @@ public class Splinter implements Robot
                     long now = TimeUtil.utime();
                     if (last != 0)
                     {
-                        double dt = (now - last) / (double)TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS);
+                        double dt = (now - last) / (double)TimeUnit.MICROSECONDS.convert(1, TimeUnit.SECONDS);
                         controller.update(dt);
                     }
                     last = now;

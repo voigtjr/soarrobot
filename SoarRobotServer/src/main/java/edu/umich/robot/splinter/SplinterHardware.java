@@ -11,6 +11,7 @@ import lcm.lcm.LCMSubscriber;
 import orc.Motor;
 import orc.Orc;
 import orc.OrcStatus;
+import orc.spy.Spy;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -154,6 +155,7 @@ public class SplinterHardware
     private void calibrate(OrcStatus currentStatus)
     {
         double dt = (currentStatus.utime - lastUtime) / 1000000.0;
+        System.out.println("dt: " + dt);
         boolean moving = (currentStatus.qeiVelocity[0] != 0) || (currentStatus.qeiVelocity[1] != 0);
         switch (calibrated) {
         case NO:

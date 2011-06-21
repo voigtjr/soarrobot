@@ -212,7 +212,7 @@ public class Superdroid implements Robot
             synchronized (this)
             {
                 long now = TimeUtil.utime();
-                double dt = (now - last) / (double)TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS);
+                double dt = (now - last) / (double)TimeUnit.MICROSECONDS.convert(1, TimeUnit.SECONDS);
                 if (last != 0)
                 {
                     if (controller != null)

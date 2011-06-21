@@ -48,21 +48,20 @@ import javax.swing.event.ListSelectionListener;
 
 import org.jdesktop.swingx.JXTable;
 
-import april.viewer.ViewRobot;
-import april.viewer.Viewer.RobotSelectionChangedListener;
-
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 
 import edu.umich.robot.actions.ActionManager;
 import edu.umich.robot.actions.CreateSplinterRobotAction;
+import edu.umich.robot.april.SoarViewRobot;
 
 /**
  * The robot & robot controller table.
  * 
  * @author voigtjr@gmail.com
  */
-public class RobotsView extends JPanel implements RobotSelectionChangedListener
+// TODO SoarApril
+public class RobotsView extends JPanel /* implements RobotSelectionChangedListener */
 {
     private static final long serialVersionUID = 7404227862171554005L;
 
@@ -240,7 +239,7 @@ public class RobotsView extends JPanel implements RobotSelectionChangedListener
         }
     };
 
-    public void onRobotSelectionChanged(ViewRobot selectedRobot)
+    public void onRobotSelectionChanged(SoarViewRobot selectedRobot)
     {
         if (selectedRobot == null)
             table.getSelectionModel().clearSelection();

@@ -35,14 +35,15 @@ import sml.Kernel.SystemEventInterface;
 import sml.smlSystemEventId;
 import april.config.Config;
 import april.sim.SimObject;
-import april.sim.Simulator;
-import april.util.GetOpt;
 import april.util.TimeUtil;
-import april.vis.VisObject;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import edu.umich.robot.april.SoarSimObject;
+import edu.umich.robot.april.SoarSimulator;
+import edu.umich.robot.april.SoarTimeUtil;
+import edu.umich.robot.april.TimeScalable;
 import edu.umich.robot.events.AbstractProgramEvent;
 import edu.umich.robot.events.AfterResetEvent;
 import edu.umich.robot.events.BeforeResetEvent;
@@ -122,7 +123,7 @@ public class Controller
 
     private final Soar soar;
 
-    private final Simulator sim;
+    private final SoarSimulator sim;
 
     private final Radio radio = new SimRadio();
 
@@ -168,27 +169,12 @@ public class Controller
             this.collisions = collisions;
         }
         
-        public SimObject makeVisObject(Config config)
-        {
-            String className = config.requireString("class");
-            try
-            {
-                Class cls = Class.forName(className);
-                SimObject o = (SimObject) cls.getConstructor(Simulator.class, String.class, Config.class).newInstance(this, name, config);
-                return o;
-            } catch (Exception ex)
-            {
-                System.out.println("RobotData: Unable to create " + name + ": " + ex);
-                return null;
-            }
-        }
-        
         final RobotType type;
         final String name;
         final Pose initialPose;
         final boolean collisions;
         boolean simulated = false;
-        List<SimObject> simObjs = Lists.newArrayList();
+        List<SoarSimObject> simObjs = Lists.newArrayList();
     }
     
     /**
@@ -208,10 +194,12 @@ public class Controller
         soar.registerForSystemEvent(smlSystemEventId.smlEVENT_SYSTEM_STOP, soarHandler, null);
         
         String configPath = config.getPath(null);
+        /*
         GetOpt getOpt = new GetOpt();
         getOpt.addString('\0', "config", configPath, "Path to configuration file.");
-        //sim = new Simulator(config);
-        sim = new Simulator(getOpt);
+        */
+        sim = new SoarSimulator(config);
+        //sim = new Simulator(getOpt);
         metamap = new MetamapFactory(config).build();
         metamap.setController(this);
         events.addListener(RobotAddedEvent.class, metamap);
@@ -276,13 +264,13 @@ public class Controller
         sd.simulated = true;
         
         Config rconfig = new Config();
-        rconfig.setString("class", "april.sim.SimSplinter");
+        rconfig.setString("class", "edu.umich.robot.april.SimSplinter");
         rconfig.setDoubles("initialPosition", Misc
                 .toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
-        SimObject ss = sd.makeVisObject(rconfig);
+                
+        SoarSimObject ss = (SoarSimObject) sim.addObject(sd.name, rconfig);
         
-        SimObject ss = sim.addObject(sd.name, rconfig);
         if (ss != null)
             sd.simObjs.add(ss);
     }
@@ -311,11 +299,12 @@ public class Controller
         sd.simulated = true;
 
         Config rconfig = new Config();
-        rconfig.setString("class", "april.sim.SimSplinter"); // TODO: still using SimSplinter for superdroid
+        rconfig.setString("class", "edu.umich.robot.april.SimSplinter"); // TODO: still using SimSplinter for superdroid
         rconfig.setDoubles("initialPosition", Misc
                 .toPrimitiveDoubleArray(sd.initialPose.getPos()));
         rconfig.setBoolean("wallCollisions", sd.collisions);
-        SimObject ss = sim.addObject(sd.name, rconfig);
+        SoarSimObject ss = (SoarSimObject) sim.addObject(sd.name, rconfig);
+        
         if (ss != null)
             sd.simObjs.add(ss);
     }
@@ -327,7 +316,7 @@ public class Controller
             return; // TODO warn
 
         Config lconfig = new Config();
-        lconfig.setString("class", "april.sim.SimLaser");
+        lconfig.setString("class", "edu.umich.robot.april.SimLaser");
         lconfig.setString("pose", sd.name);
         lconfig.setDoubles("position", new double[] { 0, 0, 0.4 });
         lconfig.setDoubles("rollpitchyaw_degrees", new double[] { 0, 0, 0 });
@@ -339,7 +328,8 @@ public class Controller
         lconfig.setDouble("theta_noise_degrees", 0.25);
         lconfig.setInt("max_range_m", 30);
         lconfig.setInt("hz", 7);
-        SimObject sl = sim.addObject(sd.name + "lidar", lconfig);
+        SoarSimObject sl = (SoarSimObject) sim.addObject(sd.name + "lidar", lconfig);
+        
         if (sl != null)
             sd.simObjs.add(sl);
     }
@@ -538,10 +528,10 @@ public class Controller
         if (rate > 4)
             rate = 1;
         
-        TimeUtil.setTimeScale(rate);
+        SoarTimeUtil.setTimeScale(rate);
         for(RobotData sd : simRobots.values())
         {
-            for (SimObject so : sd.simObjs)
+            for (SoarSimObject so : sd.simObjs)
             {
                 if (so instanceof TimeScalable)
                 {
@@ -553,6 +543,7 @@ public class Controller
         for (Robot r : robots.getAll())
             r.setTimeScale(rate);
         events.fireEvent(new TimeScaleChangedEvent(rate));
+        
     }
     
     /**
@@ -639,7 +630,9 @@ public class Controller
         for (SplinterHardware s : splinters)
             s.shutdown();
         robots.shutdown();
+        
         sim.shutdown();
+        
         metamap.shutdown();
         down = true;
     }
@@ -694,7 +687,7 @@ public class Controller
         
         for (RobotData sd : simRobots.values())
         {
-            for (SimObject so : sd.simObjs)
+            for (SoarSimObject so : sd.simObjs)
                 sim.removeObject(so);
             sd.simObjs.clear();
         }

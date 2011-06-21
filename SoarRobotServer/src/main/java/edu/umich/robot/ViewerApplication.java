@@ -46,8 +46,9 @@ import org.apache.commons.logging.LogFactory;
 import april.config.Config;
 import april.config.ConfigFile;
 import april.config.ConfigUtil;
-import april.viewer.ViewRobot;
 import april.viewer.Viewer;
+import edu.umich.robot.april.SoarViewRobot;
+import edu.umich.robot.april.ViewTrajectory;
 import edu.umich.robot.util.Configs;
 import edu.umich.robot.util.swing.SwingTools;
 
@@ -127,8 +128,7 @@ public class ViewerApplication
 
         viewerView = new ViewerView(viewer.getVisCanvas());
         
-        // TODO
-        // This is left over from SoarApril
+        // TODO SoarApril
         // viewer.getVisCanvas().setDrawGround(true);
 
         frame.add(viewerView, BorderLayout.CENTER);
@@ -173,7 +173,7 @@ public class ViewerApplication
             addViewWaypoints(s);
             
             // TODO SoarApril
-            // addViewTrajectory(s);
+            addViewTrajectory(s);
         }
     }
     
@@ -214,15 +214,15 @@ public class ViewerApplication
             config.setInts(prefix + "color", color);
     }
 
-    private ViewRobot addViewRobot(String name)
+    private SoarViewRobot addViewRobot(String name)
     {
         Config config = new Config();
-        config.setString("class", "april.viewer.ViewRobot");
+        config.setString("class", "edu.umich.robot.april.SoarViewRobot");
         addPositionInfo(config, "avatar.", new double[] { 0, 0, 0 },
                 new double[] { 0, 0, 0 }, null);
 
         Configs.toLog(logger, config);
-        return (ViewRobot) viewer.addObject(name, config);
+        return (SoarViewRobot) viewer.addObject(name, config);
     }
 
     private void addViewLidars(String name)
@@ -253,8 +253,6 @@ public class ViewerApplication
         viewer.addObject(name + "waypoints", config);
     }
 
-    // TODO SoarApril
-    /*
     private ViewTrajectory addViewTrajectory(String name)
     {
         Config config = new Config();
@@ -264,8 +262,7 @@ public class ViewerApplication
         Configs.toLog(logger, config);
         return (ViewTrajectory)viewer.addObject(name + "trajectory", config);
     }
-    */
-
+    
     public static void main(final String[] args)
     {
         SwingTools.initializeLookAndFeel();
