@@ -162,6 +162,17 @@ public class AreaDescriptionIL extends InputLinkElement
             {
                 open = true;
                 IntWme.newInstance(wallwme, IOConstants.TO, id);
+                
+                // Add something here that looks like a gateway
+                Identifier gatewayWme = agent.getSoarAgent().CreateIdWME(getRoot(), IOConstants.GATEWAY);
+                gatewayWme.CreateStringWME(IOConstants.DIRECTION, dir);
+                PointWithDistanceIL gatewayPoint = new PointWithDistanceIL(gatewayWme, agent, w.getMidpoint());
+                gatewayWme.CreateStringWME(IOConstants.DOOR, "nil");
+                gatewayWme.CreateIntWME(IOConstants.TO, id);
+                gatewayWme.CreateIntWME(IOConstants.TO, ad.getId());
+
+                destroyList.add(gatewayWme);
+                pointDataList.add(gatewayPoint);
             }
             StringWme.newInstance(wallwme, IOConstants.OPEN, Boolean.toString(open));
             

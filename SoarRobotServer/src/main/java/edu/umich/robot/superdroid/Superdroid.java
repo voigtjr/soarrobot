@@ -67,6 +67,7 @@ import edu.umich.robot.metamap.AreaState;
 import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.radio.Radio;
+import edu.umich.robot.slam.SoarSlam;
 import edu.umich.robot.util.HeadingController;
 import edu.umich.robot.util.PIDController;
 import edu.umich.robot.util.Pose;
@@ -125,7 +126,7 @@ public class Superdroid implements Robot
     
     // TODO
     // Slam
-    // private SoarSlam slam;
+    private SoarSlam slam;
     
     public Superdroid(String name, Radio radio, Metamap metamap) 
     {
@@ -147,18 +148,7 @@ public class Superdroid implements Robot
         commandTask = schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
         
         // Initalize slam.
-        // Will throw an exception if the default config file isn't found.
-        // TODO
-        /*
-        try
-        {
-            slam = new SoarSlam();
-        }
-        catch (IOException e)
-        {
-            slam = null;
-        }
-        */
+        slam = new SoarSlam();
     }
     
     public RobotType getType()

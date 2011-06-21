@@ -83,7 +83,6 @@ public class SimSplinter implements SoarSimObject, TimeScalable
 
     synchronized void update(double dt)
     {
-        System.out.println("dt: " + dt);
         if (driveCommand != null)
         {
             leftMotor.setVoltage(driveCommand.left * 12);
@@ -95,9 +94,7 @@ public class SimSplinter implements SoarSimObject, TimeScalable
         double right_rad_per_sec = rightMotor.getRadPerSec();
         double wheel_diameter = 0.25;
         double baseline = 0.35;
-        
-        System.out.println("rad / sec: " + left_rad_per_sec + ", " + right_rad_per_sec);
-        
+                
         double dleft = dt * left_rad_per_sec * wheel_diameter;
         totalMeters.left += dleft;
         

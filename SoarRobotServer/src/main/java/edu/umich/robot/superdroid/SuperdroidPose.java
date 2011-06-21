@@ -43,7 +43,6 @@ public class SuperdroidPose implements PoseProvider
                 }
             }
         });
-
     }
     
     public pose_t getPose()
