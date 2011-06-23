@@ -152,6 +152,7 @@ public class AreaDescriptionIL extends InputLinkElement
             lcmtemplist.add(wp);
 
             Identifier wallwme = agent.getSoarAgent().CreateIdWME(getRoot(), IOConstants.WALL);
+            wallwme.CreateIntWME(IOConstants.ID, w.getId());
             PointWithDistanceIL pointData = new PointWithDistanceIL(wallwme, agent, w.getMidpoint());
 
             String dir = w.getDirection().toString().toLowerCase();
@@ -161,7 +162,9 @@ public class AreaDescriptionIL extends InputLinkElement
             for (Integer id : w.getTo())
             {
                 open = true;
-                IntWme.newInstance(wallwme, IOConstants.TO, id);
+                
+                // Use a ^gateway wme instead of ^to
+                // IntWme.newInstance(wallwme, IOConstants.TO, id);
                 
                 // Add something here that looks like a gateway
                 Identifier gatewayWme = agent.getSoarAgent().CreateIdWME(getRoot(), IOConstants.GATEWAY);
@@ -173,6 +176,7 @@ public class AreaDescriptionIL extends InputLinkElement
 
                 destroyList.add(gatewayWme);
                 pointDataList.add(gatewayPoint);
+                
             }
             StringWme.newInstance(wallwme, IOConstants.OPEN, Boolean.toString(open));
             

@@ -54,4 +54,6 @@ public interface Wall
      * @return
      */
     List<Integer> getTo();
+    
+    int getId();
 }

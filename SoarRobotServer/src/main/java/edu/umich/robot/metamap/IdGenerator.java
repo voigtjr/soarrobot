@@ -34,6 +34,11 @@ public class IdGenerator
     private final AtomicInteger next = new AtomicInteger();
     private final AtomicInteger mark = new AtomicInteger();
     
+    public IdGenerator() 
+    {
+        
+    }
+    
     public int getId()
     {
         return next.getAndIncrement();

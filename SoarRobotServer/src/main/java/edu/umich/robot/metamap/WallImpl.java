@@ -40,15 +40,18 @@ public class WallImpl implements Wall
     
     private final List<Integer> to;
     
-    WallImpl(Pose room, Pose roomMidpoint, WallDir dir)
+    private int id;
+    
+    WallImpl(Pose room, Pose roomMidpoint, WallDir dir, IdGenerator idg)
     {
-        this(room, roomMidpoint, dir, new ArrayList<Integer>());
+        this(room, roomMidpoint, dir, new ArrayList<Integer>(), idg);
     }
     
-    WallImpl(Pose room, Pose roomMidpoint, WallDir dir, List<Integer> to)
+    WallImpl(Pose room, Pose roomMidpoint, WallDir dir, List<Integer> to, IdGenerator idg)
     {
         this.dir = dir;
         this.to = new ImmutableList.Builder<Integer>().addAll(to).build();
+        this.id = idg.getId();
 
         Pose mp = new Pose(roomMidpoint);
         switch (dir)
@@ -82,6 +85,11 @@ public class WallImpl implements Wall
     public List<Integer> getTo()
     {
         return to;
+    }
+    
+    public int getId()
+    {
+        return id;
     }
     
     @Override
