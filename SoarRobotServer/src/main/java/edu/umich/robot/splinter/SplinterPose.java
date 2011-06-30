@@ -13,7 +13,7 @@ import april.lcmtypes.pose_t;
 import edu.umich.robot.util.PoseProvider;
 import edu.umich.robot.util.Poses;
 
-public class SplinterPose implements PoseProvider
+public class SplinterPose extends PoseProvider
 {
     private static final Log logger = LogFactory.getLog(Poses.class);
 
@@ -25,6 +25,7 @@ public class SplinterPose implements PoseProvider
 
     SplinterPose(String id)
     {
+        super();
         String channel = POSE_CHANNEL_BASE + id;
         LCM.getSingleton().subscribe(channel, new LCMSubscriber()
         {
@@ -34,6 +35,7 @@ public class SplinterPose implements PoseProvider
                 try
                 {
                     pose = new pose_t(ins);
+                    poseChanged();
                 }
                 catch (IOException e)
                 {

@@ -29,40 +29,46 @@ import april.vis.VisText;
 import april.vis.VisViewManager;
 import april.vis.VisWorld;
 
-/** VisCanvasEventAdapter that draws a robot and allows teleportation. **/
+/**
+ * VisCanvasEventAdapter that draws a robot and allows teleportation and
+ * selection.
+ **/
 public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
 {
-    public enum FollowMode {
-        FOLLOW_DISABLED (0),
-        FOLLOW_XY (1),
-        FOLLOW_XY_THETA (2);
+    public enum FollowMode
+    {
+        FOLLOW_DISABLED(0), FOLLOW_XY(1), FOLLOW_XY_THETA(2);
 
         int value;
 
-        FollowMode(int value) {
+        FollowMode(int value)
+        {
             this.value = value;
         }
 
-        String prettyString() {
+        String prettyString()
+        {
             return this.name().replace('_', ' ').toLowerCase();
         }
     }
 
-    Viewer              viewer;
-    String              name;
-    Config              config;
-    LCM                 lcm             = LCM.getSingleton();
-    VisRobot            vrobot          = new VisRobot();
-    VisObject           vavatar;
-    VisObject           vSelectionCircle;
-    java.util.Timer     leadTimer;
-    LeadTask            leadTask        = new LeadTask();
-    pose_t              pose;
-    FollowMode          followMode      = FollowMode.FOLLOW_DISABLED;
-    double              lastRobotPos[]  = new double[] { 0, 0, 0 };
-    double              lastRobotQuat[] = new double[] { 1, 0, 0, 0 };
-    PoseTracker         pt;
+    Viewer viewer;
+    String name;
+    Config config;
+    LCM lcm = LCM.getSingleton();
+    VisRobot vrobot = new VisRobot();
+    VisObject vavatar;
+    VisObject vSelectionCircle;
+    java.util.Timer leadTimer;
+    LeadTask leadTask = new LeadTask();
+    pose_t pose;
+    FollowMode followMode = FollowMode.FOLLOW_DISABLED;
+    double lastRobotPos[] = new double[] { 0, 0, 0 };
+    double lastRobotQuat[] = new double[] { 1, 0, 0, 0 };
+    PoseTracker pt;
     ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+
+    boolean selected;
 
     /** If interactive, teleports are enabled. **/
     public SoarViewRobot(Viewer viewer, String name, Config config)
@@ -77,40 +83,42 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
         double spos[] = config.getDoubles("avatar.position", null);
         double squat[] = ConfigUtil.getQuaternion(config, "avatar");
         boolean model4 = config.getBoolean("model4", false);
-        if (spos != null && squat != null) {
+        if (spos != null && squat != null)
+        {
             VisObject robot = model4 ? new Model4(null, -1, Color.lightGray, 1.0) : ModelS.createRobot(Color.BLUE);
             vavatar = new VisChain(squat, spos, robot);
             vSelectionCircle = new VisCylinder(0.5, 0.01, new Color(.1f, .4f, 1f));
         }
 
-        exec.scheduleAtFixedRate(new Runnable() {
+        exec.scheduleAtFixedRate(new Runnable()
+        {
             @Override
             public void run()
             {
                 pose = pt.get();
-                if (pose == null) {
+                if (pose == null)
+                {
                     // System.out.println(ViewRobot.this.name + " pose null");
                     return;
                 }
                 VisWorld.Buffer vb = SoarViewRobot.this.viewer.getVisWorld().getBuffer("Robot " + SoarViewRobot.this.name);
                 // vb.addBuffered(new VisChain(pose.orientation, pose.pos,
                 // vrobot));
-                if (vavatar != null) {
+                if (vavatar != null)
+                {
                     vb.addBuffered(new VisChain(pose.orientation, pose.pos, vavatar));
                 }
-                
-                // TODO SoarApril
-                /*
-                if (isSelected()) {
+
+                if (isSelected())
+                {
                     vb.addBuffered(new VisChain(pose.orientation, pose.pos, vSelectionCircle));
                 }
-                */
 
                 vb.switchBuffer();
-                if (followMode != FollowMode.FOLLOW_DISABLED) {
+                if (followMode != FollowMode.FOLLOW_DISABLED)
+                {
                     VisViewManager viewManager = SoarViewRobot.this.viewer.getVisCanvas().getViewManager();
-                    viewManager.follow(lastRobotPos, lastRobotQuat, pose.pos, pose.orientation,
-                            followMode == FollowMode.FOLLOW_XY_THETA);
+                    viewManager.follow(lastRobotPos, lastRobotQuat, pose.pos, pose.orientation, followMode == FollowMode.FOLLOW_XY_THETA);
                 }
                 lastRobotPos = LinAlg.copy(pose.pos);
                 lastRobotQuat = LinAlg.copy(pose.orientation);
@@ -121,16 +129,13 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
     @Override
     public boolean mouseDragged(VisCanvas vc, GRay3D ray, MouseEvent e)
     {
-        if (!vc.isPicking(this))
-            return false;
-        
+        if (!vc.isPicking(this)) return false;
+
         // TODO SoarApril
         /*
-        if (!isSelected())
-            return false;
-            */
-        if (pose == null)
-            return false;
+         * if (!isSelected()) return false;
+         */
+        if (pose == null) return false;
         int mods = e.getModifiersEx();
         boolean shift = (mods & MouseEvent.SHIFT_DOWN_MASK) > 0;
         boolean ctrl = (mods & MouseEvent.CTRL_DOWN_MASK) > 0;
@@ -138,8 +143,7 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
         ctrl = ctrl & (!alt);
         shift = shift & (!alt);
         // only left mouse button.
-        if ((mods & InputEvent.BUTTON1_DOWN_MASK) == 0)
-            return false;
+        if ((mods & InputEvent.BUTTON1_DOWN_MASK) == 0) return false;
         if (!shift && !ctrl)
         {
             // translate. Move robot to the mouse position
@@ -176,11 +180,11 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
 
     class LeadTask extends TimerTask
     {
-        GRay3D              ray;
-        static final double MAX_VELOCITY         = 0.5;     // m/s
+        GRay3D ray;
+        static final double MAX_VELOCITY = 0.5; // m/s
         static final double MAX_ANGULAR_VELOCITY = Math.PI; // rad/s
-        static final int    HZ                   = 40;
-        static final double DT                   = 1.0 / HZ;
+        static final int HZ = 40;
+        static final double DT = 1.0 / HZ;
 
         @Override
         public void run()
@@ -188,8 +192,7 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
             // lead the robot.
             double pos[] = ray.intersectPlaneXY(pose.pos[2]);
             double distance = LinAlg.distance(pos, pose.pos);
-            if (distance < 0.3)
-                return;
+            if (distance < 0.3) return;
             double theta = Math.atan2(pos[1] - pose.pos[1], pos[0] - pose.pos[0]);
             pose.orientation = LinAlg.angleAxisToQuat(theta, new double[] { 0, 0, 1 });
             double err[] = LinAlg.subtract(pos, pose.pos);
@@ -202,17 +205,22 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
     @Override
     public boolean mousePressed(VisCanvas vc, GRay3D ray, MouseEvent e)
     {
-        if (e.getButton() == MouseEvent.BUTTON1) {
+        if (e.getButton() == MouseEvent.BUTTON1)
+        {
             // TODO SoarApril
-            /*
-            if (vc.isPicking(this)) {
-                select();
+
+            if (vc.isPicking(this))
+            {
+                setSelected(false);
                 return true;
             }
-            if (isSelected()) {
-                deselect();
+            /*
+            if (isSelected())
+            {
+                setSelected(true);
             }
             */
+
         }
         return false;
     }
@@ -220,8 +228,7 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
     @Override
     public boolean mouseReleased(VisCanvas vc, GRay3D ray, MouseEvent e)
     {
-        if (!vc.isPicking(this))
-            return false;
+        if (!vc.isPicking(this)) return false;
         if (leadTimer != null)
         {
             leadTimer.cancel();
@@ -257,8 +264,7 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
 
     protected double queryDistance(VisCanvas vc, GRay3D ray)
     {
-        if (pose == null)
-            return -1;
+        if (pose == null) return -1;
         double pos[] = ray.intersectPlaneXY();
         double dist = Math.sqrt(LinAlg.sq(pos[0] - pose.pos[0]) + LinAlg.sq(pos[1] - pose.pos[1]));
         return dist < 1 ? dist : -1;
@@ -271,47 +277,52 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
     }
 
     VisObject lastFollowTemporary;
-//    int       findCount;
-//    boolean   lastCharT = false;
+
+    // int findCount;
+    // boolean lastCharT = false;
 
     @Override
     public boolean keyTyped(VisCanvas vc, KeyEvent e)
     {
-//        if (e.getKeyChar() == 'f')
-//        {
-//            // Follow mode
-//            followMode = (followMode + 1) % 3;
-//            vc.getWorld().removeTemporary(lastFollowTemporary);
-//            lastFollowTemporary = new VisText(VisText.ANCHOR.CENTER, followString[followMode]);
-//            vc.getWorld().addTemporary(lastFollowTemporary, 1.0);
-//            return true;
-//        }
-//        if (e.getKeyChar() == 'F' && lastRobotPos != null)
-//        {
-//            findCount++;
-//            if (findCount % 2 == 1)
-//            {
-//                // FIND.
-//                VisViewManager viewManager = vc.getViewManager();
-//                viewManager.lookAt(LinAlg.add(lastRobotPos, new double[] { 0, 0, 10 }), lastRobotPos, new double[] { 0, 1, 0 });
-//            }
-//            else
-//            {
-//                VisViewManager viewManager = vc.getViewManager();
-//                double rpy[] = LinAlg.quatToRollPitchYaw(lastRobotQuat);
-//                double behindDist = 5;
-//                viewManager.lookAt(LinAlg.add(lastRobotPos, new double[] { Math.cos(-rpy[2]) * behindDist, Math.sin(-rpy[2]) * behindDist, 2 }), lastRobotPos, new double[] { 0, 0, 1 });
-//            }
-//            return true;
-//        }
-//        if (lastCharT)
-//        {
-//            if (e.getKeyChar() == 'c')
-//            {
-//                trajectory.clear();
-//            }
-//        }
-//        lastCharT = e.getKeyChar() == 't';
+        // if (e.getKeyChar() == 'f')
+        // {
+        // // Follow mode
+        // followMode = (followMode + 1) % 3;
+        // vc.getWorld().removeTemporary(lastFollowTemporary);
+        // lastFollowTemporary = new VisText(VisText.ANCHOR.CENTER,
+        // followString[followMode]);
+        // vc.getWorld().addTemporary(lastFollowTemporary, 1.0);
+        // return true;
+        // }
+        // if (e.getKeyChar() == 'F' && lastRobotPos != null)
+        // {
+        // findCount++;
+        // if (findCount % 2 == 1)
+        // {
+        // // FIND.
+        // VisViewManager viewManager = vc.getViewManager();
+        // viewManager.lookAt(LinAlg.add(lastRobotPos, new double[] { 0, 0, 10
+        // }), lastRobotPos, new double[] { 0, 1, 0 });
+        // }
+        // else
+        // {
+        // VisViewManager viewManager = vc.getViewManager();
+        // double rpy[] = LinAlg.quatToRollPitchYaw(lastRobotQuat);
+        // double behindDist = 5;
+        // viewManager.lookAt(LinAlg.add(lastRobotPos, new double[] {
+        // Math.cos(-rpy[2]) * behindDist, Math.sin(-rpy[2]) * behindDist, 2 }),
+        // lastRobotPos, new double[] { 0, 0, 1 });
+        // }
+        // return true;
+        // }
+        // if (lastCharT)
+        // {
+        // if (e.getKeyChar() == 'c')
+        // {
+        // trajectory.clear();
+        // }
+        // }
+        // lastCharT = e.getKeyChar() == 't';
         return false;
     }
 
@@ -319,10 +330,8 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
     {
         // TODO SoarApril
         /*
-        if (isSelected()) {
-            viewer.setSelectedFollowMode(mode);
-        }
-        */
+         * if (isSelected()) { viewer.setSelectedFollowMode(mode); }
+         */
         followMode = mode;
         vc.getWorld().removeTemporary(lastFollowTemporary);
         lastFollowTemporary = new VisText(VisText.ANCHOR.BOTTOM, mode.prettyString());
@@ -334,19 +343,20 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
     {
         VisViewManager viewManager = vc.getViewManager();
         double rpy[] = LinAlg.quatToRollPitchYaw(lastRobotQuat);
-        if (mode == 1) {
+        if (mode == 1)
+        {
             // Above robot
             double[] eye = LinAlg.add(lastRobotPos, new double[] { 0, 0, 10 });
             double[] lookAt = lastRobotPos;
             double[] up = new double[] { Math.cos(rpy[2]), Math.sin(rpy[2]), 0 };
             viewManager.viewGoal.lookAt(eye, lookAt, up);
-        } else {
+        }
+        else
+        {
             // Behind robot
             double behindDist = 1.2;
             double height = 1;
-            double[] eye = LinAlg.add(lastRobotPos, new double[] {
-                    Math.cos(rpy[2] + Math.PI) * behindDist,
-                    Math.sin(rpy[2] + Math.PI) * behindDist, height });
+            double[] eye = LinAlg.add(lastRobotPos, new double[] { Math.cos(rpy[2] + Math.PI) * behindDist, Math.sin(rpy[2] + Math.PI) * behindDist, height });
             double[] lookAt = LinAlg.add(lastRobotPos, new double[] { 0, 0, height - .3 });
             double[] up = new double[] { 0, 0, 1 };
             viewManager.viewGoal.lookAt(eye, lookAt, up);
@@ -364,23 +374,19 @@ public class SoarViewRobot extends VisCanvasEventAdapter implements ViewObject
         houts.addKeyboardCommand(this, "f", HelpOutput.CTRL, "Cycle through follow modes");
         houts.addKeyboardCommand(this, "F", HelpOutput.CTRL, "Find robot");
     }
-    
-    // TODO SoarApril
-    /*
-    public boolean isSelected() {
-        return viewer.robotIsSelected(this);
+
+    public boolean isSelected()
+    {
+        return selected;
     }
 
-    public void select() {
-        viewer.setSelectedRobot(this);
+    public void setSelected(boolean selected)
+    {
+        this.selected = selected;
     }
 
-    public void deselect() {
-        viewer.setSelectedRobot(null);
-    }
-
-    public FollowMode getFollowMode() {
+    public FollowMode getFollowMode()
+    {
         return followMode;
     }
-    */
 }
