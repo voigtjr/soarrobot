@@ -359,6 +359,7 @@ public class GuiApplication
         viewer.addRobotSelectionChangedListener(robotsView);
         viewer.getVisCanvas().setDrawGround(true);
         */
+        
         viewer.getVisCanvas().addEventHandler(new VisCanvasEventAdapter() {
 
             public String getName() {

@@ -18,6 +18,6 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/SoarRobotLibrary"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/orc.jar"/>
-	<classpathentry kind="lib" path="/Users/kinkadek/Programming/april/java/april.jar"/>
+	<classpathentry kind="lib" path="/Users/miller/Programming/april/java/april.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

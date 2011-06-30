@@ -21,16 +21,18 @@
  */
 package edu.umich.robot.laser;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import lcm.lcm.LCM;
-
 import april.lcmtypes.laser_t;
 
 import com.google.common.util.concurrent.MoreExecutors;
+
+import edu.umich.robot.lcmtypes.urg_range_t;
 
 /**
  * Merges messages from a SICK and/or simulated laser sensor in to a single,
@@ -44,7 +46,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 public class Lidar
 {
-    //private static final Log logger = LogFactory.getLog(Lidar.class);
+    // private static final Log logger = LogFactory.getLog(Lidar.class);
 
     private static final LCM lcm = LCM.getSingleton();
 
@@ -63,35 +65,52 @@ public class Lidar
     private final UrgBinner urg;
 
     private final String lowresChannel;
-    
+
     private final ScheduledExecutorService schexec = MoreExecutors.getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1));
-    
+
     private final float radstep;
-    
+
     private final float rad0;
-    
+
     private Laser cached;
+
+    // For lidar-change events
+    public interface Binner
+    {
+    }
+
+    public interface LidarChangedListener
+    {
+        void onLidarChanged(SickBinner binner);
+
+        void onLidarChanged(UrgBinner binner);
+    }
+
+    private ArrayList<LidarChangedListener> lidarChangedListeners = new ArrayList<LidarChangedListener>();
 
     public Lidar(String name, boolean useSick, int bins, double fov)
     {
         sim = new SickBinner(SIM_LASER_CHANNEL_BASE + name, bins, fov);
-        if (useSick)  
+        sim.setLidar(this);
+        if (useSick)
         {
             sick = new SickBinner(SICK_LASER_CHANNEL_BASE + name, bins, fov);
+            sick.setLidar(this);
             urg = null;
         }
         else
         {
             sick = null;
             urg = new UrgBinner(URG_CHANNEL_BASE + name, bins, fov);
+            urg.setLidar(this);
         }
         lowresChannel = LASER_LOWRES_CHANNEL_BASE + name;
-        
-        radstep = (float)(Math.PI / bins);
-        rad0 = (float)(Math.PI / -2) + (radstep / 2);
+
+        radstep = (float) (Math.PI / bins);
+        rad0 = (float) (Math.PI / -2) + (radstep / 2);
         Laser.Builder lb = new Laser.Builder(rad0, radstep);
         cached = lb.addRanges(new float[] { 0, 0, 0, 0, 0 }).build();
-        
+
         schexec.scheduleAtFixedRate(update, 0, 100, TimeUnit.MILLISECONDS);
     }
 
@@ -116,20 +135,20 @@ public class Lidar
             {
                 urg.update();
                 urgBins = urg.getBinned();
+
             }
-            
+
             int bins = simBins != null ? simBins.size() : 0;
             if (bins == 0)
             {
                 bins = sickBins != null ? sickBins.size() : 0;
                 if (bins == 0)
                 {
-                     bins = urgBins != null ? urgBins.size() : 0;
-                     if (bins == 0)
-                         return;
+                    bins = urgBins != null ? urgBins.size() : 0;
+                    if (bins == 0) return;
                 }
             }
-            
+
             Laser.Builder lb = new Laser.Builder(rad0, radstep);
             for (int i = 0; i < bins; ++i)
             {
@@ -143,11 +162,10 @@ public class Lidar
             lcm.publish(lowresChannel, cached.toLcm());
         }
     };
-    
+
     private final float min(float value, List<Float> bins, int i)
     {
-        if (bins == null)
-            return value;
+        if (bins == null) return value;
         return Math.min(value, bins.get(i));
     }
 
@@ -155,7 +173,7 @@ public class Lidar
     {
         return cached;
     }
-    
+
     public void shutdown()
     {
         schexec.shutdown();
@@ -171,18 +189,15 @@ public class Lidar
         {
             return buildLaser(sick.getLaser());
         }
-        
+
         // TODO merge urg and sim / sick types
         /*
-        if (urg != null)
-        {
-            return buildLaser(urg.getLaser());
-        }
-        */
-        
+         * if (urg != null) { return buildLaser(urg.getLaser()); }
+         */
+
         return null;
     }
-    
+
     private static Laser buildLaser(laser_t laser)
     {
         Laser.Builder lb = new Laser.Builder(laser.rad0, laser.radstep);
@@ -192,5 +207,30 @@ public class Lidar
             lb.add(value);
         }
         return lb.build();
+    }
+
+    public void addLidarChangedListener(LidarChangedListener listener)
+    {
+        lidarChangedListeners.add(listener);
+    }
+
+    public void removeLidarChangedListener(LidarChangedListener listener)
+    {
+        lidarChangedListeners.remove(listener);
+    }
+
+    public void lidarChanged(Binner binner)
+    {
+        for (LidarChangedListener listener : lidarChangedListeners)
+        {
+            if (binner instanceof SickBinner)
+            {
+                listener.onLidarChanged((SickBinner) binner);
+            }
+            if (binner instanceof UrgBinner)
+            {
+                listener.onLidarChanged((UrgBinner) binner);
+            }
+        }
     }
 }

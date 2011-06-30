@@ -28,6 +28,8 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import april.lcmtypes.laser_t;
+import april.lcmtypes.pose_t;
 import april.util.TimeUtil;
 
 import com.google.common.util.concurrent.MoreExecutors;
@@ -62,15 +64,21 @@ import edu.umich.robot.events.feedback.EffectorSuccessEvent;
 import edu.umich.robot.events.feedback.RobotConfigChangedEvent;
 import edu.umich.robot.laser.Laser;
 import edu.umich.robot.laser.Lidar;
+import edu.umich.robot.laser.Lidar.LidarChangedListener;
+import edu.umich.robot.laser.SickBinner;
+import edu.umich.robot.laser.UrgBinner;
+import edu.umich.robot.lcmtypes.urg_range_t;
 import edu.umich.robot.metamap.AreaDescription;
 import edu.umich.robot.metamap.AreaState;
 import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.radio.Radio;
-import edu.umich.robot.slam.SoarSlam;
+import edu.umich.robot.slam.Slam;
+import edu.umich.robot.slam.SlamGui;
 import edu.umich.robot.util.HeadingController;
 import edu.umich.robot.util.PIDController;
 import edu.umich.robot.util.Pose;
+import edu.umich.robot.util.PoseProvider.PoseChangedListener;
 import edu.umich.robot.util.SimBattery;
 import edu.umich.robot.util.Updatable;
 import edu.umich.robot.util.events.RobotEventListener;
@@ -82,7 +90,7 @@ import edu.umich.robot.util.properties.PropertyManager;
 /**
  * @author voigtjr@gmail.com
  */
-public class Superdroid implements Robot
+public class Superdroid implements Robot, LidarChangedListener, PoseChangedListener
 {
     private final PropertyManager properties = new PropertyManager();
 
@@ -126,7 +134,8 @@ public class Superdroid implements Robot
     
     // TODO
     // Slam
-    private SoarSlam slam;
+    private SlamGui slamGui;
+    private Slam slam;
     
     public Superdroid(String name, Radio radio, Metamap metamap) 
     {
@@ -136,6 +145,7 @@ public class Superdroid implements Robot
         this.lidar = new Lidar(name, false, 5, Math.PI);
         
         pose = new SuperdroidPose(name);
+        pose.addPoseChangedListener(this);
         initGains();
         drive = new SuperdroidDrive(name);
         velocities = new SuperdroidVelocities(name, drive, pose, apid, lpid);
@@ -148,7 +158,9 @@ public class Superdroid implements Robot
         commandTask = schexec.scheduleAtFixedRate(command, 0, period, TimeUnit.MILLISECONDS);
         
         // Initalize slam.
-        slam = new SoarSlam();
+        slamGui = new SlamGui();
+        slam = slamGui.getSlam();
+        lidar.addLidarChangedListener(this);
     }
     
     public RobotType getType()
@@ -502,6 +514,25 @@ public class Superdroid implements Robot
         schexec.shutdown();
         lidar.shutdown();
         battery.shutdown();
+    }
+
+    @Override
+    public void onLidarChanged(SickBinner binner)
+    {
+        laser_t laser = binner.getLaser();
+        slam.processScan(laser);
+    }
+
+    @Override
+    public void onLidarChanged(UrgBinner binner)
+    {
+        // TODO implement
+    }
+
+    @Override
+    public void onPoseChanged(pose_t pose)
+    {
+        slam.processOdometry(pose);
     }
 
 }

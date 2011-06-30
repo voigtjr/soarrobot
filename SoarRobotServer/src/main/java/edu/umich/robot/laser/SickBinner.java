@@ -12,6 +12,8 @@ import april.util.TimeUtil;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import edu.umich.robot.laser.Lidar.Binner;
+
 /**
  * TODO refactor this and UrgBinner -- they share a lot of code. See URG binner
  * for detailed comments.
@@ -19,7 +21,7 @@ import com.google.common.collect.Lists;
  * @author voigtjr
  * 
  */
-public class SickBinner
+public class SickBinner implements Binner
 {
     private final LCM lcm = LCM.getSingleton();
     
@@ -34,6 +36,8 @@ public class SickBinner
     private final double fov0;
     
     private final double fovstep;
+    
+    private Lidar lidar = null;
     
     public SickBinner(String channel, int bins, double fov)
     {
@@ -53,6 +57,11 @@ public class SickBinner
         lcm.subscribe(channel, subscriber);
     }
     
+    public void setLidar(Lidar lidar)
+    {
+        this.lidar = lidar;
+    }
+    
     private final LCMSubscriber subscriber = new LCMSubscriber()
     {
         @Override
@@ -61,6 +70,7 @@ public class SickBinner
             try 
             {
                 laser = new laser_t(ins);
+                lidar.lidarChanged(SickBinner.this);
             }
             catch (IOException e)
             {

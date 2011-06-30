@@ -24,7 +24,7 @@ import april.lcmtypes.pose_t;
 import april.util.GridMap;
 import april.util.Tic;
 
-public class SoarSlam
+public class Slam
 {
     // slam setup
     boolean useOdom = false;
@@ -107,12 +107,12 @@ public class SoarSlam
         ArrayList<double[]> gpoints;
     }
 
-    public SoarSlam()
+    public Slam()
     {
         this(null);
     }
 
-    public SoarSlam(Config config)
+    public Slam(Config config)
     {
         // parsing config file
         if (config != null)

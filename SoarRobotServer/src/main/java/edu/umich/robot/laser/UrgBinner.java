@@ -12,6 +12,7 @@ import april.util.TimeUtil;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import edu.umich.robot.laser.Lidar.Binner;
 import edu.umich.robot.lcmtypes.urg_range_t;
 
 /**
@@ -21,7 +22,7 @@ import edu.umich.robot.lcmtypes.urg_range_t;
  * @author voigtjr
  * 
  */
-public class UrgBinner
+public class UrgBinner implements Binner
 {
     private final LCM lcm = LCM.getSingleton();
     
@@ -36,6 +37,8 @@ public class UrgBinner
     private final double fov0;
     
     private final double fovstep;
+    
+    private Lidar lidar = null;
     
     /**
      * @param channel The channel the URG is sending data to.
@@ -60,6 +63,11 @@ public class UrgBinner
         lcm.subscribe(channel, subscriber);
     }
     
+    public void setLidar(Lidar lidar)
+    {
+        this.lidar = lidar;
+    }
+    
     private final LCMSubscriber subscriber = new LCMSubscriber()
     {
         @Override
@@ -68,6 +76,10 @@ public class UrgBinner
             try 
             {
                 urg = new urg_range_t(ins);
+                if (lidar != null)
+                {
+                    lidar.lidarChanged(UrgBinner.this);
+                }
             }
             catch (IOException e)
             {
@@ -147,6 +159,11 @@ public class UrgBinner
         if (last == -1)
             return null;
         return new ImmutableList.Builder<Float>().addAll(binned).build();
+    }
+    
+    public urg_range_t getUrgRange()
+    {
+        return urg;
     }
     
     public static void main(String[] args)

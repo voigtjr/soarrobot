@@ -37,6 +37,7 @@ import edu.umich.robot.util.Misc;
  */
 public class Laser
 {
+    
     public static class Builder {
         ImmutableList.Builder<Float> ranges = new ImmutableList.Builder<Float>();
         private final float rad0;
