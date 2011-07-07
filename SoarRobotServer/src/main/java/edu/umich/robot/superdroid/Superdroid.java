@@ -21,7 +21,9 @@
  */
 package edu.umich.robot.superdroid;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -519,8 +521,24 @@ public class Superdroid implements Robot, LidarChangedListener, PoseChangedListe
     @Override
     public void onLidarChanged(SickBinner binner)
     {
+    	//pass to "processScan" points from lidar scan in robot's coordinate frame
         laser_t laser = binner.getLaser();
-        slam.processScan(laser);
+        ArrayList<double[]> rpoints = new ArrayList<double[]>();
+		double rad0 = laser.rad0;
+		int skipBeams = 1; //allows for the skipping of beam returns
+		for(int i=0;i<laser.nranges;i++){
+			double c = Math.cos(rad0);
+			double s = Math.sin(rad0);
+			rad0+=laser.radstep;
+			
+			if(laser.ranges[i] > 10) continue;
+			// TODO check laser range before adding point to rpoints
+			if(i%skipBeams == 0){
+				double[] xy = {laser.ranges[i]*c,laser.ranges[i]*s};
+				rpoints.add(xy);
+			}
+		}
+        slam.processScan(rpoints);
     }
 
     @Override
@@ -532,7 +550,12 @@ public class Superdroid implements Robot, LidarChangedListener, PoseChangedListe
     @Override
     public void onPoseChanged(pose_t pose)
     {
-        slam.processOdometry(pose);
+    	//pass to "processOdometry" robots [x,y,theta] pose in global coordinate frame
+    	double[] q = pose.orientation;
+    	double y = 2*((q[0]*q[3])+(q[1]*q[2]));
+    	double x = 1-2*(Math.pow(q[2], 2) + Math.pow(q[3], 2));
+    	double angle = Math.atan2(y,x);
+    	double[] odomxyt = new double[]	{pose.pos[0], pose.pos[1], angle};
+        slam.processOdometry(odomxyt);
     }
-
 }

@@ -24,233 +24,226 @@ import april.vis.VisDataPointStyle;
 import april.vis.VisRobot;
 import april.vis.VisWorld;
 
-public class SlamGui implements LCMSubscriber
-{
-    // 3D viewing
-    int viewCount = 0;
+public class SlamGui implements LCMSubscriber {
+	// SoarSlam instance
+	Slam slam;
 
-    // SoarSlam instance
-    Slam slam;
+	// Objects for threading
+	PeriodicTasks dispPeriodicTasks = new PeriodicTasks();
+	Task dispTask = new Task() {
+		public void run(double dt) {
+			displayGraph(mapFrame.getWorld());
+		}
+	};
 
-    // Objects for threading
-    PeriodicTasks dispPeriodicTasks = new PeriodicTasks();
-    Task dispTask = new Task()
-    {
-        public void run(double dt)
-        {
-            displayGraph(slam.g, mapFrame.getWorld());
-        }
-    };
+	// Vis objects
+	SlamMapFrame mapFrame = new SlamMapFrame("Map View");
+	SlamScanFrame scanFrame = new SlamScanFrame("Scan View");
+	ParameterGUI parameterGui = mapFrame.getParameterGui();
 
-    // laser_t available for plotting the scan
-    laser_t cScan;
+	// For use by lcm-listening GUIs.
+	String laserName;
+	String odomName;
 
-    // Vis objects
-    SlamMapFrame mapFrame = new SlamMapFrame("Map View");
-    SlamScanFrame scanFrame = new SlamScanFrame("Scan View");
-    ParameterGUI parameterGui = mapFrame.getParameterGui();
+	public void messageReceived(LCM lcm, String channel, LCMDataInputStream ins) {
+		try {
+			if (channel.startsWith(laserName)) {
+				laser_t laser = new laser_t(ins);
+				ArrayList<double[]> rpoints = new ArrayList<double[]>();
+				double rad0 = laser.rad0;
+				int skipBeams = 1; // allows for the skipping of beam returns
+				for (int i = 0; i < laser.nranges; i++) {
+					double c = Math.cos(rad0);
+					double s = Math.sin(rad0);
+					rad0 += laser.radstep;
 
-    // For use by lcm-listening GUIs.
-    String laserName;
-    String odomName;
+					if (laser.ranges[i] > 10)
+						continue;
+					// TODO check laser range before adding point to rpoints
+					if (i % skipBeams == 0) {
+						double[] xy = { laser.ranges[i] * c,
+								laser.ranges[i] * s };
+						rpoints.add(xy);
+					}
+				}
+				slam.processScan(rpoints);
+			}
 
-    public void messageReceived(LCM lcm, String channel, LCMDataInputStream ins)
-    {
-        try
-        {
-            if (channel.startsWith(laserName))
-            {
-                laser_t laser = new laser_t(ins);
-                cScan = laser;
-                slam.processScan(laser);
-            }
+			if (channel.startsWith(odomName)) {
+				pose_t pose = new pose_t(ins);
+				// pass to "processOdometry" robots [x,y,theta] pose in global
+				// coordinate frame
+				double[] q = pose.orientation;
+				double y = 2 * ((q[0] * q[3]) + (q[1] * q[2]));
+				double x = 1 - 2 * (Math.pow(q[2], 2) + Math.pow(q[3], 2));
+				double angle = Math.atan2(y, x);
+				double[] odomxyt = new double[] { pose.pos[0], pose.pos[1],
+						angle };
+				slam.processOdometry(odomxyt);
+			}
+		} catch (Exception ex) {
+			System.out.println("Error Reading the message: " + ex);
+			ex.printStackTrace();
+		}
+	}
 
-            if (channel.startsWith(odomName))
-            {
-                pose_t pose = new pose_t(ins);
-                slam.processOdometry(pose);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.out.println("Error Reading the message: " + ex);
-            ex.printStackTrace();
-        }
-    }
+	public SlamGui() {
+		this(null);
+	}
 
-    public SlamGui()
-    {
-        this(null);
-    }
+	/**
+	 * Creates a SlamGui without subscribing to any LCM channels
+	 */
+	public SlamGui(Config config) {
+		if (config != null) {
+			slam = new Slam(config);
+		} else {
+			slam = new Slam();
+		}
+		if (parameterGui.gb("showscan"))
+			scanFrame.setVisible(true);
+		if (!parameterGui.gb("showscan"))
+			scanFrame.setVisible(false);
 
-    /**
-     * Creates a SlamGui without subscribing to any LCM channels
-     */
-    public SlamGui(Config config)
-    {
-        if (config != null)
-        {
-            slam = new Slam(config);
-        }
-        else
-        {
-            slam = new Slam();
-        }
-        if (parameterGui.gb("showscan")) scanFrame.setVisible(true);
-        if (!parameterGui.gb("showscan")) scanFrame.setVisible(false);
+		// Thread map vis
+		dispPeriodicTasks.addFixedDelay(dispTask, 0.2);
+		dispPeriodicTasks.setRunning(true);
+	}
 
-        // Thread map vis
-        dispPeriodicTasks.addFixedDelay(dispTask, 0.2);
-        dispPeriodicTasks.setRunning(true);
-    }
+	/**
+	 * Creates a SlamGui and subscribes to the specified LCM channels
+	 * 
+	 * @param config
+	 * @param laserName
+	 * @param odomName
+	 */
+	public SlamGui(Config config, String laserName, String odomName) {
+		this(config);
 
-    /**
-     * Creates a SlamGui and subscribes to the specified LCM channels
-     * 
-     * @param config
-     * @param laserName
-     * @param odomName
-     */
-    public SlamGui(Config config, String laserName, String odomName)
-    {
-        this(config);
+		// Parse config file
+		Config lcmConfig = config.getChild("lcm");
+		this.laserName = lcmConfig.getString("laserName", laserName);
+		this.odomName = lcmConfig.getString("odomName", odomName);
 
-        // Parse config file
-        Config lcmConfig = config.getChild("lcm");
-        this.laserName = lcmConfig.getString("laserName", laserName);
-        this.odomName = lcmConfig.getString("odomName", odomName);
+		// Subscribe to lcm
+		LCM lcm = LCM.getSingleton();
+		lcm.subscribe(this.laserName, this);
+		lcm.subscribe(this.odomName, this);
+	}
 
-        // Subscribe to lcm
-        LCM lcm = LCM.getSingleton();
-        lcm.subscribe(this.laserName, this);
-        lcm.subscribe(this.odomName, this);
-    }
+	public Slam getSlam() {
+		return slam;
+	}
 
-    public Slam getSlam()
-    {
-        return slam;
-    }
+	void displayGraph(VisWorld visual) {
+		VisWorld.Buffer worldBuffer = visual.getBuffer("worldstate");
+		VisWorld.Buffer robotsBuffer = visual.getBuffer("robots");
 
-    void displayGraph(Graph g, VisWorld visual)
-    {
-        VisWorld.Buffer worldBuffer = visual.getBuffer("worldstate");
-        VisWorld.Buffer robotsBuffer = visual.getBuffer("robots");
+		// Plot current pose
+		if (parameterGui.gb("showcurpose")) {
+			double[] pose = slam.xyt;
+			robotsBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(pose),
+					new VisRobot(Color.yellow)));
+		}
 
-        // Plot current pose
-        if (parameterGui.gb("showcurpose"))
-        {
-            double[] pose = slam.xyt;
-            robotsBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(pose), new VisRobot(Color.yellow)));
-        }
+		// Show scans as they are received
+		if (parameterGui.gb("showscan")) {
+			scanFrame.setVisible(true);
+			// process this scan into points
+			ArrayList<double[]> rpoints = new ArrayList<double[]>();
+			rpoints = slam.lastScan;
+			VisWorld.Buffer vb2 = scanFrame.getWorld().getBuffer("worldstate");
+			vb2.addBuffered(new VisChain(LinAlg.xytToMatrix(new double[] { 0,
+					0, 0 }), new VisRobot(Color.red)));
+			vb2.addBuffered(new VisData(new VisDataPointStyle(Color.blue, 2),
+					rpoints));
+			vb2.switchBuffer();
+		} else {
+			scanFrame.setVisible(false);
+		}
 
-        // Show scan
-        if (parameterGui.gb("showscan"))
-        {
-            scanFrame.setVisible(true);
-            // process this scan into points
-            ArrayList<double[]> rpoints = new ArrayList<double[]>();
-            if (cScan != null)
-            {
-                double rad0 = cScan.rad0;
-                for (int i = 0; i < cScan.nranges; i++)
-                {
-                    double c = Math.cos(rad0);
-                    double s = Math.sin(rad0);
-                    rad0 += cScan.radstep;
+		// Plot all nodes and their corresponding scans
+		for (int i = 0; i < slam.g.nodes.size(); i++) {
+			// Node's state
+			double[] pose = slam.g.nodes.get(i).state;
 
-                    // Thresholding errors
-                    if (cScan.ranges[i] > slam.minLaser && cScan.ranges[i] < slam.maxLaser)
-                    {
-                        double[] xy = { cScan.ranges[i] * c, cScan.ranges[i] * s };
-                        rpoints.add(xy);
-                    }
-                }
-            }
-            VisWorld.Buffer vb2 = scanFrame.getWorld().getBuffer("worldstate");
-            vb2.addBuffered(new VisChain(LinAlg.xytToMatrix(new double[] { 0, 0, 0 }), new VisRobot(Color.red)));
-            vb2.addBuffered(new VisData(new VisDataPointStyle(Color.blue, 2), rpoints));
-            vb2.switchBuffer();
-        }
-        else
-        {
-            scanFrame.setVisible(false);
-        }
+			// Node's scan
+			@SuppressWarnings("unchecked")
+			ArrayList<double[]> LPoints = (ArrayList<double[]>) slam.g.nodes
+					.get(i).getAttribute("points");
+			ArrayList<double[]> GPoints = LinAlg.transform(pose, LPoints);
 
-        // Plot all nodes and their corresponding scans
-        for (int i = 0; i < g.nodes.size(); i++)
-        {
+			// Add pose to buffer
+			robotsBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(pose),
+					new VisRobot(Color.red)));
 
-            // Node's state
-            double[] pose = g.nodes.get(i).state;
-            double nodeTime = (Double) g.nodes.get(i).getAttribute("time") * 0.25;
+			// Add scan to buffer
+			worldBuffer.addBuffered(new VisData(new VisDataPointStyle(
+					Color.blue, 2), GPoints));
+		}
 
-            // xyzrpy
-            double[] xyzrpy = new double[] { pose[0], pose[1], nodeTime, 0, 0, pose[2] };
+		// Display added edges from loop closure task
+		if (parameterGui.gb("hypothesis")) {
+			synchronized (slam.hypoth) {
+				for (GXYTEdge gh : slam.hypoth) {
+					VisData vd = new VisData(new VisDataPointStyle(Color.green,
+							2), new VisDataLineStyle(Color.green, 1));
 
-            // Node's scan
-            @SuppressWarnings("unchecked")
-            ArrayList<double[]> LPoints = (ArrayList<double[]>) g.nodes.get(i).getAttribute("points");
-            ArrayList<double[]> GPoints = LinAlg.transform(pose, LPoints);
+					GXYTNode ga = (GXYTNode) slam.g.nodes.get(gh.nodes[0]);
+					GXYTNode gb = (GXYTNode) slam.g.nodes.get(gh.nodes[1]);
 
-            // Add pose to buffer
-            if (!parameterGui.gb("threed")) robotsBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(pose), new VisRobot(Color.red)));
-            if (parameterGui.gb("threed"))
-            {
-                robotsBuffer.addBuffered(new VisChain(xyzrpy, new VisRobot(Color.red)));
-            }
+					vd.add(new double[] { ga.state[0], ga.state[1] });
+					vd.add(new double[] { gb.state[0], gb.state[1] });
 
-            // Add scan to buffer
-            worldBuffer.addBuffered(new VisData(new VisDataPointStyle(Color.blue, 2), GPoints));
-        }
+					worldBuffer.addBuffered(vd);
+				}
+			}
+		}
 
-        // Display added edges from loop closure task
-        if (parameterGui.gb("hypothesis"))
-        {
-            for (GXYTEdge gh : slam.hypoth)
-            {
-                VisData vd = new VisData(new VisDataPointStyle(Color.orange, 3), new VisDataLineStyle(Color.green, 1));
+		// Show additional paths (ground truth:red | pure odometry:black | slam
+		// corrected: yellow)
+		if (parameterGui.gb("gTruth")) {
+			VisData vd = new VisData(new VisDataPointStyle(Color.red, 2),
+					new VisDataLineStyle(Color.red, 2));
+			synchronized (slam.gTruth) {
+				for (double[] gt : slam.gTruth)
+					vd.add(new double[] { gt[0], gt[1] });
+				double[] grn = slam.gTruth.get(slam.gTruth.size() - 1);
+				// System.out.println("Ground Truth Location:" + grn[0] + ", " +
+				// grn[1] + ", " + grn[2]);
+			}
+			worldBuffer.addBuffered(vd);
+		}
+		if (parameterGui.gb("pureOdom")) {
+			VisData vd = new VisData(new VisDataPointStyle(Color.black, 2),
+					new VisDataLineStyle(Color.black, 2));
+			synchronized (slam.pureOdom) {
+				for (double[] po : slam.pureOdom)
+					vd.add(new double[] { po[0], po[1] });
+				double[] loc = slam.pureOdom.get(slam.pureOdom.size() - 1);
+				// System.out.println("Pure Odometry Location:" + loc[0] + ", "
+				// + loc[1] + ", " + loc[2]);
+			}
+			worldBuffer.addBuffered(vd);
+		}
+		if (parameterGui.gb("slamPose")) {
+			VisData vd = new VisData(new VisDataPointStyle(Color.yellow, 2),
+					new VisDataLineStyle(Color.yellow, 2));
+			synchronized (slam.slamPose) {
+				for (double[] sp : slam.slamPose)
+					vd.add(new double[] { sp[0], sp[1] });
+			}
+			worldBuffer.addBuffered(vd);
+		}
 
-                GXYTNode ga = (GXYTNode) g.nodes.get(gh.nodes[0]);
-                GXYTNode gb = (GXYTNode) g.nodes.get(gh.nodes[1]);
-                double ta = (Double) g.nodes.get(gh.nodes[0]).getAttribute("time") * 0.25;
-                double tb = (Double) g.nodes.get(gh.nodes[1]).getAttribute("time") * 0.25;
+		// Update vis
+		worldBuffer.switchBuffer();
+		robotsBuffer.switchBuffer();
+	}
 
-                if (!parameterGui.gb("threed"))
-                {
-                    vd.add(new double[] { ga.state[0], ga.state[1] });
-                    vd.add(new double[] { gb.state[0], gb.state[1] });
-                }
-
-                if (parameterGui.gb("threed"))
-                {
-                    vd.add(new double[] { ga.state[0], ga.state[1], ta });
-                    vd.add(new double[] { gb.state[0], gb.state[1], tb });
-                }
-                worldBuffer.addBuffered(vd);
-            }
-        }
-
-        // 3D viewer
-        // Rotate view, needs tuning depending on current data set
-        if (parameterGui.gb("threed") && slam.starter != 0)
-        {
-            double ang = Math.toRadians(viewCount);
-            double[] cameraPos = new double[] { 15 * Math.cos(ang), 15 * Math.sin(ang), 10 };
-            double[] viewPos = new double[] { g.nodes.get(0).state[0], g.nodes.get(0).state[1], 0 };
-            double[] up = new double[] { 0, 0, 1 };
-            mapFrame.getCanvas().getViewManager().viewGoal.lookAt(cameraPos, viewPos, up);
-            viewCount++;
-        }
-
-        // Update vis
-        worldBuffer.switchBuffer();
-        robotsBuffer.switchBuffer();
-    }
-
-    public static void main(String args[])
-    {
-        Config config = ConfigUtil.getDefaultConfig(args);
-        new SlamGui(config, "hoku", "odom");
-    }
+	public static void main(String args[]) {
+		Config config = ConfigUtil.getDefaultConfig(args);
+		new SlamGui(config, "hoku", "odom");
+	}
 
 }
