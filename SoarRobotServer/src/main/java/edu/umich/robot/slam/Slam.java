@@ -53,8 +53,7 @@ public class Slam {
 
 	// parameters for sampling from noisy odometry
 	Random r = new Random();
-	double[] al = new double[] { Math.pow(0.005, 2), Math.pow(0.0001, 2),
-			Math.pow(0.005, 2), Math.pow(0.001, 2) };
+	double[] al = new double[] { 0.01, 0.01, Math.toRadians(0.1) };
 	ArrayList<double[]> gTruth = new ArrayList<double[]>();
 	ArrayList<double[]> pureOdom = new ArrayList<double[]>();
 	ArrayList<double[]> slamPose = new ArrayList<double[]>();
@@ -201,7 +200,7 @@ public class Slam {
 		}
 
 		if (noisyOdom) {
-			// noisy sampling from odometry using RTR process model
+			// noisy sampling from odometry using RBT process model
 			double dist = LinAlg.distance(groundTruth, odomxyt);
 			double dang = Math
 					.abs(MathUtil.mod2pi(groundTruth[2] - odomxyt[2]));
@@ -211,31 +210,25 @@ public class Slam {
 					gTruth.add(LinAlg.copy(odomxyt));
 				}
 
-				// true movement parameters
-				double dtrans = Math.sqrt(Math.pow(
-						(odomxyt[0] - groundTruth[0]), 2)
-						+ Math.pow((odomxyt[1] - groundTruth[1]), 2));
-				double drot1 = Math.atan2((odomxyt[1] - groundTruth[1]),
-						(odomxyt[0] - groundTruth[0])) - groundTruth[2];
-				double drot2 = odomxyt[2] - groundTruth[2] - drot1;
+				// true movement RBT parameters
+				double[] priorU = LinAlg.xytInvMul31(groundTruth, odomxyt);
+				priorU[2] = MathUtil.mod2pi(priorU[2]);
 				groundTruth = LinAlg.copy(odomxyt);
 
-				// sampling from noise parameters
-				double s1 = al[0] * Math.pow(drot1, 2) + al[1]
-						* Math.pow(dtrans, 2);
-				double s2 = al[2] * Math.pow(dtrans, 2) + al[3]
-						* (Math.pow(drot1, 2) + Math.pow(drot2, 2));
-				double s3 = al[0] * Math.pow(drot2, 2) + al[1]
-						* Math.pow(dtrans, 2);
-				double rot1 = drot1 + Math.sqrt(s1) * r.nextGaussian();
-				double trans = dtrans + Math.sqrt(s2) * r.nextGaussian();
-				double rot2 = drot2 + Math.sqrt(s3) * r.nextGaussian();
+				// sampling from noise parameters, assuming error of al[num] per
+				// each
+				// full unit of true movement
+				double s1 = Math.abs(al[0] * priorU[0]);
+				double s2 = Math.abs(al[1] * priorU[1]);
+				double s3 = Math.abs(al[2] * priorU[2]);
+
+				double Dx = priorU[0] + Math.sqrt(s1) * r.nextGaussian();
+				double Dy = priorU[1] + Math.sqrt(s2) * r.nextGaussian();
+				double Dt = priorU[2] + Math.sqrt(s3) * r.nextGaussian();
 
 				// new odomxyt after sampling
-				odomxyt[2] = XYT[2] + rot1;
-				odomxyt[0] = XYT[0] + trans * Math.cos(odomxyt[2]);
-				odomxyt[1] = XYT[1] + trans * Math.sin(odomxyt[2]);
-				odomxyt[2] = odomxyt[2] + rot2;
+				double[] newU = new double[] { Dx, Dy, Dt };
+				odomxyt = LinAlg.xytMultiply(XYT, newU);
 				odomxyt[2] = MathUtil.mod2pi(odomxyt[2]);
 
 				synchronized (pureOdom) {

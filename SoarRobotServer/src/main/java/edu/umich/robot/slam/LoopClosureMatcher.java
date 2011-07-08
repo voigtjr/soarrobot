@@ -25,7 +25,7 @@ public class LoopClosureMatcher
     double distErr = 0.15;
     double rotErr = 0.1;
     double minMatchScore = 20 * 255;
-    double trange = Math.toRadians(180);
+    double trange = Math.toRadians(90);
     double trangeres = Math.toRadians(1);
     double xyrange = 0.1;
     double xCov = 1.0;
