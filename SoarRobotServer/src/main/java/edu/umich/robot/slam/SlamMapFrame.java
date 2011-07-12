@@ -21,9 +21,11 @@ public class SlamMapFrame extends JFrame
         super(title);
         
         parameterGui.addCheckBoxes("hypothesis", "Show Added Edges", true);
-        parameterGui.addCheckBoxes("threed", "View 3-D", false);
         parameterGui.addCheckBoxes("showscan", "Show Scan", false);
         parameterGui.addCheckBoxes("showcurpose", "Show Current Pose", true);
+        parameterGui.addCheckBoxes("gTruth", "Show Ground Truth Movement", false);
+        parameterGui.addCheckBoxes("pureOdom", "Show Noisy Odometry Movement", false);
+        parameterGui.addCheckBoxes("slamPose", "Show SLAM Corrected Movement", false);
 
         canvas.getViewManager().setInterfaceMode(3);
 

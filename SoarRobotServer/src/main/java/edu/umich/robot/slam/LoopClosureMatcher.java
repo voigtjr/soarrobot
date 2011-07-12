@@ -21,16 +21,17 @@ public class LoopClosureMatcher
     // pass in true values via 'config' file (see below)
     double metersPerPixel = 0.05;
     double rangeCovariance = 0.1;
-    double gridmap_size = 40;
+    double gridmap_size = 20;
     double distErr = 0.15;
     double rotErr = 0.1;
     double minMatchScore = 20 * 255;
-    double trange = Math.toRadians(10);
+    double trange = Math.toRadians(90);
     double trangeres = Math.toRadians(1);
-    double xyrange = 1.5;
+    double xyrange = 0.1;
     double xCov = 1.0;
     double yCov = 1.0;
     double tCov = Math.toRadians(5.0);
+    boolean openLoop = false;
 
     // loop closure scan matcher
     MultiResolutionMatcher clMatcher;
@@ -76,6 +77,19 @@ public class LoopClosureMatcher
         return this.xyrange;
     }
 
+    // setting matching parameters
+    public void setMatchParameters(double matchScore, double thetarange, double thetares, double searchrange){
+    	this.minMatchScore = matchScore;
+    	this.trange = thetarange;
+    	this.trangeres = thetares;
+    	this.xyrange = searchrange;
+    }
+    
+    //toggle this flag between openloop matching and closeloop matching
+    public void setOpenLoopMatch(boolean flag){
+    	this.openLoop = flag;
+    }
+    
     // set the grip map for the loop closure scan matcher
     public void setModel(GridMap gmap)
     {
@@ -126,27 +140,21 @@ public class LoopClosureMatcher
 
         r = hc.match(ptsB, priorXYT, priorScaled, LinAlg.copy(r, 3));
 
+        //additional constraints (do not affects systems with large search windows)
+        //simply in place to assist in the 'hallway' problem
+        if(openLoop){
+        	double[] hill = LinAlg.copy(r,3);
+        	double[] err = LinAlg.subtract(hill, priorXYT);
+        	err[2] = MathUtil.mod2pi(err[2]);
+        	if(Math.abs(err[0]) > xyrange || Math.abs(err[1]) > xyrange || Math.abs(err[2]) > trange){
+        		return null;
+        	}
+        }
+        
         if (r[3] < minMatchScore)
         { // score too low to add an edge
             return null;
         }
-
-        /*
-         * Additional constraints to consider . . . double xytb_posterior[] =
-         * LinAlg.copy(res, 3); double dxyt_posterior[] =
-         * LinAlg.xytInvMul31(xyta, xytb_posterior);
-         * 
-         * double err[] = LinAlg.subtract(xytb_posterior, xytb); err[2] =
-         * MathUtil.mod2pi(err[2]);
-         * 
-         * double err_dist = Math.sqrt(LinAlg.sq(err[0]) + LinAlg.sq(err[1]));
-         * double err_t = Math.abs(MathUtil.mod2pi(err[2]));
-         * 
-         * if (err_dist > 0.5 || err_t > Math.toRadians(15)) { sweep.xyt_slam =
-         * LinAlg.xytMultiply(sweepa.xyt_slam, dxyt_prior);
-         * System.out.println("rejecting slam"); } else { sweep.xyt_slam =
-         * LinAlg.xytMultiply(sweepa.xyt_slam, dxyt_posterior); } }
-         */
 
         newEdge.z = new double[] { r[0], r[1], r[2] };
         newEdge.P = LinAlg.diag(new double[] { xCov, yCov, tCov });

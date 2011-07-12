@@ -36,7 +36,7 @@ public class SuperdroidPose extends PoseProvider
                 try
                 {
                     pose = new pose_t(ins);
-                    System.out.println("Pose: " + pose.pos[0] + ", " + pose.pos[1] + ", " + pose.pos[2]);
+                    //System.out.println("Pose: " + pose.pos[0] + ", " + pose.pos[1] + ", " + pose.pos[2]);
                     poseChanged();
                 }
                 catch (IOException e)
