@@ -28,11 +28,10 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import lcm.lcm.LCM;
+
 import april.lcmtypes.laser_t;
 
 import com.google.common.util.concurrent.MoreExecutors;
-
-import edu.umich.robot.lcmtypes.urg_range_t;
 
 /**
  * Merges messages from a SICK and/or simulated laser sensor in to a single,

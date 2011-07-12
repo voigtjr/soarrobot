@@ -97,6 +97,7 @@ public class AreaDescriptionIL extends InputLinkElement
 
     private void newArea(AreaDescription ad)
     {
+        debug("newArea(" + ad.toString() + ")");
         idwme.update(ad.getId());
         logger.trace(idwme);
         
@@ -263,5 +264,10 @@ public class AreaDescriptionIL extends InputLinkElement
                 StringWme.newInstance(doorWme, IOConstants.STATE, doorStateValue);
     		}
     	}
+    }
+    
+    private static void debug(String message)
+    {
+        System.out.println(message);
     }
 }
