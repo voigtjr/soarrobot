@@ -10,6 +10,9 @@ import april.config.Config;
 import april.graph.CholeskySolver;
 import april.graph.DijkstraProjection;
 import april.graph.GEdge;
+import april.graph.GNode;
+import april.graph.GXYEdge;
+import april.graph.GXYNode;
 import april.graph.GXYTEdge;
 import april.graph.GXYTNode;
 import april.graph.GXYTPosEdge;
@@ -28,12 +31,18 @@ public class Slam {
 	boolean useOdom = true;
 	boolean closeLoop = true;
 	boolean noisyOdom = true;
+	boolean includeDoors = true;
+	boolean slamWdoors = true;
 
 	// config files, one for slam process, loopmatch process, and loopclosure
 	// process
 	Config slamConfig;
 	Config loopmatchConfig;
 	Config loopcloseConfig;
+
+	// door finder setup
+	DoorFinder doorFinder = new DoorFinder();
+	int lastPoseIndex = 0;
 
 	// variables for 3d plotting
 	Tic tic;
@@ -100,7 +109,7 @@ public class Slam {
 	// XYT to process odometry as rigid body transforms
 	double XYT[] = new double[3];
 	// holds additional added edges for visualization
-	ArrayList<GXYTEdge> hypoth = new ArrayList<GXYTEdge>();
+	ArrayList<GEdge> hypoth = new ArrayList<GEdge>();
 
 	// laser scan class
 	public static class Scan {
@@ -169,6 +178,7 @@ public class Slam {
 		tic = new Tic();
 		if (!useOdom)
 			starter = 1;
+		doorFinder.setSlamMethod(slamWdoors);
 	}
 
 	/** Pass in pose as (x, y, theta) in units of [meters, meters, radians] **/
@@ -286,6 +296,14 @@ public class Slam {
 			if (!useOdom)
 				drawScan(scan);
 
+			// door finder
+			if (includeDoors) {
+				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt);
+
+				for (int d = 0; d < doorFinder.edgesAdded; d++)
+					hypoth.add(g.edges.get(g.edges.size() - 1 - d));
+			}
+
 			return;
 		}
 
@@ -305,7 +323,7 @@ public class Slam {
 		}
 
 		// where was our last pose
-		GXYTNode NA = (GXYTNode) g.nodes.get(g.nodes.size() - 1);
+		GXYTNode NA = (GXYTNode) g.nodes.get(lastPoseIndex);
 		double ddist = LinAlg.distance(xyt, NA.state, 2);
 		double dtheta = Math.abs(MathUtil.mod2pi(xyt[2] - NA.state[2]));
 
@@ -330,7 +348,7 @@ public class Slam {
 					LinAlg.sq(ddist * distErr) + 0.01,
 					LinAlg.sq(dtheta * rotErr) + Math.toRadians(1) });
 			ge.nodes = new int[2];
-			ge.nodes[0] = g.nodes.size() - 2;
+			ge.nodes[0] = lastPoseIndex;
 			ge.nodes[1] = g.nodes.size() - 1;
 
 			// scan match edge
@@ -351,7 +369,7 @@ public class Slam {
 				// invert z
 				newEdge.z = LinAlg.xytInverse(newEdge.z);
 				newEdge.nodes = new int[2];
-				newEdge.nodes[0] = g.nodes.size() - 2;
+				newEdge.nodes[0] = lastPoseIndex;
 				newEdge.nodes[1] = g.nodes.size() - 1;
 				double[] tempXYZ = LinAlg.xytMultiply(NA.state, newEdge.z);
 				gn.init = tempXYZ;
@@ -369,6 +387,14 @@ public class Slam {
 			} else {
 				g.edges.add(ge);
 			}
+			lastPoseIndex = g.nodes.size() - 1;
+
+			// find the doors now (if we are concerned with doors)
+			if (includeDoors) {
+				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt);
+				for (int d = 0; d < doorFinder.edgesAdded; d++)
+					hypoth.add(g.edges.get(g.edges.size() - 1 - d));
+			}
 
 			// switch loopmatcher search information for loopclosing
 			loopmatcher.setMatchParameters(matchScore, thetaRange,
@@ -383,17 +409,18 @@ public class Slam {
 				LC.run(0);
 				if (curEdges < g.edges.size()) {
 					optimizeFull(g);
-					xyt = LinAlg.copy(g.nodes.get(g.nodes.size() - 1).state);
+					xyt = LinAlg.copy(g.nodes.get(lastPoseIndex).state);
 				}
 			}
 
 			// updating the open loop gridmap
-			Scan scan = new Scan();
-			scan.xyt = xyt;
-			scan.gpoints = LinAlg.transform(xyt, rpoints);
-			scans.add(scan);
-			if (!useOdom)
+			if (!useOdom) {
+				Scan scan = new Scan();
+				scan.xyt = xyt;
+				scan.gpoints = LinAlg.transform(xyt, rpoints);
+				scans.add(scan);
 				drawScan(scan);
+			}
 		}
 		synchronized (slamPose) {
 			slamPose.add(LinAlg.copy(xyt));
@@ -501,10 +528,11 @@ public class Slam {
 			b.add(ge);
 		}
 
-		// not 'really' setup to be threaded...so don't do it!
+		// Do NOT thread this
 		public void run(double dt) {
+			autoclose_lastnode = lastPoseIndex;
 			// nothing to do
-			if (g == null || g.nodes.size() <= 2) {
+			if (g == null || (g.nodes.size() - doorFinder.numDoors) <= 2) {
 				return;
 			}
 			if (autoclose_lastnode == g.nodes.size()) {
@@ -545,6 +573,15 @@ public class Slam {
 				for (int i = 0; i < autoclose_lastnode; i++) {
 					GXYTEdge dpPrior = dp.getEdge(i);
 
+					if (dpPrior == null) {
+						continue;
+					}
+
+					if (g.nodes.get(dpPrior.nodes[0]) instanceof GXYNode
+							|| g.nodes.get(dpPrior.nodes[1]) instanceof GXYNode) {
+						continue;
+					}
+
 					// double trace = LinAlg.trace(dpPrior.P);
 
 					// which nodes *might* be in the neighborhood?
@@ -557,7 +594,7 @@ public class Slam {
 					// the maximum
 					// xy search area of the loop closure matcher parameter
 					double curDist = LinAlg.distance(refnode.state,
-							g.nodes.get(dpPrior.nodes[1]).state);
+							g.nodes.get(dpPrior.nodes[1]).state, 2);
 					if (curDist > loopmatcher.getSearchDist())
 						continue;
 
@@ -576,7 +613,6 @@ public class Slam {
 				for (int cidx = 0; cidx < Math.min(maxScanMatchAttempts,
 						candidates.size()); cidx++) {
 					GXYTEdge dpPrior = candidates.get(cidx);
-					int i = dpPrior.nodes[1];
 
 					// if (LinAlg.trace(dpPrior.P) < minTrace)
 					// continue;
@@ -757,12 +793,12 @@ public class Slam {
 					boolean reject = false;
 
 					if (true) {
-						GXYTNode ga = (GXYTNode) g.nodes.get(pidxs[depth]);
+						GNode ga = g.nodes.get(pidxs[depth]);
 						// int ga_robot_id = (Integer)
 						// ga.getAttribute("robot_id");
 
 						for (int i = 0; i < depth - 1; i++) {
-							GXYTNode gb = (GXYTNode) g.nodes.get(pidxs[i]);
+							GNode gb = g.nodes.get(pidxs[i]);
 
 							// if (ga_robot_id == (Integer)
 							// gb.getAttribute("robot_id")) {
@@ -774,9 +810,15 @@ public class Slam {
 										.sq(xyt_local_a[0] - xyt_local_b[0])
 										+ LinAlg.sq(xyt_local_a[1]
 												- xyt_local_b[1]));
-								double tdist = Math
-										.abs(MathUtil.mod2pi(xyt_local_a[2]
-												- xyt_local_b[2]));
+								double tdist;
+								if (ga instanceof GXYTNode
+										&& gb instanceof GXYTNode) {
+									tdist = Math.abs(MathUtil
+											.mod2pi(xyt_local_a[2]
+													- xyt_local_b[2]));
+								} else {
+									tdist = 0;
+								}
 
 								if (xydist < 0.25 && tdist < Math.toRadians(30))
 									reject = true;
@@ -844,7 +886,6 @@ public class Slam {
 	void optimizeFull(Graph g) {
 		synchronized (g) {
 			double chi2Before = g.getErrorStats().chi2normalized;
-
 			CholeskySolver gs = new CholeskySolver(g,
 					new MinimumDegreeOrdering());
 			gs.verbose = false;

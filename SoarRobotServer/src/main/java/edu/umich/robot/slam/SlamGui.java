@@ -8,6 +8,10 @@ import lcm.lcm.LCMDataInputStream;
 import lcm.lcm.LCMSubscriber;
 import april.config.Config;
 import april.config.ConfigUtil;
+import april.graph.GEdge;
+import april.graph.GNode;
+import april.graph.GXYEdge;
+import april.graph.GXYNode;
 import april.graph.GXYTEdge;
 import april.graph.GXYTNode;
 import april.graph.Graph;
@@ -22,6 +26,7 @@ import april.vis.VisData;
 import april.vis.VisDataLineStyle;
 import april.vis.VisDataPointStyle;
 import april.vis.VisRobot;
+import april.vis.VisStar;
 import april.vis.VisWorld;
 
 public class SlamGui implements LCMSubscriber {
@@ -164,6 +169,16 @@ public class SlamGui implements LCMSubscriber {
 
 		// Plot all nodes and their corresponding scans
 		for (int i = 0; i < slam.g.nodes.size(); i++) {
+
+			// plot all of the doors
+			if (slam.g.nodes.get(i) instanceof GXYNode) {
+				double[] state = new double[] { slam.g.nodes.get(i).state[0],
+						slam.g.nodes.get(i).state[1], 0 };
+				worldBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(state),
+						new VisStar()));
+				continue;
+			}
+
 			// Node's state
 			double[] pose = slam.g.nodes.get(i).state;
 
@@ -185,12 +200,19 @@ public class SlamGui implements LCMSubscriber {
 		// Display added edges from loop closure task
 		if (parameterGui.gb("hypothesis")) {
 			synchronized (slam.hypoth) {
-				for (GXYTEdge gh : slam.hypoth) {
-					VisData vd = new VisData(new VisDataPointStyle(Color.green,
-							2), new VisDataLineStyle(Color.green, 1));
+				for (GEdge gh : slam.hypoth) {
 
-					GXYTNode ga = (GXYTNode) slam.g.nodes.get(gh.nodes[0]);
-					GXYTNode gb = (GXYTNode) slam.g.nodes.get(gh.nodes[1]);
+					VisData vd;
+					if (gh instanceof GXYEdge) {
+						vd = new VisData(new VisDataPointStyle(Color.red, 2),
+								new VisDataLineStyle(Color.red, 1));
+					} else {
+						vd = new VisData(new VisDataPointStyle(Color.green, 2),
+								new VisDataLineStyle(Color.green, 1));
+					}
+
+					GNode ga = slam.g.nodes.get(gh.nodes[0]);
+					GNode gb = slam.g.nodes.get(gh.nodes[1]);
 
 					vd.add(new double[] { ga.state[0], ga.state[1] });
 					vd.add(new double[] { gb.state[0], gb.state[1] });
@@ -208,9 +230,6 @@ public class SlamGui implements LCMSubscriber {
 			synchronized (slam.gTruth) {
 				for (double[] gt : slam.gTruth)
 					vd.add(new double[] { gt[0], gt[1] });
-				double[] grn = slam.gTruth.get(slam.gTruth.size() - 1);
-				// System.out.println("Ground Truth Location:" + grn[0] + ", " +
-				// grn[1] + ", " + grn[2]);
 			}
 			worldBuffer.addBuffered(vd);
 		}
@@ -220,9 +239,6 @@ public class SlamGui implements LCMSubscriber {
 			synchronized (slam.pureOdom) {
 				for (double[] po : slam.pureOdom)
 					vd.add(new double[] { po[0], po[1] });
-				double[] loc = slam.pureOdom.get(slam.pureOdom.size() - 1);
-				// System.out.println("Pure Odometry Location:" + loc[0] + ", "
-				// + loc[1] + ", " + loc[2]);
 			}
 			worldBuffer.addBuffered(vd);
 		}
