@@ -531,7 +531,7 @@ public class Superdroid implements Robot, LidarChangedListener, PoseChangedListe
 			double s = Math.sin(rad0);
 			rad0+=laser.radstep;
 			
-			if(laser.ranges[i] > 10) continue;
+			if(laser.ranges[i] > 15) continue;
 			// TODO check laser range before adding point to rpoints
 			if(i%skipBeams == 0){
 				double[] xy = {laser.ranges[i]*c,laser.ranges[i]*s};

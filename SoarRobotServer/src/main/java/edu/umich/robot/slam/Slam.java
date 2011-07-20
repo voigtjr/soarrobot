@@ -11,7 +11,6 @@ import april.graph.CholeskySolver;
 import april.graph.DijkstraProjection;
 import april.graph.GEdge;
 import april.graph.GNode;
-import april.graph.GXYEdge;
 import april.graph.GXYNode;
 import april.graph.GXYTEdge;
 import april.graph.GXYTNode;
@@ -32,21 +31,18 @@ public class Slam {
 	boolean closeLoop = true;
 	boolean noisyOdom = true;
 	boolean includeDoors = true;
-	boolean slamWdoors = true;
+	boolean slamWdoors = false;
 
 	// config files, one for slam process, loopmatch process, and loopclosure
 	// process
 	Config slamConfig;
 	Config loopmatchConfig;
 	Config loopcloseConfig;
+	Config doorfinderConfig;
 
 	// door finder setup
-	DoorFinder doorFinder = new DoorFinder();
+	DoorFinder doorFinder;
 	int lastPoseIndex = 0;
-
-	// variables for 3d plotting
-	Tic tic;
-	double initialT = 0.0;
 
 	// open loop scan matcher if not using odometry
 	MultiResolutionScanMatcher openMatch;
@@ -132,6 +128,7 @@ public class Slam {
 		if (slamConfig != null) {
 			loopmatchConfig = config.getChild("LoopMatcher");
 			loopcloseConfig = config.getChild("LoopCloser");
+			doorfinderConfig = config.getChild("DoorFinder");
 		}
 
 		// setting slam parameters
@@ -148,6 +145,9 @@ public class Slam {
 			rotErr = slamConfig.getDouble("rotErr", rotErr);
 			useOdom = slamConfig.getBoolean("useOdom", useOdom);
 			closeLoop = slamConfig.getBoolean("closeLoop", closeLoop);
+			noisyOdom = slamConfig.getBoolean("noisyOdom", noisyOdom);
+			includeDoors = slamConfig.getBoolean("includeDoors", includeDoors);
+			slamWdoors = slamConfig.getBoolean("slamWdoors", slamWdoors);
 			matchScore = slamConfig.getDouble("matchScore", matchScore);
 			thetaRange = Math.toRadians(slamConfig.getDouble("thetaRange",
 					thetaRange));
@@ -169,16 +169,20 @@ public class Slam {
 					.getInt("old_scan_decay", old_scan_decay);
 		}
 
-		// Initializations
-		LC = new LoopClosure(loopcloseConfig);
-		openMatch = new MultiResolutionScanMatcher(new Config());
-		gm = GridMap.makeMeters(-(gridmapsize / 2), -(gridmapsize / 2),
-				gridmapsize, gridmapsize, metersPerPixel, 0);
-		this.g = new Graph();
-		tic = new Tic();
-		if (!useOdom)
+		// Initializations based on slam setup
+		if (closeLoop)
+			LC = new LoopClosure(loopcloseConfig);
+		if (!useOdom) {
+			openMatch = new MultiResolutionScanMatcher(new Config());
+			gm = GridMap.makeMeters(-(gridmapsize / 2), -(gridmapsize / 2),
+					gridmapsize, gridmapsize, metersPerPixel, 0);
 			starter = 1;
-		doorFinder.setSlamMethod(slamWdoors);
+		}
+		if (includeDoors) {
+			doorFinder = new DoorFinder(doorfinderConfig);
+			doorFinder.setSlamMethod(slamWdoors);
+		}
+		this.g = new Graph();
 	}
 
 	/** Pass in pose as (x, y, theta) in units of [meters, meters, radians] **/
@@ -209,6 +213,7 @@ public class Slam {
 			return;
 		}
 
+		// sampling from noisy odometry
 		if (noisyOdom) {
 			// noisy sampling from odometry using RBT process model
 			double dist = LinAlg.distance(groundTruth, odomxyt);
@@ -282,10 +287,8 @@ public class Slam {
 			edge.P = LinAlg.diag(new double[] { 0.01, 0.01, 0.001 });
 			g.edges.add(edge);
 
-			initialT = tic.toc();
 			gn.setAttribute("points", new ArrayList<double[]>(rpoints),
 					new april.util.PointArrayCoder());
-			gn.setAttribute("time", tic.toc() - initialT);
 			gn.setAttribute("node_index", g.nodes.size());
 			g.nodes.add(gn);
 
@@ -299,7 +302,6 @@ public class Slam {
 			// door finder
 			if (includeDoors) {
 				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt);
-
 				for (int d = 0; d < doorFinder.edgesAdded; d++)
 					hypoth.add(g.edges.get(g.edges.size() - 1 - d));
 			}
@@ -336,7 +338,6 @@ public class Slam {
 			gn.init = xyt;
 			gn.setAttribute("points", new ArrayList<double[]>(rpoints),
 					new april.util.PointArrayCoder());
-			gn.setAttribute("time", tic.toc() - initialT);
 			gn.setAttribute("node_index", g.nodes.size());
 			g.nodes.add(gn);
 
@@ -532,11 +533,20 @@ public class Slam {
 		public void run(double dt) {
 			autoclose_lastnode = lastPoseIndex;
 			// nothing to do
-			if (g == null || (g.nodes.size() - doorFinder.numDoors) <= 2) {
-				return;
-			}
-			if (autoclose_lastnode == g.nodes.size()) {
-				return;
+			if (includeDoors) {
+				if (g == null || (g.nodes.size() - doorFinder.numDoors) <= 2) {
+					return;
+				}
+				if (autoclose_lastnode == g.nodes.size()) {
+					return;
+				}
+			} else {
+				if (g == null || g.nodes.size() <= 2) {
+					return;
+				}
+				if (autoclose_lastnode == g.nodes.size()) {
+					return;
+				}
 			}
 
 			// add other XYT edges to our hypothesis pool
