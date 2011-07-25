@@ -1,8 +1,10 @@
-splinters = [seek];
+#splinters = [seek];
+superdroids = [seek];
 seek 
 {
 	position = [2, -2];
-	#productions = "agents/robot3/clean-house-new.soar";
+	productions = "agents/robot3/clean-house-new.soar";
+	simulated = true;
 }
 
 image_path = "../common/3x3.png";

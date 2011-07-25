@@ -58,7 +58,7 @@ public class Slam {
 
 	// parameters for sampling from noisy odometry
 	Random r = new Random();
-	double[] al = new double[] { 0.01, 0.01, Math.toRadians(0.1) };
+	double[] al = new double[] { 0.005, 0.005, Math.toRadians(0.05) };
 	ArrayList<double[]> gTruth = new ArrayList<double[]>();
 	ArrayList<double[]> pureOdom = new ArrayList<double[]>();
 	ArrayList<double[]> slamPose = new ArrayList<double[]>();

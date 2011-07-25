@@ -176,6 +176,15 @@ public class SlamGui implements LCMSubscriber {
 						slam.g.nodes.get(i).state[1], 0 };
 				worldBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(state),
 						new VisStar()));
+				
+				double direction = (Double) slam.g.nodes.get(i).getAttribute("doorDirection");
+				VisData vd = new VisData(new VisDataPointStyle(Color.blue, 2),
+						new VisDataLineStyle(Color.blue, 1));
+				vd.add(new double[] { state[0], state[1] });
+				vd.add(new double[] { state[0] + Math.cos(direction), state[1] + Math.sin(direction) });
+				vd.add(new double[] { state[0] - Math.cos(direction), state[1] - Math.sin(direction) });
+				worldBuffer.addBuffered(vd);
+				
 				continue;
 			}
 

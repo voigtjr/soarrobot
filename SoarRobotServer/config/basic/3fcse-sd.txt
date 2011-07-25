@@ -3,7 +3,7 @@ charlie
 {
 	position = [-31, -42.0];
 	productions = "agents/robot3/clean-house-new.soar";
-	simulated = false;
+	simulated = true;
 }
 
 image_path = "../common/3fcse.png";

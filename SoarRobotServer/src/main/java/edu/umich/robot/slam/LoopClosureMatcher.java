@@ -27,7 +27,7 @@ public class LoopClosureMatcher
     double minMatchScore = 20 * 255;
     double trange = Math.toRadians(90);
     double trangeres = Math.toRadians(1);
-    double xyrange = 0.3;
+    double xyrange = 0.15;
     double xCov = 1.0;
     double yCov = 1.0;
     double tCov = Math.toRadians(5.0);

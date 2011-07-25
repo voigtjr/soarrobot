@@ -19,18 +19,18 @@ public class DoorFinder {
 
 	// door finder parameters
 	int maxPoints = 30;
-	double upperAngThresh = Math.toRadians(60);
+	double upperAngThresh = Math.toRadians(50);
 	double lowerAngThresh = Math.toRadians(5);
 	double distThresh = 0.05;
 	double gapThresh = 2;
 	double doorDist = 15;
 	double windowThresh = 1;
-	double lowerDoorSize = 3.0;
+	double lowerDoorSize = 1.0;
 	double upperDoorSize = 5.0;
 	double linefitThresh = 0.05;
 	int linePoints = 4;
-	int maxDoors = 2;
-	double distErr = 0.01;
+	int maxDoors = 3;
+	double distErr = 0.1;
 	
 	// booleans for door detection (and some other const. variables)
 	boolean gap = true;
@@ -45,8 +45,8 @@ public class DoorFinder {
 	int edgesAdded = 0;
 	
 	//data association thresholds on nearest neighbor gating
-	double upperDataThresh = 23;
-	double lowerDataThresh = 2.5;
+	double upperDataThresh = 3;
+	double lowerDataThresh = 1;
 
 	// constructors
 	public DoorFinder() {
@@ -201,6 +201,7 @@ public class DoorFinder {
 
 							// new line now we have switched axis
 							line = LinAlg.fitLine(newPoints);
+							line[0] = (1/line[0]);
 						}
 
 						// thresholding on the line fitting
@@ -249,8 +250,10 @@ public class DoorFinder {
 											// break this loop, reset our point
 											// search index 'i', set closeOp
 											// back to 0
+											double AofDoor = Math.atan2(-(1/line[0]), 1);
 											double[] dHolder = LinAlg.xytMultiply(xyt, new double[] {
-													xcenter, ycenter, 0 });
+													xcenter, ycenter,  AofDoor});											
+											dHolder[2] = MathUtil.mod2pi(dHolder[2]);
 											doors.add(dHolder);
 											i = i + j + 2;
 											closeOp = false;
@@ -284,7 +287,7 @@ public class DoorFinder {
 		}
 	}
 
-	//used by find doors
+	//used by locateDoors method to determine if we can actually see a door
 	public int seePoint(ArrayList<double[]> scan, int oPidx, int cPidx,
 			double[] openPoint, double[] closePoint) {
 
@@ -345,7 +348,7 @@ public class DoorFinder {
 			double best = getMahal((GXYTNode) graph.nodes.get(lastNodeIdx), doorNode, dp.getEdge(lastNodeIdx), (GXYTNode) graph.nodes.get(poseidx), doorLocation);
 			int bestDoorindex = index;
 			
-			// simple nearest neighbor (not using probability for now...)
+			// gated nearest neighbor association (need a better probability estimate for the door....)
 			for (int k = 1; k < doorMap.size(); k++) {
 
 				// run through each other door, determine if better than the best
@@ -401,6 +404,7 @@ public class DoorFinder {
 				GXYNode doorNode = new GXYNode();
 				doorNode.state = LinAlg.copy(doorState);
 				doorNode.init = LinAlg.copy(doorState);
+				doorNode.setAttribute("doorDirection", doorState[2]);
 				ArrayList<Integer> nodeList = new ArrayList<Integer>();
 				nodeList.add(poseidx);
 				doorNode.setAttribute("nodeList", nodeList);
@@ -482,6 +486,6 @@ public class DoorFinder {
 		//mahal distance 
 		double diffX = door[0] - doorNode.state[0];
 		double diffY = door[1] - doorNode.state[1];
-		return doorCovInv[0][0]*diffX*diffX + doorCovInv[1][0]*diffX*diffY + doorCovInv[0][1]*diffX*diffY + doorCovInv[1][1]*diffY*diffY;
+		return Math.abs(doorCovInv[0][0]*diffX*diffX + doorCovInv[1][0]*diffX*diffY + doorCovInv[0][1]*diffX*diffY + doorCovInv[1][1]*diffY*diffY);
 	}
 }
