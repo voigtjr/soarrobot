@@ -301,7 +301,8 @@ public class Slam {
 
 			// door finder
 			if (includeDoors) {
-				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt);
+				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
+						loopmatcher);
 				for (int d = 0; d < doorFinder.edgesAdded; d++)
 					hypoth.add(g.edges.get(g.edges.size() - 1 - d));
 			}
@@ -388,14 +389,6 @@ public class Slam {
 			} else {
 				g.edges.add(ge);
 			}
-			lastPoseIndex = g.nodes.size() - 1;
-
-			// find the doors now (if we are concerned with doors)
-			if (includeDoors) {
-				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt);
-				for (int d = 0; d < doorFinder.edgesAdded; d++)
-					hypoth.add(g.edges.get(g.edges.size() - 1 - d));
-			}
 
 			// switch loopmatcher search information for loopclosing
 			loopmatcher.setMatchParameters(matchScore, thetaRange,
@@ -403,6 +396,15 @@ public class Slam {
 
 			if (scans.size() > maxScanHistory)
 				scans.remove(0);
+
+			// find the doors now (if we are concerned with doors)
+			if (includeDoors) {
+				lastPoseIndex = g.nodes.size() - 1;
+				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
+						loopmatcher);
+				for (int d = 0; d < doorFinder.edgesAdded; d++)
+					hypoth.add(g.edges.get(g.edges.size() - 1 - d));
+			}
 
 			// loopclosure
 			if (closeLoop) {
@@ -577,12 +579,15 @@ public class Slam {
 			}
 
 			// frequency of loop closing on nodes
+			// will attempt to close very Nth node added to the graph
 			if (autoclose_lastnode % closeFrequency == 0) {
+
 				// identify the set of nodes that we'd like to do scanmatching
 				// to.
 				for (int i = 0; i < autoclose_lastnode; i++) {
 					GXYTEdge dpPrior = dp.getEdge(i);
 
+					// only want edges which attach poses to poses
 					if (dpPrior == null) {
 						continue;
 					}
@@ -592,12 +597,9 @@ public class Slam {
 						continue;
 					}
 
-					// double trace = LinAlg.trace(dpPrior.P);
-
 					// which nodes *might* be in the neighborhood?
 					// Compute the mahalanobis distance that the nodes are
 					// within 5 meters of each other.
-
 					// HACK - add additional structure to requirements of
 					// possible candidates:
 					// forcing the candidates to be within a "true" distance of
@@ -608,31 +610,20 @@ public class Slam {
 					if (curDist > loopmatcher.getSearchDist())
 						continue;
 
-					double mahl = mahalanobisDistance(dpPrior, hypoAddDistThres); // hypoAddDistThres
-																					// =
-																					// dist
-																					// (2-5
-																					// m
-																					// )
+					//mahalanobis distance to add candidates for loop closure
+					double mahl = mahalanobisDistance(dpPrior, hypoAddDistThres); 
 					if (mahl < 0.45)
 						candidates.add(dpPrior);
 				}
 
+				// shuffle, shuffle, shuffle...
 				Collections.shuffle(candidates);
 
 				for (int cidx = 0; cidx < Math.min(maxScanMatchAttempts,
 						candidates.size()); cidx++) {
 					GXYTEdge dpPrior = candidates.get(cidx);
 
-					// if (LinAlg.trace(dpPrior.P) < minTrace)
-					// continue;
-
-					// try to match
-					// avoid over confidence by adding fudge
-					// dpPrior.P[0][0] += LinAlg.sq(.5);
-					// dpPrior.P[1][1] += LinAlg.sq(.5);
-					// dpPrior.P[2][2] += LinAlg.sq(Math.toRadians(5));
-
+					// attempting to match nodes
 					GXYTNode nodeA = (GXYTNode) g.nodes.get(dpPrior.nodes[0]);
 					GXYTNode nodeB = (GXYTNode) g.nodes.get(dpPrior.nodes[1]);
 					double[] prior = LinAlg.xytInvMul31(nodeA.state,

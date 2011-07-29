@@ -31,22 +31,22 @@ public class DoorFinder {
 	int linePoints = 4;
 	int maxDoors = 3;
 	double distErr = 0.1;
-	
+
 	// booleans for door detection (and some other const. variables)
 	boolean gap = true;
 	boolean closeOp = false;
 	ArrayList<double[]> points = new ArrayList<double[]>();
 	ArrayList<double[]> doors = new ArrayList<double[]>();
-	
-	//door finder slam parameters
+
+	// door finder slam parameters
 	boolean doorSlam = true;
 	HashMap<Integer, Integer> doorMap = new HashMap<Integer, Integer>();
 	int numDoors = 0;
 	int edgesAdded = 0;
-	
-	//data association thresholds on nearest neighbor gating
+
+	// data association thresholds on nearest neighbor gating
 	double upperDataThresh = 3;
-	double lowerDataThresh = 1;
+	double lowerDataThresh = 0.5;
 
 	// constructors
 	public DoorFinder() {
@@ -77,23 +77,24 @@ public class DoorFinder {
 		}
 
 	}
-	
+
 	// main method for finding doors and adding them to our graph
-	public void findDoors(ArrayList<double[]> scan, Graph G, int PoseIndex, double[] curPose){
-		
-		//clear door array list and reset edgesAdded
-		doors.clear(); 
+	public void findDoors(ArrayList<double[]> scan, Graph G, int PoseIndex,
+			double[] curPose, LoopClosureMatcher matcher) {
+
+		// clear door array list and reset edgesAdded
+		doors.clear();
 		edgesAdded = 0;
-		
-		//find doors in the given scan
+
+		// find doors in the given scan
 		locateDoors(scan, curPose);
-		
-		//do data associations
-		int[] doorIndices = dataAssociation(doors, G, PoseIndex);
-		
-		//update graph according to data association
+
+		// do data associations
+		int[] doorIndices = dataAssociation(doors, G, PoseIndex, matcher);
+
+		// update graph according to data association
 		updateGraph(doorIndices, G, PoseIndex, curPose);
-		
+
 	}
 
 	// find doors
@@ -201,7 +202,7 @@ public class DoorFinder {
 
 							// new line now we have switched axis
 							line = LinAlg.fitLine(newPoints);
-							line[0] = (1/line[0]);
+							line[0] = (1 / line[0]);
 						}
 
 						// thresholding on the line fitting
@@ -250,10 +251,16 @@ public class DoorFinder {
 											// break this loop, reset our point
 											// search index 'i', set closeOp
 											// back to 0
-											double AofDoor = Math.atan2(-(1/line[0]), 1);
-											double[] dHolder = LinAlg.xytMultiply(xyt, new double[] {
-													xcenter, ycenter,  AofDoor});											
-											dHolder[2] = MathUtil.mod2pi(dHolder[2]);
+											double AofDoor = Math.atan2(
+													-(1 / line[0]), 1);
+											double[] dHolder = LinAlg
+													.xytMultiply(xyt,
+															new double[] {
+																	xcenter,
+																	ycenter,
+																	AofDoor });
+											dHolder[2] = MathUtil
+													.mod2pi(dHolder[2]);
 											doors.add(dHolder);
 											i = i + j + 2;
 											closeOp = false;
@@ -287,7 +294,7 @@ public class DoorFinder {
 		}
 	}
 
-	//used by locateDoors method to determine if we can actually see a door
+	// used by locateDoors method to determine if we can actually see a door
 	public int seePoint(ArrayList<double[]> scan, int oPidx, int cPidx,
 			double[] openPoint, double[] closePoint) {
 
@@ -317,90 +324,133 @@ public class DoorFinder {
 
 		return pointsWithin;
 	}
-	
-	//do data association on found doors
-	public int[] dataAssociation(ArrayList<double[]> daDoors, Graph graph, int poseidx) {
-		
-		//indices within graph of data associations (-1 if new door)
+
+	// do data association on found doors
+	public int[] dataAssociation(ArrayList<double[]> daDoors, Graph graph,
+			int poseidx, LoopClosureMatcher matcher) {
+
+		// indices within graph of data associations (-1 if new door)
 		int[] indices = new int[daDoors.size()];
-		
-		//no doors yet, so all doors are new and should be initialized
-		if(doorMap.isEmpty()){
-			for(int i = 0; i < daDoors.size(); i++)
+
+		// no doors yet, so all doors are new and should be initialized
+		if (doorMap.isEmpty()) {
+			for (int i = 0; i < daDoors.size(); i++)
 				indices[i] = -1;
 			return indices;
 		}
-		
-		//dijkstra projection for the current pose
-		DijkstraProjection dp = new DijkstraProjection(graph, poseidx);
-		
-		//gated nearest neighbor data association
-		for(int j = 0; j < daDoors.size(); j++){
 
-			//current door we are trying to do association on
+		// current pose in our map that has just been added
+		// we are doing association on this pose's scan
+		GXYTNode thisPose = (GXYTNode) graph.nodes.get(poseidx);
+
+		// data association using scan matching technique
+		for (int j = 0; j < daDoors.size(); j++) {
+
+			// current door we are trying to do association on
 			double[] doorLocation = daDoors.get(j);
-			
-			// initial door in our map
+			double best;
+			int bestDoorindex;
+
+			// initial door
 			int index = doorMap.get(0);
 			GXYNode doorNode = (GXYNode) graph.nodes.get(index);
-			ArrayList<Integer> doorNodes = (ArrayList<Integer>) doorNode.getAttribute("nodeList");
-			int lastNodeIdx = doorNodes.get(doorNodes.size()-1);
-			double best = getMahal((GXYTNode) graph.nodes.get(lastNodeIdx), doorNode, dp.getEdge(lastNodeIdx), (GXYTNode) graph.nodes.get(poseidx), doorLocation);
-			int bestDoorindex = index;
-			
-			// gated nearest neighbor association (need a better probability estimate for the door....)
+			ArrayList<Integer> doorNodes = (ArrayList<Integer>) doorNode
+					.getAttribute("nodeList");
+			int lastNodeIdx = doorNodes.get(doorNodes.size() - 1);
+
+			// do a scan match between our current pose and the pose that last
+			// saw the current considered door
+			// our data association will be based on how well the difference
+			// between the old edge connecting both poses
+			// and the new edge from scan matching agrees with the error in the
+			// association between the considered door
+			// and the located door
+			GXYTNode lastPose = (GXYTNode) graph.nodes.get(lastNodeIdx);
+			double[] prior = LinAlg.xytInvMul31(lastPose.state, thisPose.state);
+			prior[2] = MathUtil.mod2pi(prior[2]);
+			GXYTEdge ge = matcher.match(lastPose, thisPose, prior);
+			double[] doorChange = new double[] {
+					doorLocation[0] - doorNode.state[0],
+					doorLocation[1] - doorNode.state[1] };
+			if (ge != null) {
+				double[] newChange = new double[] { prior[0] - ge.z[0],
+						prior[1] - ge.z[1] };
+				best = LinAlg.distance(newChange, doorChange, 2);
+				bestDoorindex = index;
+			} else {
+				best = LinAlg.distance(doorLocation, doorNode.state, 2);
+				bestDoorindex = index;
+			}
+
+			// run through the rest of the doors
 			for (int k = 1; k < doorMap.size(); k++) {
 
-				// run through each other door, determine if better than the best
+				// run through each other door, determine if better than the
+				// current running 'best'
 				index = doorMap.get(k);
 				doorNode = (GXYNode) graph.nodes.get(index);
-				doorNodes = (ArrayList<Integer>) doorNode.getAttribute("nodeList");
-				lastNodeIdx = doorNodes.get(doorNodes.size()-1);
-				double chi2 = getMahal((GXYTNode) graph.nodes.get(lastNodeIdx), doorNode, dp.getEdge(lastNodeIdx), (GXYTNode) graph.nodes.get(poseidx), doorLocation);
-
-				// best found so far?
-				if (chi2 < best) {
-					best = chi2;
+				doorNodes = (ArrayList<Integer>) doorNode
+						.getAttribute("nodeList");
+				lastNodeIdx = doorNodes.get(doorNodes.size() - 1);
+				lastPose = (GXYTNode) graph.nodes.get(lastNodeIdx);
+				prior = LinAlg.xytInvMul31(lastPose.state, thisPose.state);
+				prior[2] = MathUtil.mod2pi(prior[2]);
+				ge = matcher.match(lastPose, thisPose, prior);
+				doorChange = new double[] {
+						doorLocation[0] - doorNode.state[0],
+						doorLocation[1] - doorNode.state[1] };
+				double possBest;
+				if (ge != null) {
+					double[] newChange = new double[] { prior[0] - ge.z[0],
+							prior[1] - ge.z[1] };
+					possBest = LinAlg.distance(newChange, doorChange, 2);
+				} else {
+					possBest = LinAlg.distance(doorLocation, doorNode.state, 2);
+				}
+				if (possBest < best) {
+					best = possBest;
 					bestDoorindex = index;
 				}
 			}
-			
-			// here is our double gate on nearest neighbor data association
-			// if best chi2 is greater than upper threshold, we have found a new door
+
+			// here is our double gate on our scan matching distance heuristic
 			if (best > upperDataThresh) {
 				indices[j] = -1;
 				continue;
 			}
-			
-			//if best chi2 is lower than lower threshold, we have made a data association
-			if(best < lowerDataThresh){
+
+			// if best chi2 is lower than lower threshold, we have made a data
+			// association
+			if (best < lowerDataThresh) {
 				indices[j] = bestDoorindex;
-				//update where we last saw the node
-				ArrayList<Integer> nodeList = (ArrayList<Integer>) graph.nodes.get(bestDoorindex).getAttribute("nodeList");
+				// update where we last saw the node
+				ArrayList<Integer> nodeList = (ArrayList<Integer>) graph.nodes
+						.get(bestDoorindex).getAttribute("nodeList");
 				nodeList.add(poseidx);
 				continue;
 			}
-			
-			//otherwise, we are inbetween our gate, we will ignore this observation (take no action)
+
+			// otherwise, we are inbetween our gate, we will ignore this
+			// observation (take no action)
 			indices[j] = -2;
 		}
-		
+
 		return indices;
 	}
-	
-	//update the graph to reflect doors (as well as slam edges if applicable)
-	public void updateGraph(int[] idxs, Graph gr, int poseidx, double[] xyt){
-		
-		//run through each door, process it accordingly
-		for(int i = 0; i < doors.size(); i++){
-			
-			//door we are working with
+
+	// update the graph to reflect doors (as well as slam edges if applicable)
+	public void updateGraph(int[] idxs, Graph gr, int poseidx, double[] xyt) {
+
+		// run through each door, process it accordingly
+		for (int i = 0; i < doors.size(); i++) {
+
+			// door we are working with
 			double[] doorState = doors.get(i);
-			
-			//new door, initialize regardless slam setup
-			if(idxs[i] == -1){
-				
-				//create the node, add to graph, update door map
+
+			// new door, initialize regardless slam setup
+			if (idxs[i] == -1) {
+
+				// create the node, add to graph, update door map
 				GXYNode doorNode = new GXYNode();
 				doorNode.state = LinAlg.copy(doorState);
 				doorNode.init = LinAlg.copy(doorState);
@@ -411,13 +461,16 @@ public class DoorFinder {
 				doorMap.put(numDoors, gr.nodes.size());
 				gr.nodes.add(doorNode);
 				numDoors += 1;
-				
-				//create the edge between this door and the pose that saw this door
+
+				// create the edge between this door and the pose that saw this
+				// door
 				GXYEdge doorEdge = new GXYEdge();
-				double dx = Math.cos(xyt[2])* (doorNode.state[0] - xyt[0])+ Math.sin(xyt[2])* (doorNode.state[1] - xyt[1]);
-				double dy = -Math.sin(xyt[2])* (doorNode.state[0] - xyt[0])+ Math.cos(xyt[2])* (doorNode.state[1] - xyt[1]);
-				doorEdge.z = new double[] {dx, dy};
-				doorEdge.nodes = new int[] {poseidx, gr.nodes.size() - 1};
+				double dx = Math.cos(xyt[2]) * (doorNode.state[0] - xyt[0])
+						+ Math.sin(xyt[2]) * (doorNode.state[1] - xyt[1]);
+				double dy = -Math.sin(xyt[2]) * (doorNode.state[0] - xyt[0])
+						+ Math.cos(xyt[2]) * (doorNode.state[1] - xyt[1]);
+				doorEdge.z = new double[] { dx, dy };
+				doorEdge.nodes = new int[] { poseidx, gr.nodes.size() - 1 };
 				double xyDist = LinAlg.distance(doorNode.state, xyt, 2);
 				doorEdge.P = LinAlg.diag(new double[] {
 						LinAlg.sq(xyDist * distErr) + 0.01,
@@ -427,18 +480,20 @@ public class DoorFinder {
 				edgesAdded += 1;
 				continue;
 			}
-			
-			//not a new door, add edge if using doors to assist in slam
-			if(doorSlam && (idxs[i] != -2)){
+
+			// not a new door, add edge if using doors to assist in slam
+			if (doorSlam && (idxs[i] != -2)) {
 				GXYEdge doorEdge = new GXYEdge();
-				double dx = Math.cos(xyt[2]) * (doorState[0] - xyt[0]) + Math.sin(xyt[2]) * (doorState[1] - xyt[1]);
-				double dy = -Math.sin(xyt[2]) * (doorState[0] - xyt[0]) + Math.cos(xyt[2]) * (doorState[1] - xyt[1]);
+				double dx = Math.cos(xyt[2]) * (doorState[0] - xyt[0])
+						+ Math.sin(xyt[2]) * (doorState[1] - xyt[1]);
+				double dy = -Math.sin(xyt[2]) * (doorState[0] - xyt[0])
+						+ Math.cos(xyt[2]) * (doorState[1] - xyt[1]);
 				doorEdge.z = new double[] { dx, dy };
 				double xyDist = LinAlg.distance(doorState, xyt, 2);
 				doorEdge.P = LinAlg.diag(new double[] {
 						LinAlg.sq(xyDist * distErr) + 0.01,
 						LinAlg.sq(xyDist * distErr) + 0.01, });
-				doorEdge.nodes = new int[] { poseidx, idxs[i]};
+				doorEdge.nodes = new int[] { poseidx, idxs[i] };
 				doorEdge.setAttribute("type", "door");
 				gr.edges.add(doorEdge);
 				edgesAdded += 1;
@@ -446,46 +501,8 @@ public class DoorFinder {
 		}
 	}
 
-	//change slam settings on door finder class
-	public void setSlamMethod(boolean option){
+	// change slam settings on door finder class
+	public void setSlamMethod(boolean option) {
 		this.doorSlam = option;
-	}
-	
-	//mahal distance for data association above
-	//lastNode: last pose that saw the considered door
-	//dik: dijkstra projection of the current pose
-	//
-	double getMahal(GXYTNode lastNode, GXYNode doorNode, GXYTEdge dikEdge, GXYTNode curPose, double[] door) {
-		
-		//edge parameters to door from curPose
-		double dx = Math.cos(curPose.state[2])* (door[0] - curPose.state[0])+ Math.sin(curPose.state[2])* (door[1] - curPose.state[1]);
-		double dy = -Math.sin(curPose.state[2])* (door[0] - curPose.state[0])+ Math.cos(curPose.state[2])* (door[1] - curPose.state[1]);
-		double[][] covD = new double[2][2];
-		covD[0][0] = dx*distErr;
-		covD[1][1] = dy*distErr;
-		
-		//jacobian of door pose with respect to dikstra edge
-		//dikstra edge connects lastNode with curPose
-		double[][] Ja = new double[2][3];
-		Ja[0][0] = 1;
-		Ja[0][2] = -Math.sin(curPose.state[2])*dx - Math.cos(curPose.state[2])*dy;
-		Ja[1][1] = 1;
-		Ja[1][2] = Math.cos(curPose.state[2])*dx - Math.sin(curPose.state[2])*dy;
-		
-		//jacobian of door pose with respect to door edge
-		//door edge connects door with curPose
-		double[][] Jt = new double[2][2];
-		Jt[0][0] = Math.cos(curPose.state[2]);
-		Jt[0][1] = -Math.sin(curPose.state[2]);
-		Jt[1][0] = Math.sin(curPose.state[2]);
-		Jt[1][1] = Math.cos(curPose.state[2]);
-		
-		//mahal covariance
-		double[][] doorCovInv = LinAlg.inverse(LinAlg.add(LinAlg.matrixABCt(Ja, dikEdge.P, Ja), LinAlg.matrixABCt(Jt, covD, Jt)));
-		
-		//mahal distance 
-		double diffX = door[0] - doorNode.state[0];
-		double diffY = door[1] - doorNode.state[1];
-		return Math.abs(doorCovInv[0][0]*diffX*diffX + doorCovInv[1][0]*diffX*diffY + doorCovInv[0][1]*diffX*diffY + doorCovInv[1][1]*diffY*diffY);
 	}
 }
