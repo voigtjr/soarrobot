@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import april.config.Config;
-import april.graph.DijkstraProjection;
 import april.graph.GXYEdge;
 import april.graph.GXYNode;
 import april.graph.GXYTEdge;
@@ -14,13 +13,62 @@ import april.jmat.LinAlg;
 import april.jmat.MathUtil;
 
 public class DoorFinder {
+
 	// config file for door finder parameters
 	Config config;
 
-	// door finder parameters
+	/**
+	 * The following parameters are used by the 'findDoors' method and may
+	 * adjusted based on the environment.
+	 * 
+	 * @param maxPoints
+	 *            When a possible beginning to a door has been found, the number
+	 *            of lidar points do we search ahead for the end of the door.
+	 * @param angThresh
+	 *            Minimum angle threshold between two lidar points before
+	 *            considering the points a possible edge of a door (see
+	 *            locateDoors method for understanding of this angle
+	 *            calculation).
+	 * @param lowerAngThresh
+	 *            Minimum double gated angle threshold between two lidar points
+	 *            before considering a possible door (lidar scan sees a door but
+	 *            nothing beyond the door, the two points considered by the
+	 *            method below must be below this param before they will be
+	 *            considered as a possible door).
+	 * @param distThresh
+	 *            Minimum distance between two lidar points before considering a
+	 *            possible edge of a door.
+	 * @param gapThresh
+	 *            Minimum distance between two lidar points before considering a
+	 *            possible door (lidar scan sees a door but nothing beyond the
+	 *            door, the two points considered by the method below must be
+	 *            below this parameter before they will be considered as a
+	 *            possible door).
+	 * @param doorDist
+	 *            Minimum distance the considered door must be away before
+	 *            actually classifying it as a door.
+	 * @param windowThresh
+	 *            Setting a window size in meters around the center of a
+	 *            possible door. Used to check if other lidar points are within
+	 *            this window.
+	 * @param lowerDoorSize
+	 *            Minimum size of a possible door before classifying it as a
+	 *            door.
+	 * @param upperDoorSize
+	 *            Maximum size of a possible door before classifying it as a
+	 *            door.
+	 * @param linefitThresh
+	 *            Maximum threshold of the linear regression used on the points
+	 *            which make up a possible door.
+	 * @param linePoints
+	 *            Amount of additional points to use in the linear regression
+	 *            algorithm. Add this number in front and behind the edges of
+	 *            the door.
+	 * @param maxDoors
+	 *            Maximum amount of doors to find per scan.
+	 */
 	int maxPoints = 30;
-	double upperAngThresh = Math.toRadians(50);
-	double lowerAngThresh = Math.toRadians(5);
+	double angThresh = Math.toRadians(50);
 	double distThresh = 0.05;
 	double gapThresh = 2;
 	double doorDist = 15;
@@ -30,23 +78,30 @@ public class DoorFinder {
 	double linefitThresh = 0.05;
 	int linePoints = 4;
 	int maxDoors = 3;
-	double distErr = 0.1;
 
-	// booleans for door detection (and some other const. variables)
-	boolean gap = true;
-	boolean closeOp = false;
-	ArrayList<double[]> points = new ArrayList<double[]>();
-	ArrayList<double[]> doors = new ArrayList<double[]>();
-
-	// door finder slam parameters
-	boolean doorSlam = true;
-	HashMap<Integer, Integer> doorMap = new HashMap<Integer, Integer>();
-	int numDoors = 0;
-	int edgesAdded = 0;
-
-	// data association thresholds on nearest neighbor gating
+	/**
+	 * The following parameters are used by the 'dataAssociation' method and may
+	 * be adjusted based on environment or desired results.
+	 * 
+	 * @param upperDataThresh
+	 *            Double gated upper threshold on the best data association
+	 *            match. If outside this value, assign new landmark.
+	 * @param lowerDataThresh
+	 *            Double gated lower threshold on the best data association
+	 *            match. If below this value, associate with corresponding
+	 *            landmark.
+	 */
 	double upperDataThresh = 3;
 	double lowerDataThresh = 0.5;
+
+	// maps each door to it's index within graph.nodes
+	HashMap<Integer, Integer> doorMap = new HashMap<Integer, Integer>();
+
+	// number of doors that have been found
+	int numDoors = 0;
+
+	// used by the SLAM method to visualize door edges added to the graph
+	int edgesAdded = 0;
 
 	// constructors
 	public DoorFinder() {
@@ -57,10 +112,8 @@ public class DoorFinder {
 
 		if (config != null) {
 			this.maxPoints = config.getInt("maxPoints", maxPoints);
-			this.upperAngThresh = Math.toRadians(config.getDouble(
-					"upperAngThresh", Math.toDegrees(upperAngThresh)));
-			this.lowerAngThresh = Math.toRadians(config.getDouble(
-					"lowerAngThresh", Math.toDegrees(lowerAngThresh)));
+			this.angThresh = Math.toRadians(config.getDouble("angThresh",
+					Math.toDegrees(angThresh)));
 			this.distThresh = config.getDouble("distThresh", distThresh);
 			this.gapThresh = config.getDouble("gapThresh", gapThresh);
 			this.doorDist = config.getDouble("doorDist", doorDist);
@@ -73,48 +126,99 @@ public class DoorFinder {
 					upperDoorSize);
 			this.linefitThresh = config.getDouble("linefitThresh",
 					linefitThresh);
-			this.distErr = config.getDouble("distErr", distErr);
+			this.upperDataThresh = config.getDouble("upperDataThresh",
+					upperDataThresh);
+			this.lowerDataThresh = config.getDouble("lowerDataThresh",
+					lowerDataThresh);
 		}
 
 	}
 
-	// main method for finding doors and adding them to our graph
+	/**
+	 * Main method for finding doors and adding them to the graph.
+	 * 
+	 * Within this method doors are located, associated, and updated within the
+	 * SLAM pose graph.
+	 * 
+	 * @param scan
+	 *            Current scan with which to attempt to locate doors within.
+	 * @param G
+	 *            Graph being used for SLAM.
+	 * @param PoseIndex
+	 *            The index of the current pose within graph.nodes corresponding
+	 *            to the lidar scan we are searching for doors within.
+	 * @param curPose
+	 *            The current pose of the robot (x, y, theta).
+	 * @param matcher
+	 *            The instance of the loop closing matcher used for SLAM.
+	 */
 	public void findDoors(ArrayList<double[]> scan, Graph G, int PoseIndex,
 			double[] curPose, LoopClosureMatcher matcher) {
 
-		// clear door array list and reset edgesAdded
-		doors.clear();
+		// reset 'edgesAdded' for SLAM
 		edgesAdded = 0;
 
 		// find doors in the given scan
-		locateDoors(scan, curPose);
+		ArrayList<double[]> doorsFound = locateDoors(scan, curPose);
 
 		// do data associations
-		int[] doorIndices = dataAssociation(doors, G, PoseIndex, matcher);
+		int[] doorIndices = dataAssociation(doorsFound, G, PoseIndex, matcher);
 
 		// update graph according to data association
-		updateGraph(doorIndices, G, PoseIndex, curPose);
+		updateGraph(doorIndices, G, PoseIndex, curPose, doorsFound);
 
 	}
 
-	// find doors
-	public void locateDoors(ArrayList<double[]> rpoints, double[] xyt) {
+	/**
+	 * Finds doors within a given lidar scan.
+	 * 
+	 * Algorithm walks though every lidar point and attempts to find two edges
+	 * of a door. Multiple thresholding occurs according to the parameters
+	 * within this class (see above for thresholding parameters and their
+	 * descriptions).
+	 * 
+	 * @param rpoints
+	 *            Set of lidar points in global coordinate frame. Each entry
+	 *            within the array list is a two element array of type double
+	 *            representing a single lidar point. The first element is the
+	 *            x-coordinate and the second element is the y-coordinate of the
+	 *            lidar point.
+	 * @param xyt
+	 *            Current location of the robot (x, y, theta).
+	 * @return Returns an array list where each element within the list is a
+	 *         three element array of type double representing a single door
+	 *         found within the scan. The first element is the x-coordinate, the
+	 *         second element is the y-coordinate, and the third element is the
+	 *         orientation of the door in the global coordinate frame.
+	 */
+	public ArrayList<double[]> locateDoors(ArrayList<double[]> rpoints,
+			double[] xyt) {
 
-		// initializations prior to looping over rpoints
+		// boolean flags
+		boolean gap = true;
+		boolean closeOp = false;
+
+		// holds points for line fitting
+		ArrayList<double[]> points = new ArrayList<double[]>();
+
+		// holds located door locations (return variable)
+		ArrayList<double[]> doors = new ArrayList<double[]>();
+
+		// initializations prior to looping over lidar points
 		int i = linePoints + 1;
 		double[] curPoint = rpoints.get(i - 1);
 
-		// searching through all points
+		// searching through all lidar points for possible door edges
 		while (i < rpoints.size()) {
 
 			// next and last point in our scan
 			double[] nextPoint = rpoints.get(i);
 			double[] lastPoint = rpoints.get(i - 2);
 
-			// distance between this next point and our current point
-			double dist = LinAlg.distance(nextPoint, curPoint);
+			// distance between next point and our current point
+			double dist = LinAlg.distance(nextPoint, curPoint, 2);
 
-			// create vectors and determine the angel between them
+			// create vectors and determine the angle between them
 			// v1 is the vector from lastPoint to curPoint
 			// v2 is the vector from curPoint to nextPoint
 			double[] v1 = LinAlg.subtract(curPoint, lastPoint);
@@ -122,9 +226,8 @@ public class DoorFinder {
 			double ang = -MathUtil.mod2pi(Math.atan2(v2[1], v2[0])
 					- Math.atan2(v1[1], v1[0]));
 
-			// have we found a 'drop-off'?
-			if ((ang > upperAngThresh && dist > distThresh)
-					|| (dist > gapThresh)) {
+			// determining if we have found a possible edge for a door
+			if ((ang > angThresh && dist > distThresh) || (dist > gapThresh)) {
 				closeOp = true;
 			} else {
 				curPoint = LinAlg.copy(nextPoint);
@@ -132,27 +235,27 @@ public class DoorFinder {
 				continue;
 			}
 
+			// we have found an edge to a possible door, now looking for
+			// the other edge to the door
 			if (closeOp) {
 
-				// we are now attempting to find the close point of a potential
-				// door
+				// searching ahead for the other edge of the door
 				for (int j = 1; j < maxPoints; j++) {
 
-					// make sure we don't get ahead of our points
+					// avoid getting ahead of total number of points in scan
 					if (j + i + linePoints + 1 > rpoints.size()) {
 						break;
 					}
 
-					// current point we are attempting to close door with
+					// current point we are considering as other door edge
 					double[] closePoint = rpoints.get(j + i);
 
-					// find next possible close point (same as finding open
-					// point)
+					// find other edge (same as first edge)
 					double[] aheadPoint = rpoints.get(j + i + 1);
 					double[] behindPoint = rpoints.get(j + i - 1);
 
 					// distance between close point and ahead point
-					dist = LinAlg.distance(behindPoint, closePoint);
+					dist = LinAlg.distance(behindPoint, closePoint, 2);
 
 					// create vectors and determine the angle between them
 					// v1 is the vector from behindPoint to
@@ -163,9 +266,8 @@ public class DoorFinder {
 					ang = -MathUtil.mod2pi(Math.atan2(v2[1], v2[0])
 							- Math.atan2(v1[1], v1[0]));
 
-					// check thresholds, is this a possible ending point for our
-					// door?
-					if ((ang > upperAngThresh && dist > distThresh)
+					// determining if we have found a possible edge for a door
+					if ((ang > angThresh && dist > distThresh)
 							|| (dist > gapThresh)) {
 
 						// clean out array list points for line fitting
@@ -180,7 +282,7 @@ public class DoorFinder {
 						// additional points for line fitting (padding our line)
 						for (int z = 2; z < linePoints + 1; z++) {
 							// point behind
-							points.add(rpoints.get(i - z));
+							points.add(rpoints.get(i - z - 1));
 
 							// point ahead
 							points.add(rpoints.get(i + j + z));
@@ -189,18 +291,16 @@ public class DoorFinder {
 						// fit this line
 						double[] line = LinAlg.fitLine(points);
 
-						// is the line too close to vertical to get a good
-						// estimation from?
+						// if line is close to being 'vertical', invert x/y and
+						// recompute the linear regression
 						if (Math.abs(line[0]) > 20) {
 
-							// lets switch the axis recompute the regression
 							ArrayList<double[]> newPoints = new ArrayList<double[]>();
 							for (double[] pc : points) {
 								double[] npc = new double[] { pc[1], pc[0] };
 								newPoints.add(npc);
 							}
 
-							// new line now we have switched axis
 							line = LinAlg.fitLine(newPoints);
 							line[0] = (1 / line[0]);
 						}
@@ -208,49 +308,56 @@ public class DoorFinder {
 						// thresholding on the line fitting
 						if (line[2] < linefitThresh) {
 
-							// check there really is a gap here
+							// check for a true gap
 							double xcenter = (curPoint[0] + closePoint[0]) / 2;
 							double ycenter = (curPoint[1] + closePoint[1]) / 2;
 
-							// any of these other points in our gap?
+							// looking for points between the two edges within
+							// the window threshold of our gap
 							for (int k = i + 2; k < i + j - 1; k++) {
 								double[] gapPoint = rpoints.get(k);
 								double xrange = Math.abs(gapPoint[0] - xcenter);
 								double yrange = Math.abs(gapPoint[1] - ycenter);
 
-								// found a point in our gap! (not a door)
+								// final threshold check on the considered point
+								// between the possible door edges
 								if (xrange < windowThresh
 										&& yrange < windowThresh) {
+
+									// reset gap flag and break this loop to
+									// continue searching for the other edge of
+									// the door
 									gap = false;
 									break;
 								}
 							}
 
-							// if there is a gap, continue checks for door
+							// if there is a gap, continue verifying an actual
+							// door has been found
 							if (gap) {
 
 								// lets test the distance of this gap now
 								double gapDist = LinAlg.distance(closePoint,
-										curPoint);
+										curPoint, 2);
 
-								// are we within our door size?
+								// checking size of door against
 								if (gapDist > lowerDoorSize
 										&& gapDist < upperDoorSize) {
 
-									// lets make sure the door is somewhat close
-									// to
-									// us
+									// checking how far away the door is
 									if (Math.sqrt(Math.pow(xcenter, 2)
 											+ Math.pow(ycenter, 2)) < doorDist) {
 
-										// can we really see this door?
-										int numPoints = seePoint(rpoints, i, i
+										// checking if we can see the door based
+										// on our lidar scan (see method below)
+										int numPoints = seeDoor(rpoints, i, i
 												+ j, curPoint, closePoint);
+
+										// checking how many points obstruct our
+										// view
 										if (numPoints == 0) {
-											// we have finally found a door,
-											// break this loop, reset our point
-											// search index 'i', set closeOp
-											// back to 0
+											// finally found a door, determine
+											// orientation of door
 											double AofDoor = Math.atan2(
 													-(1 / line[0]), 1);
 											double[] dHolder = LinAlg
@@ -261,8 +368,16 @@ public class DoorFinder {
 																	AofDoor });
 											dHolder[2] = MathUtil
 													.mod2pi(dHolder[2]);
+
+											// add this door to array list for
+											// return
 											doors.add(dHolder);
+
+											// update index i for search
 											i = i + j + 2;
+
+											// reset flags and current point
+											// considered
 											closeOp = false;
 											curPoint = rpoints.get(i - 1);
 											break;
@@ -271,6 +386,8 @@ public class DoorFinder {
 								}
 
 							} else {
+								// reset gap flag and continue search for other
+								// edge of door
 								gap = true;
 							}
 
@@ -279,40 +396,69 @@ public class DoorFinder {
 				}
 			}
 
-			// did we find a door?
+			// did we find a door
 			if (!closeOp) {
 				// how many doors were we allowed to find?
 				if (doors.size() == maxDoors)
-					return;
+					return doors;
 			}
-			// we did not find a door...keep searching
+			// we did not find a door, reset index and keep searching
 			else {
 				i = i + 1;
 				curPoint = LinAlg.copy(nextPoint);
 				closeOp = false;
 			}
 		}
+		return doors;
 	}
 
-	// used by locateDoors method to determine if we can actually see a door
-	public int seePoint(ArrayList<double[]> scan, int oPidx, int cPidx,
+	/**
+	 * Determines if the robot can see a particular door given a lidar scan.
+	 * 
+	 * To determine if any points are obstructing the view of the door, all
+	 * points between the open and close edge of the door are tested against the
+	 * closest point to the door.
+	 * 
+	 * @param scan
+	 *            Set of lidar points in global coordinate frame. Each entry
+	 *            within the array list is a two element array of type double
+	 *            representing a single lidar point. The first element is the
+	 *            x-coordinate and the second element is the y-coordinate of the
+	 *            lidar point.
+	 * @param oPidx
+	 *            Index within the lidar scan array list of the point considered
+	 *            to be the open edge of the door.
+	 * @param cPidx
+	 *            Index within the lidar scan array list of the point considered
+	 *            to be the close edge of the door.
+	 * @param openPoint
+	 *            Location of the point considered to be the open edge of the
+	 *            door.
+	 * @param closePoint
+	 *            Location of the point considered to be the close edge of the
+	 *            door.
+	 * @return Returns the amount of points within the search cone closer to the
+	 *         robot than the closest point of the door.
+	 */
+	public int seeDoor(ArrayList<double[]> scan, int oPidx, int cPidx,
 			double[] openPoint, double[] closePoint) {
 
 		// where to start search / end search
 		int start = Math.min(oPidx, cPidx);
 		int stop = Math.max(oPidx, cPidx);
 
-		// what is min range of the search cone?
+		// determining the minimum value of the search cone
 		double rangeOpen = Math.sqrt(Math.pow(openPoint[0], 2)
 				+ Math.pow(openPoint[1], 2));
 		double rangeClose = Math.sqrt(Math.pow(closePoint[0], 2)
 				+ Math.pow(closePoint[1], 2));
 		double minRange = Math.min(rangeOpen, rangeClose);
 
-		// how many points are within this cone?
+		// counter for the points within the search cone
 		int pointsWithin = 0;
 
-		// lets find some perpetrators!
+		// running through all points within the search cone to determine which
+		// ones are closer to us than the door
 		for (int i = start + 1; i < stop; i++) {
 			double[] perpPoint = scan.get(i);
 			double perpRange = Math.sqrt(Math.pow(perpPoint[0], 2)
@@ -325,11 +471,34 @@ public class DoorFinder {
 		return pointsWithin;
 	}
 
-	// do data association on found doors
+	/**
+	 * Data association algorithm.
+	 * 
+	 * Determines from the newly located doors which doors correspond to
+	 * previously seen doors.
+	 * 
+	 * @param daDoors
+	 *            Array list of doors recently found in a lidar scan.
+	 * @param graph
+	 *            Graph being used for SLAM.
+	 * @param poseidx
+	 *            Index within graph.nodes of the current robot pose.
+	 * @param matcher
+	 *            The instance of the loop closing matcher used for SLAM.
+	 * @return Returns an array list of type int the same size as the number of
+	 *         doors passed into the method via the door array list. Each index
+	 *         within the returned array corresponds to the door of the same
+	 *         index within the door array list. The integer values returned
+	 *         represent the index within graph.nodes with which a given door
+	 *         has been associated with. A value of '-1' corresponds to a new
+	 *         door while a value of '-2' corresponds to an observation of a
+	 *         door which should be ignored according to our double gated
+	 *         parameters (see class parameters above).
+	 */
 	public int[] dataAssociation(ArrayList<double[]> daDoors, Graph graph,
 			int poseidx, LoopClosureMatcher matcher) {
 
-		// indices within graph of data associations (-1 if new door)
+		// indices within graph of data associations
 		int[] indices = new int[daDoors.size()];
 
 		// no doors yet, so all doors are new and should be initialized
@@ -343,28 +512,37 @@ public class DoorFinder {
 		// we are doing association on this pose's scan
 		GXYTNode thisPose = (GXYTNode) graph.nodes.get(poseidx);
 
-		// data association using scan matching technique
+		// run through each door we have found to attempt association
 		for (int j = 0; j < daDoors.size(); j++) {
 
-			// current door we are trying to do association on
+			// current door we are trying to associate
 			double[] doorLocation = daDoors.get(j);
 			double best;
 			int bestDoorindex;
 
-			// initial door
+			// initiate algorithm by associating the door we are considering
+			// with the first door we ever saw
 			int index = doorMap.get(0);
+
+			// get the door node from the graph based on our door map (mapping
+			// door number to index within graph.nodes)
 			GXYNode doorNode = (GXYNode) graph.nodes.get(index);
+
+			// grab the array list of all the door nodes that have seen the door
+			// we are considering
 			ArrayList<Integer> doorNodes = (ArrayList<Integer>) doorNode
 					.getAttribute("nodeList");
+
+			// get the index within graph.nodes of the last pose that saw the
+			// door we are considering
 			int lastNodeIdx = doorNodes.get(doorNodes.size() - 1);
 
-			// do a scan match between our current pose and the pose that last
-			// saw the current considered door
-			// our data association will be based on how well the difference
-			// between the old edge connecting both poses
-			// and the new edge from scan matching agrees with the error in the
-			// association between the considered door
-			// and the located door
+			// current association heuristic: do a scan match between our
+			// current pose and the pose that last saw the door we are trying to
+			// associate with. our data association will be based on how well
+			// the difference between the old edge connecting both poses and the
+			// new edge from scan matching agrees with the error in the
+			// association between the considered door and the located door
 			GXYTNode lastPose = (GXYTNode) graph.nodes.get(lastNodeIdx);
 			double[] prior = LinAlg.xytInvMul31(lastPose.state, thisPose.state);
 			prior[2] = MathUtil.mod2pi(prior[2]);
@@ -385,8 +563,8 @@ public class DoorFinder {
 			// run through the rest of the doors
 			for (int k = 1; k < doorMap.size(); k++) {
 
-				// run through each other door, determine if better than the
-				// current running 'best'
+				// run through each other door, determine if each associations
+				// heuristic value is better than the current running 'best'
 				index = doorMap.get(k);
 				doorNode = (GXYNode) graph.nodes.get(index);
 				doorNodes = (ArrayList<Integer>) doorNode
@@ -413,14 +591,14 @@ public class DoorFinder {
 				}
 			}
 
-			// here is our double gate on our scan matching distance heuristic
+			// double gate on our scan matching distance heuristic
+			// new door to be added to the graph
 			if (best > upperDataThresh) {
 				indices[j] = -1;
 				continue;
 			}
 
-			// if best chi2 is lower than lower threshold, we have made a data
-			// association
+			// associated door
 			if (best < lowerDataThresh) {
 				indices[j] = bestDoorindex;
 				// update where we last saw the node
@@ -430,16 +608,37 @@ public class DoorFinder {
 				continue;
 			}
 
-			// otherwise, we are inbetween our gate, we will ignore this
-			// observation (take no action)
+			// ignore this observation (inside our gated thresholds)
 			indices[j] = -2;
 		}
 
 		return indices;
 	}
 
-	// update the graph to reflect doors (as well as slam edges if applicable)
-	public void updateGraph(int[] idxs, Graph gr, int poseidx, double[] xyt) {
+	/**
+	 * Updates SLAM pose graph to include located doors.
+	 * 
+	 * Currently not set up to add additional edges based on successful data
+	 * associations.
+	 * 
+	 * @param idxs
+	 *            The indices from the data association method which associates
+	 *            each door within the doors array list with a prior door. Each
+	 *            value within the array corresponds either to a new door, the
+	 *            index within graph.nodes of the associated door, or a '-2' to
+	 *            designate an observation of a door which should be ignored
+	 *            (all based on a double gates system, see above).
+	 * @param gr
+	 *            Graph being used for SLAM.
+	 * @param poseidx
+	 *            Index within graph.nodes of the current robot pose.
+	 * @param xyt
+	 *            Current location of the robot (x, y, theta).
+	 * @param doors
+	 *            Array list of doors recently found in a lidar scan.
+	 */
+	public void updateGraph(int[] idxs, Graph gr, int poseidx, double[] xyt,
+			ArrayList<double[]> doors) {
 
 		// run through each door, process it accordingly
 		for (int i = 0; i < doors.size(); i++) {
@@ -447,7 +646,7 @@ public class DoorFinder {
 			// door we are working with
 			double[] doorState = doors.get(i);
 
-			// new door, initialize regardless slam setup
+			// initialize new door
 			if (idxs[i] == -1) {
 
 				// create the node, add to graph, update door map
@@ -473,36 +672,13 @@ public class DoorFinder {
 				doorEdge.nodes = new int[] { poseidx, gr.nodes.size() - 1 };
 				double xyDist = LinAlg.distance(doorNode.state, xyt, 2);
 				doorEdge.P = LinAlg.diag(new double[] {
-						LinAlg.sq(xyDist * distErr) + 0.01,
-						LinAlg.sq(xyDist * distErr) + 0.01, });
+						LinAlg.sq(xyDist * 0.1) + 0.01,
+						LinAlg.sq(xyDist * 0.1) + 0.01, });
 				doorEdge.setAttribute("type", "door");
 				gr.edges.add(doorEdge);
 				edgesAdded += 1;
 				continue;
 			}
-
-			// not a new door, add edge if using doors to assist in slam
-			if (doorSlam && (idxs[i] != -2)) {
-				GXYEdge doorEdge = new GXYEdge();
-				double dx = Math.cos(xyt[2]) * (doorState[0] - xyt[0])
-						+ Math.sin(xyt[2]) * (doorState[1] - xyt[1]);
-				double dy = -Math.sin(xyt[2]) * (doorState[0] - xyt[0])
-						+ Math.cos(xyt[2]) * (doorState[1] - xyt[1]);
-				doorEdge.z = new double[] { dx, dy };
-				double xyDist = LinAlg.distance(doorState, xyt, 2);
-				doorEdge.P = LinAlg.diag(new double[] {
-						LinAlg.sq(xyDist * distErr) + 0.01,
-						LinAlg.sq(xyDist * distErr) + 0.01, });
-				doorEdge.nodes = new int[] { poseidx, idxs[i] };
-				doorEdge.setAttribute("type", "door");
-				gr.edges.add(doorEdge);
-				edgesAdded += 1;
-			}
 		}
-	}
-
-	// change slam settings on door finder class
-	public void setSlamMethod(boolean option) {
-		this.doorSlam = option;
 	}
 }

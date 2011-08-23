@@ -23,7 +23,6 @@ import april.jmat.MultiGaussian;
 import april.jmat.ordering.MinimumDegreeOrdering;
 import april.laser.scanmatcher.MultiResolutionScanMatcher;
 import april.util.GridMap;
-import april.util.Tic;
 
 public class Slam {
 	// slam setup
@@ -31,7 +30,6 @@ public class Slam {
 	boolean closeLoop = true;
 	boolean noisyOdom = true;
 	boolean includeDoors = true;
-	boolean slamWdoors = false;
 
 	// config files, one for slam process, loopmatch process, and loopclosure
 	// process
@@ -147,7 +145,6 @@ public class Slam {
 			closeLoop = slamConfig.getBoolean("closeLoop", closeLoop);
 			noisyOdom = slamConfig.getBoolean("noisyOdom", noisyOdom);
 			includeDoors = slamConfig.getBoolean("includeDoors", includeDoors);
-			slamWdoors = slamConfig.getBoolean("slamWdoors", slamWdoors);
 			matchScore = slamConfig.getDouble("matchScore", matchScore);
 			thetaRange = Math.toRadians(slamConfig.getDouble("thetaRange",
 					thetaRange));
@@ -180,7 +177,6 @@ public class Slam {
 		}
 		if (includeDoors) {
 			doorFinder = new DoorFinder(doorfinderConfig);
-			doorFinder.setSlamMethod(slamWdoors);
 		}
 		this.g = new Graph();
 	}
