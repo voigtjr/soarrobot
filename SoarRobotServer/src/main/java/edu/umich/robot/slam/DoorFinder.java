@@ -141,7 +141,11 @@ public class DoorFinder {
 	 * SLAM pose graph.
 	 * 
 	 * @param scan
-	 *            Current scan with which to attempt to locate doors within.
+	 *            Set of lidar points in global coordinate frame. Each entry
+	 *            within the array list is a two element array of type double
+	 *            representing a single lidar point. The first element is the
+	 *            x-coordinate and the second element is the y-coordinate of the
+	 *            lidar point.
 	 * @param G
 	 *            Graph being used for SLAM.
 	 * @param PoseIndex
