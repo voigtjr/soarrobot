@@ -2,16 +2,13 @@ package edu.umich.soarrobot.SoarRobotTablet.objects;
 
 import java.util.HashMap;
 
-import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import edu.umich.soarrobot.SoarRobotTablet.layout.GLUtil;
-import android.graphics.Color;
 import android.graphics.PointF;
-import android.opengl.GLSurfaceView.Renderer;
 import april.lcmtypes.laser_t;
-import april.lcmtypes.waypoint_list_t;
-import april.lcmtypes.waypoint_t;
+import edu.umich.robot.lcmtypes.waypoint_list_t;
+import edu.umich.robot.lcmtypes.waypoint_t;
+import edu.umich.soarrobot.SoarRobotTablet.layout.GLUtil;
 
 public class SimRobot extends SimObject
 {

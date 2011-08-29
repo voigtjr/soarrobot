@@ -32,12 +32,11 @@ package edu.umich.soarrobot.SoarRobotTablet.objects;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
+
 import javax.microedition.khronos.opengles.GL10;
+
 import android.graphics.Color;
 import android.graphics.PointF;
-import april.lcmtypes.laser_t;
-import april.lcmtypes.waypoint_list_t;
-import april.lcmtypes.waypoint_t;
 import edu.umich.soarrobot.SoarRobotTablet.layout.GLUtil;
 
 public class SimObject {

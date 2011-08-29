@@ -44,4 +44,3 @@ public enum WallDir
         return null;
     }
 }
-
