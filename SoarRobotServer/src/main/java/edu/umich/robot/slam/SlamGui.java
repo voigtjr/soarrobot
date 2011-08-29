@@ -103,7 +103,7 @@ public class SlamGui implements LCMSubscriber {
 		if (config != null) {
 			slam = new Slam(config);
 		} else {
-			slam = new Slam();
+			slam = new Slam(null);
 		}
 		if (parameterGui.gb("showscan"))
 			scanFrame.setVisible(true);
@@ -176,15 +176,18 @@ public class SlamGui implements LCMSubscriber {
 						slam.g.nodes.get(i).state[1], 0 };
 				worldBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(state),
 						new VisStar()));
-				
-				double direction = (Double) slam.g.nodes.get(i).getAttribute("doorDirection");
+
+				double direction = (Double) slam.g.nodes.get(i).getAttribute(
+						"doorDirection");
 				VisData vd = new VisData(new VisDataPointStyle(Color.blue, 2),
 						new VisDataLineStyle(Color.blue, 1));
 				vd.add(new double[] { state[0], state[1] });
-				vd.add(new double[] { state[0] + Math.cos(direction), state[1] + Math.sin(direction) });
-				vd.add(new double[] { state[0] - Math.cos(direction), state[1] - Math.sin(direction) });
+				vd.add(new double[] { state[0] + Math.cos(direction),
+						state[1] + Math.sin(direction) });
+				vd.add(new double[] { state[0] - Math.cos(direction),
+						state[1] - Math.sin(direction) });
 				worldBuffer.addBuffered(vd);
-				
+
 				continue;
 			}
 
@@ -208,8 +211,8 @@ public class SlamGui implements LCMSubscriber {
 
 		// Display added edges from loop closure task
 		if (parameterGui.gb("hypothesis")) {
-			synchronized (slam.hypoth) {
-				for (GEdge gh : slam.hypoth) {
+			synchronized (slam.addedEdges) {
+				for (GEdge gh : slam.addedEdges) {
 
 					VisData vd;
 					if (gh instanceof GXYEdge) {

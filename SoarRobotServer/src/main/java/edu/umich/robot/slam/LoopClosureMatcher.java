@@ -76,15 +76,16 @@ public class LoopClosureMatcher {
 	// loop closure scan matcher
 	MultiResolutionMatcher clMatcher;
 
-	// config / grip map for the loop closure matcher
+	// configuration file / grip map for the loop closure matcher
 	Config config;
 	GridMap gmLC;
 
-	// constructors
-	public LoopClosureMatcher() {
-		this(null);
-	}
-
+	/**
+	 * Constructor method (can be called with null as input).
+	 * 
+	 * @param config
+	 *            Configuration file (see april.config for more information).
+	 */
 	public LoopClosureMatcher(Config config) {
 		if (config != null) {
 			this.metersPerPixel = config.getDouble("metersPerPixel",
@@ -116,7 +117,7 @@ public class LoopClosureMatcher {
 	 * This method must be called prior to attempting to match two scans.
 	 * 
 	 * @param lidarPts
-	 *            Set of lidar points in global coordinate frame. Each entry
+	 *            Set of lidar points in robot coordinate frame. Each entry
 	 *            within the array list is a two element array of type double
 	 *            representing a single lidar point. The first element is the
 	 *            x-coordinate and the second element is the y-coordinate of the
@@ -241,7 +242,8 @@ public class LoopClosureMatcher {
 	 * @return If a match meets all the specified parameters above, a GXYTEdge
 	 *         will be returned by this method with the appropriate variables
 	 *         assigned according to the scan matcher. Otherwise, this method
-	 *         will return an empty (null) GXYTEdge.
+	 *         will return an empty (null) GXYTEdge. Note that the edge will
+	 *         point from Node A to Node B as Node A is the reference node.
 	 */
 	public GXYTEdge match(GXYTNode a, GXYTNode b, double[] priorXYT) {
 		// new edge to return if successful match found

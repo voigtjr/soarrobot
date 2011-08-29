@@ -25,21 +25,30 @@ import april.laser.scanmatcher.MultiResolutionScanMatcher;
 import april.util.GridMap;
 
 public class Slam {
-	// slam setup
+
+	// SLAM setup
+	// use odometry sensors
 	boolean useOdom = true;
+	// attempt to close the loop
 	boolean closeLoop = true;
+	// artificially inflate the odometry information with error (used for
+	// simulation environment)
 	boolean noisyOdom = true;
+	// attempt to locate doors and add them to the pose graph
 	boolean includeDoors = true;
 
-	// config files, one for slam process, loopmatch process, and loopclosure
-	// process
+	// configuration files for parameters within the slam process, the open loop
+	// scan matching process, the close loop scan matching process, and the door
+	// finding process
 	Config slamConfig;
 	Config loopmatchConfig;
 	Config loopcloseConfig;
 	Config doorfinderConfig;
 
-	// door finder setup
+	// door finder instance
 	DoorFinder doorFinder;
+	// tracks the index within graph.nodes of the last pose (used by the door
+	// finder class)
 	int lastPoseIndex = 0;
 
 	// open loop scan matcher if not using odometry
@@ -54,17 +63,35 @@ public class Slam {
 	int old_scan_decay = 5;
 	GridMap gm;
 
-	// parameters for sampling from noisy odometry
+	// error parameters for sampling from noisy odometry
 	Random r = new Random();
 	double[] al = new double[] { 0.005, 0.005, Math.toRadians(0.05) };
+
+	// array lists to track the ground truth odometry, noise inflated odometry,
+	// and SLAM corrected odometry
 	ArrayList<double[]> gTruth = new ArrayList<double[]>();
 	ArrayList<double[]> pureOdom = new ArrayList<double[]>();
 	ArrayList<double[]> slamPose = new ArrayList<double[]>();
 
-	// starter for odom info
+	// starter variable to ensure an odometry pose is added to our graph prior
+	// to using open loop scan matching
 	int starter = 0;
 
-	// CLOSE LOOP scan search parameters
+	/**
+	 * Loop closure SLAM process parameters. Adjust based on desired
+	 * performance, environment, and robot setup.
+	 * 
+	 * @param matchScore
+	 *            Minimum score that must be achieved by the multi-resolution
+	 *            scan matcher before an matching edge is returned.
+	 * @param thetaRange
+	 *            Rotation search space (in radians).
+	 * @param thetaRangeRes
+	 *            Rotation search space resolution (in radians).
+	 * @param searchRange
+	 *            Search window size (in meters).
+	 * 
+	 */
 	double matchScore = 8000;
 	double thetaRange = Math.toRadians(10);
 	double thetaRangeRes = Math.toRadians(1);
@@ -74,7 +101,7 @@ public class Slam {
 	double distErr = 0.15;
 	double rotErr = 0.1;
 
-	// loop closure information
+	// loop closure instantiation
 	boolean returner;
 	LoopClosure LC;
 
@@ -94,8 +121,6 @@ public class Slam {
 	double pose_dist_thresh_m = 1.0;
 	double pose_theta_thresh_rad = Math.toRadians(25);
 
-	// list of scans
-	ArrayList<Scan> scans = new ArrayList<Scan>();
 	// current robot location in global frame
 	double xyt[] = new double[3];
 	// last ground truth location in global frame
@@ -103,9 +128,10 @@ public class Slam {
 	// XYT to process odometry as rigid body transforms
 	double XYT[] = new double[3];
 	// holds additional added edges for visualization
-	ArrayList<GEdge> hypoth = new ArrayList<GEdge>();
+	ArrayList<GEdge> addedEdges = new ArrayList<GEdge>();
 
-	// laser scan class
+	// laser scan class used by open loop scan matcher when not using odometry
+	// sensors
 	public static class Scan {
 		// x, y, t of robot @ time of scan
 		double xyt[];
@@ -114,23 +140,22 @@ public class Slam {
 		ArrayList<double[]> gpoints;
 	}
 
-	public Slam() {
-		this(null);
-	}
-
+	/**
+	 * Constructor method (can be called with null as input).
+	 * 
+	 * @param config
+	 *            Configuration file (see april.config for more information).
+	 */
 	public Slam(Config config) {
-		// parsing config file
+
+		// parsing configuration file
 		if (config != null) {
 			slamConfig = config.getChild("Slam");
-		}
-		if (slamConfig != null) {
 			loopmatchConfig = config.getChild("LoopMatcher");
 			loopcloseConfig = config.getChild("LoopCloser");
 			doorfinderConfig = config.getChild("DoorFinder");
-		}
 
-		// setting slam parameters
-		if (slamConfig != null) {
+			// setting clam configuration parameters
 			maxScanHistory = slamConfig.getInt("max_scan_history",
 					maxScanHistory);
 			decimate = slamConfig.getInt("decimate", decimate);
@@ -181,14 +206,21 @@ public class Slam {
 		this.g = new Graph();
 	}
 
-	/** Pass in pose as (x, y, theta) in units of [meters, meters, radians] **/
+	/**
+	 * Simple updating of the current pose estimate using odometry sensor
+	 * information.
+	 * 
+	 * @param odomxyt
+	 *            Pose estimate from odometry sensors, pass in as [x, y, theta]
+	 *            in global coordinate frame (units are meters / radians).
+	 */
 	public void processOdometry(double odomxyt[]) {
 
-		// if we aren't using the odometry, then return
+		// not using odometry according to SLAM setup, return (see above)
 		if (!useOdom)
 			return;
 
-		// map the current angle
+		// map the current angle between -pi to pi
 		odomxyt[2] = MathUtil.mod2pi(odomxyt[2]);
 
 		// allow for an initial offset position
@@ -209,14 +241,18 @@ public class Slam {
 			return;
 		}
 
-		// sampling from noisy odometry
+		// sampling from noisy odometry according to SLAM setup (see above)
 		if (noisyOdom) {
-			// noisy sampling from odometry using RBT process model
+			// noisy sampling from odometry using rigid body transformation
+			// process model
 			double dist = LinAlg.distance(groundTruth, odomxyt);
 			double dang = Math
 					.abs(MathUtil.mod2pi(groundTruth[2] - odomxyt[2]));
 
+			// only adding error in odometry measurement if we have moved since
+			// the last time we received a message
 			if (dist > 0.00001 || dang > 0.00001) {
+				// synchronizing for GUI threading
 				synchronized (gTruth) {
 					gTruth.add(LinAlg.copy(odomxyt));
 				}
@@ -227,8 +263,7 @@ public class Slam {
 				groundTruth = LinAlg.copy(odomxyt);
 
 				// sampling from noise parameters, assuming error of al[num] per
-				// each
-				// full unit of true movement
+				// each full unit of true movement
 				double s1 = Math.abs(al[0] * priorU[0]);
 				double s2 = Math.abs(al[1] * priorU[1]);
 				double s3 = Math.abs(al[2] * priorU[2]);
@@ -237,7 +272,7 @@ public class Slam {
 				double Dy = priorU[1] + Math.sqrt(s2) * r.nextGaussian();
 				double Dt = priorU[2] + Math.sqrt(s3) * r.nextGaussian();
 
-				// new odomxyt after sampling
+				// new odomxyt after sampling from noisy motion model
 				double[] newU = new double[] { Dx, Dy, Dt };
 				odomxyt = LinAlg.xytMultiply(XYT, newU);
 				odomxyt[2] = MathUtil.mod2pi(odomxyt[2]);
@@ -250,7 +285,8 @@ public class Slam {
 			}
 		}
 
-		// RBT update (u is 'T'), XYT --> A, estPose --> B
+		// rigid body transformation update (XYT stores the previous odometry
+		// sensor measurement)
 		double[] u = LinAlg.xytInvMul31(XYT, odomxyt);
 
 		// Reassign XYT values
@@ -263,44 +299,57 @@ public class Slam {
 
 	/** Pass in points relative to the robot's coordinate, units of 'meters' **/
 	public void processScan(ArrayList<double[]> rpoints) {
-		// used by gui for displaying scans
+		// used by GUI for displaying scans
 		lastScan = rpoints;
 
-		// wait for first position message to arrive before beginning scanning
+		// wait for first position message to arrive before beginning scan
+		// matching
 		if (starter == 0)
 			return;
 
-		// first scan ever
-		if ((scans.size() == 0)) {
-			// our first-ever scan.
+		// first scan received after the initial odometry message has been
+		// received
+		if (g.nodes.isEmpty()) {
+
+			// first scan ever, add a node to the graph
 			GXYTNode gn = new GXYTNode();
 			gn.state = xyt;
 			gn.init = xyt;
 
+			// anchor this node in the graph using a GXYTPosEdge (see
+			// GXYTPosEdge for more information)
 			GXYTPosEdge edge = new GXYTPosEdge();
 			edge.nodes = new int[] { 0 };
 			edge.z = LinAlg.copy(gn.state);
 			edge.P = LinAlg.diag(new double[] { 0.01, 0.01, 0.001 });
 			g.edges.add(edge);
 
-			gn.setAttribute("points", new ArrayList<double[]>(rpoints),
-					new april.util.PointArrayCoder());
+			// add attributes (LIDAR scan and node index within graph.nodes)
+			gn.setAttribute("points", rpoints);
 			gn.setAttribute("node_index", g.nodes.size());
+
+			// add node to graph
 			g.nodes.add(gn);
 
-			Scan scan = new Scan();
-			scan.xyt = xyt;
-			scan.gpoints = LinAlg.transform(xyt, rpoints);
-			scans.add(scan);
-			if (!useOdom)
+			// update the open loop grid map if we are not using odometry sensor
+			// information
+			if (!useOdom) {
+				Scan scan = new Scan();
+				scan.xyt = xyt;
+				scan.gpoints = LinAlg.transform(xyt, rpoints);
 				drawScan(scan);
+			}
 
-			// door finder
+			// call main door finder method to find doors, associate the data,
+			// and add them to the graph
 			if (includeDoors) {
 				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
 						loopmatcher);
+
+				// add door edges to our addedEdges array list for visualization
+				// (see SlamGui for more information)
 				for (int d = 0; d < doorFinder.edgesAdded; d++)
-					hypoth.add(g.edges.get(g.edges.size() - 1 - d));
+					addedEdges.add(g.edges.get(g.edges.size() - 1 - d));
 			}
 
 			return;
@@ -328,13 +377,13 @@ public class Slam {
 
 		if (ddist > pose_dist_thresh_m || dtheta > pose_theta_thresh_rad) {
 
-			// create two edges, odom edge, and scan match edge, use best
-			// new node and it's corresponding information
+			// create two edges, an odometry edge and scan match edge, use the
+			// best of the two based on whether or not the match meets all scan
+			// matching requirements
 			GXYTNode gn = new GXYTNode();
 			gn.state = xyt;
 			gn.init = xyt;
-			gn.setAttribute("points", new ArrayList<double[]>(rpoints),
-					new april.util.PointArrayCoder());
+			gn.setAttribute("points", rpoints);
 			gn.setAttribute("node_index", g.nodes.size());
 			g.nodes.add(gn);
 
@@ -349,22 +398,38 @@ public class Slam {
 			ge.nodes[0] = lastPoseIndex;
 			ge.nodes[1] = g.nodes.size() - 1;
 
-			// scan match edge
+			// new edge using scan matching information
 			loopmatcher = new LoopClosureMatcher(loopmatchConfig);
 
-			// initialize the gridmap
+			// initialize the loop closure matcher with the current LIDAR scan
 			loopmatcher.init(rpoints);
 
-			// match to new node
+			// current pose
 			GXYTNode NB = (GXYTNode) g.nodes.get(g.nodes.size() - 1);
+
+			// creating a prior (just odometry edge)
 			double[] prior = LinAlg.xytInvMul31(NB.state, NA.state);
+
+			// setting the loop matcher to open loop to enforce a bound on the
+			// matching (this avoids the hallway problem)
 			loopmatcher.setOpenLoopMatch(true);
+
+			// invoking the match (note that this is called in a reverse manner
+			// in an effort to use the same instance of the loop closure matcher
+			// during the loop closing process below)
 			GXYTEdge newEdge = loopmatcher.match(NB, NA, prior);
+
+			// setting the loop matcher back to close loop for loop closure
+			// below
 			loopmatcher.setOpenLoopMatch(false);
 
-			// good match (better than odometry), fix gn && add this edge
+			// found a good match, fix current node and add matching edge to
+			// graph.edges
 			if (newEdge != null) {
-				// invert z
+
+				// invert this edge (see matching scheme above for info), update
+				// all of the edge's information, add to graph.edges, update
+				// current pose's node
 				newEdge.z = LinAlg.xytInverse(newEdge.z);
 				newEdge.nodes = new int[2];
 				newEdge.nodes[0] = lastPoseIndex;
@@ -380,57 +445,62 @@ public class Slam {
 						LinAlg.sq(newdist * distErr) + 0.01,
 						LinAlg.sq(newtheta * rotErr) + Math.toRadians(1) });
 				g.edges.add(newEdge);
-				// updating xyt now
 				xyt = LinAlg.copy(tempXYZ);
 			} else {
 				g.edges.add(ge);
 			}
 
-			// switch loopmatcher search information for loopclosing
+			// switch scan matcher search information for loop closing
 			loopmatcher.setMatchParameters(matchScore, thetaRange,
 					thetaRangeRes, searchRange);
 
-			if (scans.size() > maxScanHistory)
-				scans.remove(0);
-
-			// find the doors now (if we are concerned with doors)
+			// attempt to find doors based on SLAM setup
 			if (includeDoors) {
 				lastPoseIndex = g.nodes.size() - 1;
 				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
 						loopmatcher);
 				for (int d = 0; d < doorFinder.edgesAdded; d++)
-					hypoth.add(g.edges.get(g.edges.size() - 1 - d));
+					addedEdges.add(g.edges.get(g.edges.size() - 1 - d));
 			}
 
-			// loopclosure
+			// attempt to close the loop based on SLAM setup
 			if (closeLoop) {
 				int curEdges = g.edges.size();
-				LC.run(0);
+				LC.close();
 				if (curEdges < g.edges.size()) {
 					optimizeFull(g);
 					xyt = LinAlg.copy(g.nodes.get(lastPoseIndex).state);
 				}
 			}
 
-			// updating the open loop gridmap
+			// updating the open loop grid map if we are not using odometry
+			// information
 			if (!useOdom) {
 				Scan scan = new Scan();
 				scan.xyt = xyt;
 				scan.gpoints = LinAlg.transform(xyt, rpoints);
-				scans.add(scan);
 				drawScan(scan);
 			}
 		}
+
+		// add updated pose to the list of SLAM poses
 		synchronized (slamPose) {
 			slamPose.add(LinAlg.copy(xyt));
 		}
 	}
 
+	/**
+	 * Updates the open loop scan matching grid map which is utilized only when
+	 * odometry information is not available.
+	 * 
+	 * @param s
+	 *            Current Scan object created from the most recent pose and
+	 *            LIDAR scan (see above for the actual Scan class definition)
+	 */
 	void drawScan(Scan s) {
 		double minx = Double.MAX_VALUE, maxx = -Double.MAX_VALUE;
 		double miny = Double.MAX_VALUE, maxy = -Double.MAX_VALUE;
 
-		// Compute bounds of the scans.
 		for (double p[] : s.gpoints) {
 			minx = Math.min(minx, p[0]);
 			maxx = Math.max(maxx, p[0]);
@@ -528,7 +598,7 @@ public class Slam {
 		}
 
 		// Do NOT thread this
-		public void run(double dt) {
+		public void close() {
 			autoclose_lastnode = lastPoseIndex;
 			// nothing to do
 			if (includeDoors) {
@@ -606,8 +676,8 @@ public class Slam {
 					if (curDist > loopmatcher.getSearchDist())
 						continue;
 
-					//mahalanobis distance to add candidates for loop closure
-					double mahl = mahalanobisDistance(dpPrior, hypoAddDistThres); 
+					// mahalanobis distance to add candidates for loop closure
+					double mahl = mahalanobisDistance(dpPrior, hypoAddDistThres);
 					if (mahl < 0.45)
 						candidates.add(dpPrior);
 				}
@@ -686,8 +756,8 @@ public class Slam {
 							// hack to prevent very close edges being added
 							// if(Math.abs(bestedge.nodes[0]-bestedge.nodes[1])>6){
 							g.edges.add(bestedge);
-							synchronized (hypoth) {
-								hypoth.add(bestedge);
+							synchronized (addedEdges) {
+								addedEdges.add(bestedge);
 							}
 							acceptedEdges.remove(bestedge);
 							// }

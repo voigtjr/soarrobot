@@ -14,9 +14,6 @@ import april.jmat.MathUtil;
 
 public class DoorFinder {
 
-	// config file for door finder parameters
-	Config config;
-
 	/**
 	 * The following parameters are used by the 'findDoors' method and may
 	 * adjusted based on the environment.
@@ -94,6 +91,9 @@ public class DoorFinder {
 	double upperDataThresh = 3;
 	double lowerDataThresh = 0.5;
 
+	// config file for door finder parameters
+	Config config;
+
 	// maps each door to it's index within graph.nodes
 	HashMap<Integer, Integer> doorMap = new HashMap<Integer, Integer>();
 
@@ -103,11 +103,12 @@ public class DoorFinder {
 	// used by the SLAM method to visualize door edges added to the graph
 	int edgesAdded = 0;
 
-	// constructors
-	public DoorFinder() {
-		this(null);
-	}
-
+	/**
+	 * Constructor method (can be called with null as input).
+	 * 
+	 * @param config
+	 *            Configuration file (see april.config for more information).
+	 */
 	public DoorFinder(Config config) {
 
 		if (config != null) {
@@ -141,7 +142,7 @@ public class DoorFinder {
 	 * SLAM pose graph.
 	 * 
 	 * @param scan
-	 *            Set of lidar points in global coordinate frame. Each entry
+	 *            Set of lidar points in robot coordinate frame. Each entry
 	 *            within the array list is a two element array of type double
 	 *            representing a single lidar point. The first element is the
 	 *            x-coordinate and the second element is the y-coordinate of the
@@ -182,7 +183,7 @@ public class DoorFinder {
 	 * descriptions).
 	 * 
 	 * @param rpoints
-	 *            Set of lidar points in global coordinate frame. Each entry
+	 *            Set of lidar points in robot coordinate frame. Each entry
 	 *            within the array list is a two element array of type double
 	 *            representing a single lidar point. The first element is the
 	 *            x-coordinate and the second element is the y-coordinate of the
@@ -424,7 +425,7 @@ public class DoorFinder {
 	 * closest point to the door.
 	 * 
 	 * @param scan
-	 *            Set of lidar points in global coordinate frame. Each entry
+	 *            Set of lidar points in robot coordinate frame. Each entry
 	 *            within the array list is a two element array of type double
 	 *            representing a single lidar point. The first element is the
 	 *            x-coordinate and the second element is the y-coordinate of the
@@ -489,14 +490,14 @@ public class DoorFinder {
 	 *            Index within graph.nodes of the current robot pose.
 	 * @param matcher
 	 *            The instance of the loop closing matcher used for SLAM.
-	 * @return Returns an array list of type int the same size as the number of
-	 *         doors passed into the method via the door array list. Each index
-	 *         within the returned array corresponds to the door of the same
-	 *         index within the door array list. The integer values returned
-	 *         represent the index within graph.nodes with which a given door
-	 *         has been associated with. A value of '-1' corresponds to a new
-	 *         door while a value of '-2' corresponds to an observation of a
-	 *         door which should be ignored according to our double gated
+	 * @return Returns an array list of type integer the same size as the number
+	 *         of doors passed into the method via the door array list. Each
+	 *         index within the returned array corresponds to the door of the
+	 *         same index within the door array list. The integer values
+	 *         returned represent the index within graph.nodes with which a
+	 *         given door has been associated with. A value of '-1' corresponds
+	 *         to a new door while a value of '-2' corresponds to an observation
+	 *         of a door which should be ignored according to our double gated
 	 *         parameters (see class parameters above).
 	 */
 	public int[] dataAssociation(ArrayList<double[]> daDoors, Graph graph,
