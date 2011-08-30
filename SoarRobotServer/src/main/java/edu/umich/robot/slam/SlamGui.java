@@ -239,8 +239,8 @@ public class SlamGui implements LCMSubscriber {
 		if (parameterGui.gb("gTruth")) {
 			VisData vd = new VisData(new VisDataPointStyle(Color.red, 2),
 					new VisDataLineStyle(Color.red, 2));
-			synchronized (slam.gTruth) {
-				for (double[] gt : slam.gTruth)
+			synchronized (slam.trueOdom) {
+				for (double[] gt : slam.trueOdom)
 					vd.add(new double[] { gt[0], gt[1] });
 			}
 			worldBuffer.addBuffered(vd);
@@ -257,8 +257,8 @@ public class SlamGui implements LCMSubscriber {
 		if (parameterGui.gb("slamPose")) {
 			VisData vd = new VisData(new VisDataPointStyle(Color.yellow, 2),
 					new VisDataLineStyle(Color.yellow, 2));
-			synchronized (slam.slamPose) {
-				for (double[] sp : slam.slamPose)
+			synchronized (slam.slamOdom) {
+				for (double[] sp : slam.slamOdom)
 					vd.add(new double[] { sp[0], sp[1] });
 			}
 			worldBuffer.addBuffered(vd);
