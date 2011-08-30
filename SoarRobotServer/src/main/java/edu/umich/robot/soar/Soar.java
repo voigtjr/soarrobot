@@ -79,8 +79,8 @@ public class Soar implements RobotEventListener, RadioHandler
     public Soar(Config config)
     {
         data = new SoarDataCollector(clock, properties, config);
-        
-        kernel = Kernel.CreateKernelInNewThread(Kernel.GetDefaultLibraryName(),
+        String soarLibraryName = Kernel.GetDefaultLibraryName();
+        kernel = Kernel.CreateKernelInNewThread(soarLibraryName,
                 Kernel.kUseAnyPort);
         if (kernel.HadError())
             throw new IllegalStateException("Soar error: "

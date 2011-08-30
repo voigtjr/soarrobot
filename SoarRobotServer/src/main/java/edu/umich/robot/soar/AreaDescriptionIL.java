@@ -55,8 +55,7 @@ import edu.umich.soar.StringWme;
  */
 public class AreaDescriptionIL extends InputLinkElement
 {
-    private static final Log logger = LogFactory
-            .getLog(AreaDescriptionIL.class);
+    private static final Log logger = LogFactory.getLog(AreaDescriptionIL.class);
 
     private final SoarAgent agent;
 
@@ -67,7 +66,7 @@ public class AreaDescriptionIL extends InputLinkElement
     private final StringWme lightwme;
 
     private final RobotOutput output;
-    
+
     private final List<Identifier> gatewayWmes = Lists.newArrayList();
 
     private final List<PointWithDistanceIL> pointDataList = Lists.newArrayList();
@@ -75,9 +74,9 @@ public class AreaDescriptionIL extends InputLinkElement
     private final List<Identifier> destroyList = Lists.newArrayList();
 
     private final String channel;
-    
+
     private static final LCM lcm = LCM.getSingleton();
-    
+
     private boolean warned = false;
 
     public AreaDescriptionIL(SoarAgent agent)
@@ -100,23 +99,22 @@ public class AreaDescriptionIL extends InputLinkElement
         debug("newArea(" + ad.toString() + ")");
         idwme.update(ad.getId());
         logger.trace(idwme);
-        
+
         String type = ad.getProperties().get("type");
         typewme.update(type == null ? IOConstants.ROOM : type);
         logger.trace(typewme);
-        
+
         waypoint_list_t lcmwps = new waypoint_list_t();
         lcmwps.utime = TimeUtil.utime();
         List<waypoint_t> lcmtemplist = Lists.newArrayList();
-        
+
         // gateways
         for (int i = 0; i < ad.getGateways().size(); ++i)
         {
             Gateway gateway = ad.getGateways().get(i);
             String dir = gateway.getDirection(ad).toString().toLowerCase();
-            if (logger.isTraceEnabled())
-                logger.trace(dir + ":" + gateway);
-            
+            if (logger.isTraceEnabled()) logger.trace(dir + ":" + gateway);
+
             waypoint_t wp = new waypoint_t();
             wp.utime = lcmwps.utime;
             wp.xLocal = gateway.getPose().getX();
@@ -125,11 +123,11 @@ public class AreaDescriptionIL extends InputLinkElement
             lcmtemplist.add(wp);
 
             Identifier gatewaywme = agent.getSoarAgent().CreateIdWME(getRoot(), IOConstants.GATEWAY);
-            
+
             Identifier doorwme = agent.getSoarAgent().CreateIdWME(gatewaywme, IOConstants.DOOR);
             IntWme.newInstance(doorwme, IOConstants.ID, gateway.getDoor().getId());
             StringWme.newInstance(doorwme, IOConstants.STATE, gateway.getDoor().getState().toString().toLowerCase());
-            
+
             PointWithDistanceIL pointData = new PointWithDistanceIL(gatewaywme, agent, gateway.getPose());
             StringWme.newInstance(gatewaywme, IOConstants.DIRECTION, dir.toString().toLowerCase());
 
@@ -160,35 +158,41 @@ public class AreaDescriptionIL extends InputLinkElement
             StringWme.newInstance(wallwme, IOConstants.DIRECTION, dir);
 
             boolean open = false;
-            for (Integer id : w.getTo())
-            {
-                open = true;
-                
-                // Use a ^gateway wme instead of ^to
-                // IntWme.newInstance(wallwme, IOConstants.TO, id);
-                
-                // Add something here that looks like a gateway
-                Identifier gatewayWme = agent.getSoarAgent().CreateIdWME(getRoot(), IOConstants.GATEWAY);
-                gatewayWme.CreateStringWME(IOConstants.DIRECTION, dir);
-                PointWithDistanceIL gatewayPoint = new PointWithDistanceIL(gatewayWme, agent, w.getMidpoint());
-                gatewayWme.CreateStringWME(IOConstants.DOOR, "nil");
-                gatewayWme.CreateIntWME(IOConstants.TO, id);
-                gatewayWme.CreateIntWME(IOConstants.TO, ad.getId());
 
-                destroyList.add(gatewayWme);
-                pointDataList.add(gatewayPoint);
-                
+            // If type is null, this is of "room" type.
+            // Otherwise, this is a door type.
+            // If it's a door type, it already has gateways.
+            if (type == null)
+            {
+                for (Integer id : w.getTo())
+                {
+                    open = true;
+
+                    // Use a ^gateway wme instead of ^to
+                    // IntWme.newInstance(wallwme, IOConstants.TO, id);
+
+                    // Add something here that looks like a gateway
+                    Identifier gatewayWme = agent.getSoarAgent().CreateIdWME(getRoot(), IOConstants.GATEWAY);
+                    gatewayWme.CreateStringWME(IOConstants.DIRECTION, dir);
+                    PointWithDistanceIL gatewayPoint = new PointWithDistanceIL(gatewayWme, agent, w.getMidpoint());
+                    gatewayWme.CreateStringWME(IOConstants.DOOR, "nil");
+                    gatewayWme.CreateIntWME(IOConstants.TO, id);
+                    gatewayWme.CreateIntWME(IOConstants.TO, ad.getId());
+
+                    destroyList.add(gatewayWme);
+                    pointDataList.add(gatewayPoint);
+                }
             }
             StringWme.newInstance(wallwme, IOConstants.OPEN, Boolean.toString(open));
-            
+
             pointDataList.add(pointData);
             destroyList.add(wallwme);
         }
 
         lcmwps.waypoints = lcmtemplist.toArray(new waypoint_t[lcmtemplist.size()]);
         lcmwps.nwaypoints = lcmwps.waypoints.length;
-        
-		lcm.publish(channel, lcmwps);
+
+        lcm.publish(channel, lcmwps);
     }
 
     @Override
@@ -211,7 +215,7 @@ public class AreaDescriptionIL extends InputLinkElement
                 newArea(ad);
                 ad.setChanged(false);
             }
-            
+
             updateLight(as);
             updateDoors(ad);
         }
@@ -227,45 +231,46 @@ public class AreaDescriptionIL extends InputLinkElement
         for (PointWithDistanceIL pointData : pointDataList)
             pointData.update();
     }
-    
+
     private void updateLight(AreaState as)
     {
         lightwme.update(as.isLit(false) ? IOConstants.TRUE : IOConstants.FALSE);
     }
-    
+
     private void updateDoors(AreaDescription ad)
     {
-    	Map<Long, Identifier> gatewayIdToDoorWme = new HashMap<Long, Identifier>();
-    	for (Identifier gatewayWme : gatewayWmes)
-    	{
-			WMElement door = gatewayWme.FindByAttribute(IOConstants.DOOR, 0);
-			if (door == null || !door.IsIdentifier()) {
-				continue;
-			}
-			Identifier doorwme = door.ConvertToIdentifier();
-			Long gatewayID = doorwme.FindByAttribute(IOConstants.ID, 0).ConvertToIntElement().GetValue();
-			gatewayIdToDoorWme.put(gatewayID, doorwme);
-    	}
-    	for (Gateway gateway : ad.getGateways())
-    	{
-    		Door door = gateway.getDoor();
-    		Long id = (long) door.getId();
-    		Identifier doorWme = gatewayIdToDoorWme.get(id);
-    		if (doorWme == null)
-    		{
-    			continue;
-    		}
-    		StringElement wmeState = doorWme.FindByAttribute(IOConstants.STATE, 0).ConvertToStringElement();
-    		String wmeStateValue = wmeState.GetValue();
-    		String doorStateValue = door.getState().toString().toLowerCase();
-    		if (!wmeStateValue.equals(doorStateValue))
-    		{
-    			wmeState.DestroyWME();
+        Map<Long, Identifier> gatewayIdToDoorWme = new HashMap<Long, Identifier>();
+        for (Identifier gatewayWme : gatewayWmes)
+        {
+            WMElement door = gatewayWme.FindByAttribute(IOConstants.DOOR, 0);
+            if (door == null || !door.IsIdentifier())
+            {
+                continue;
+            }
+            Identifier doorwme = door.ConvertToIdentifier();
+            Long gatewayID = doorwme.FindByAttribute(IOConstants.ID, 0).ConvertToIntElement().GetValue();
+            gatewayIdToDoorWme.put(gatewayID, doorwme);
+        }
+        for (Gateway gateway : ad.getGateways())
+        {
+            Door door = gateway.getDoor();
+            Long id = (long) door.getId();
+            Identifier doorWme = gatewayIdToDoorWme.get(id);
+            if (doorWme == null)
+            {
+                continue;
+            }
+            StringElement wmeState = doorWme.FindByAttribute(IOConstants.STATE, 0).ConvertToStringElement();
+            String wmeStateValue = wmeState.GetValue();
+            String doorStateValue = door.getState().toString().toLowerCase();
+            if (!wmeStateValue.equals(doorStateValue))
+            {
+                wmeState.DestroyWME();
                 StringWme.newInstance(doorWme, IOConstants.STATE, doorStateValue);
-    		}
-    	}
+            }
+        }
     }
-    
+
     private static void debug(String message)
     {
         System.out.println(message);
