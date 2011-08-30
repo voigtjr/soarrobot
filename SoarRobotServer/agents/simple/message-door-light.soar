@@ -124,7 +124,7 @@ sp {go-to-area*finish
 -->
     (write (crlf) |Arrived at destination: | <m-id>)
     (<ol> ^remove-message.id <m-id>)
-    (<s> -^operator <o>)
+    (<s> ^operator <o> -)
 }
 
 ## Operator to open a closed door - shiwali
