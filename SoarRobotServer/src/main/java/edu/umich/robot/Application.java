@@ -65,9 +65,10 @@ public class Application
      */
     public Application(final String[] args)
     {
-        Config config = ConfigUtil.getDefaultConfig(args);
+        // Config config = ConfigUtil.getDefaultConfig(args);
+        Config config = (args.length > 0) ? ConfigUtil.getDefaultConfig(args) : GuiApplication.promptForConfig(null);
         if (config == null || !config.hasKey("multiple-runs.configs"))
-            runGui(args);
+            runGui(config);
         else
             multipleRuns(config.getChild("multiple-runs"));
     }
@@ -108,14 +109,14 @@ public class Application
         logger.info("Done.");
     }
     
-    private void runGui(final String[] args)
+    private void runGui(final Config config)
     {
         SwingTools.initializeLookAndFeel();
         SwingUtilities.invokeLater(new Runnable()
         {
             public void run()
             {
-                new GuiApplication(args);
+                new GuiApplication(config);
             }
         });
     }

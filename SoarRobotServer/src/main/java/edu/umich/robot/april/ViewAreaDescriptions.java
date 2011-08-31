@@ -46,7 +46,7 @@ public class ViewAreaDescriptions implements ViewObject, LCMSubscriber
         
         for (int i = 0; i < data.nareas; ++i)
         {
-            String idString = Integer.toString(i);
+            String idString = Integer.toString(data.area_ids[i]);
             VisText vt = new VisText(new double[] {data.areas[i][0], data.areas[i][1], 0}, VisText.ANCHOR.CENTER, idString);
             vt.setDropShadow(false);
             vb.addBuffered(vt);
