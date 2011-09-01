@@ -172,14 +172,14 @@ public class Metamap implements RobotEventListener
     /**
      * Get an area description from an id number, or null if none.
      * 
-     * @param id
+     * @param index
      * @return
      */
-    public AreaDescription getAreaFromId(int id)
+    public AreaDescription getAreaFromIndex(int index)
     {
-        if (id >= areaList.size())
+        if (index >= areaList.size() || index < 0)
             return null;
-        return areaList.get(id);
+        return areaList.get(index);
     }
     
     /**

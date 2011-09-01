@@ -21,6 +21,7 @@
  */
 package edu.umich.robot.soar;
 
+import java.awt.geom.Area;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -133,7 +134,9 @@ public class AreaDescriptionIL extends InputLinkElement
 
             IntWme.newInstance(gatewaywme, IOConstants.ID, gateway.getId());
             for (Integer to : gateway.getTo())
+            {
                 IntWme.newInstance(gatewaywme, IOConstants.TO, to);
+            }
 
             pointDataList.add(pointData);
             destroyList.add(gatewaywme);

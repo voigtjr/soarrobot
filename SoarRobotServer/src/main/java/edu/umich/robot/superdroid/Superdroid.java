@@ -234,6 +234,10 @@ public class Superdroid implements Robot, LidarChangedListener, PoseChangedListe
 
     private final RobotOutput output = new RobotOutput()
     {
+        public Metamap getMetamap() {
+            return metamap;
+        }
+        
         public AreaDescription getAreaDescription()
         {
             return metamap.getArea(getPose());

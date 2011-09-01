@@ -81,9 +81,9 @@ public class ConfigSaver
         
         Config meta = config.getChild("metadata");
         List<Integer> doors = Lists.newArrayList();
-        for (int i = 0; metamap.getAreaFromId(i) != null; ++i)
+        for (int i = 0; metamap.getAreaFromIndex(i) != null; ++i)
         {
-            AreaDescription ad = metamap.getAreaFromId(i);
+            AreaDescription ad = metamap.getAreaFromIndex(i);
             meta.setInts(Integer.toString(i), ad.getPixelRect());
             String type = ad.getProperties().get("type");
             if (type != null && type.equals("door"))

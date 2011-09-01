@@ -59,6 +59,7 @@ public class MetamapFactory
     private final Map<Integer, Integer> lockedCodes = Maps.newHashMap();
     
     private final Map<Integer, RectArea.Builder> absMap = Maps.newHashMap();
+    private final Map<Integer, RectArea.Builder> idsMap = Maps.newHashMap();
     
     private final String imagePath;
     private final double metersPerPixel;
@@ -133,18 +134,19 @@ public class MetamapFactory
             
             RectArea.Builder ab = new RectArea.Builder(xywh, u.getMeters_xywh(xywh), idg);
             absMap.put(index, ab);
+            idsMap.put(ab.getId(), ab);
         }
 
         for (int index = 0; index < pixelRooms.size(); ++index)
         {
-            RectArea.Builder ab = absMap.get(index);
+            // RectArea.Builder ab = absMap.get(index);
 
             int[] xywh = pixelRooms.get(index);
             logger.debug("Room " + index);
-            setToList(ab, WallDir.WEST, xywh[0], 1, xywh);
-            setToList(ab, WallDir.EAST, xywh[0] + xywh[2], 1, xywh);
-            setToList(ab, WallDir.NORTH, xywh[1], 0, xywh);
-            setToList(ab, WallDir.SOUTH, xywh[1] + xywh[3], 0, xywh);
+            setToList(absMap, index, WallDir.WEST, xywh[0], 1, xywh);
+            setToList(absMap, index, WallDir.EAST, xywh[0] + xywh[2], 1, xywh);
+            setToList(absMap, index, WallDir.NORTH, xywh[1], 0, xywh);
+            setToList(absMap, index, WallDir.SOUTH, xywh[1] + xywh[3], 0, xywh);
         }
         
         Map<Integer, Door> doors = Maps.newConcurrentMap();
@@ -203,7 +205,7 @@ public class MetamapFactory
                 continue;
             logger.trace("telling " + toId);
             // Tell connected room about the gateway
-            absMap.get(toId).gateway(gw);
+            idsMap.get(toId).gateway(gw);
         }
     }
     
@@ -237,8 +239,9 @@ public class MetamapFactory
      * @param a The other axis for looking at wall lengths, 0 or 1 (x or y).
      * @param xywh Target room dimensions.
      */
-    private void setToList(RectArea.Builder ab, WallDir dir, int p, int a, int[] xywh)
+    private void setToList(Map<Integer, RectArea.Builder> builderMap, int index, WallDir dir, int p, int a, int[] xywh)
     {
+        RectArea.Builder ab = absMap.get(index);
         Map<Integer, List<Integer>> m = wallMaps.get(dir.opposite());
         List<Integer> tos = Lists.newArrayList();
 
@@ -250,7 +253,7 @@ public class MetamapFactory
                 int[] xywhOther = pixelRooms.get(id);
 
                 if (isOverlap(xywh[a], xywh[a + 2], xywhOther[a], xywhOther[a + 2]))
-                    tos.add(id);
+                    tos.add(absMap.get(id).getId());
             }
         }
         
