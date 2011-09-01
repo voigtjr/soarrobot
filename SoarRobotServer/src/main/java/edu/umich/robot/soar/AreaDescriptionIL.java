@@ -181,6 +181,7 @@ public class AreaDescriptionIL extends InputLinkElement
                     gatewayWme.CreateStringWME(IOConstants.DOOR, "nil");
                     gatewayWme.CreateIntWME(IOConstants.TO, id);
                     gatewayWme.CreateIntWME(IOConstants.TO, ad.getId());
+                    gatewayWme.CreateIntWME(IOConstants.ID, w.getGatewayId());
 
                     destroyList.add(gatewayWme);
                     pointDataList.add(gatewayPoint);
