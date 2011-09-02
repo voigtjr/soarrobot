@@ -44,7 +44,8 @@ public class WallClock
     
     public long getMillis()
     {
-        return TimeUtil.utime() / 1000 - offset;
+        long utime = TimeUtil.utime();
+        return (utime - offset) / 1000;
     }
 
     public void reset()
