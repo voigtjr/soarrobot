@@ -27,6 +27,7 @@ import edu.umich.robot.events.feedback.AbstractFeedbackEvent;
 import edu.umich.robot.laser.Laser;
 import edu.umich.robot.metamap.AreaDescription;
 import edu.umich.robot.metamap.AreaState;
+import edu.umich.robot.metamap.Metamap;
 import edu.umich.robot.metamap.VirtualObject;
 import edu.umich.robot.radio.Radio;
 import edu.umich.robot.util.Pose;
@@ -39,6 +40,13 @@ import edu.umich.robot.util.events.RobotEventListener;
  */
 public interface RobotOutput
 {
+    /**
+     * Get the robot's metamap.
+     * 
+     * @return
+     */
+    Metamap getMetamap();
+    
     /**
      * Get the robot's current pose. At least position, orientation, and
      * velocities should all be elaborated.

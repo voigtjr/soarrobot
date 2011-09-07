@@ -41,17 +41,19 @@ public class WallImpl implements Wall
     private final List<Integer> to;
     
     private int id;
+    private int gatewayId;
     
-    WallImpl(Pose room, Pose roomMidpoint, WallDir dir, IdGenerator idg)
+    WallImpl(Pose room, Pose roomMidpoint, WallDir dir, IdGenerator idg, boolean open)
     {
-        this(room, roomMidpoint, dir, new ArrayList<Integer>(), idg);
+        this(room, roomMidpoint, dir, new ArrayList<Integer>(), idg, open);
     }
     
-    WallImpl(Pose room, Pose roomMidpoint, WallDir dir, List<Integer> to, IdGenerator idg)
+    WallImpl(Pose room, Pose roomMidpoint, WallDir dir, List<Integer> to, IdGenerator idg, boolean open)
     {
         this.dir = dir;
         this.to = new ImmutableList.Builder<Integer>().addAll(to).build();
         this.id = idg.getId();
+        this.gatewayId = open ? idg.getId() : -1;
 
         Pose mp = new Pose(roomMidpoint);
         switch (dir)
@@ -90,6 +92,11 @@ public class WallImpl implements Wall
     public int getId()
     {
         return id;
+    }
+    
+    public int getGatewayId()
+    {
+        return gatewayId;
     }
     
     @Override

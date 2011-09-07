@@ -56,4 +56,5 @@ public interface Wall
     List<Integer> getTo();
     
     int getId();
+    int getGatewayId();
 }

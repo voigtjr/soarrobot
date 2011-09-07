@@ -63,7 +63,8 @@ public class Gateway
     }
 
     /**
-     * List of area ids that this gateway connects.
+     * List of area index-ids that this gateway connects.
+     * Returns indexes into the area list, NOT area-IDs.
      * 
      * @return
      */

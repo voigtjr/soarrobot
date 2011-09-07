@@ -14,6 +14,7 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
 {
     public long utime;
     public int nareas;
+    public int area_ids[];
     public double areas[][];
     public int ngateways;
     public int gateway_ids[];
@@ -24,7 +25,7 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
     }
  
     public static final long LCM_FINGERPRINT;
-    public static final long LCM_FINGERPRINT_BASE = 0xed3a3aacdc5e5179L;
+    public static final long LCM_FINGERPRINT_BASE = 0x9205a981bbfc735eL;
  
     static {
         LCM_FINGERPRINT = _hashRecursive(new ArrayList<Class>());
@@ -53,6 +54,10 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
         outs.writeLong(this.utime); 
  
         outs.writeInt(this.nareas); 
+ 
+        for (int a = 0; a < this.nareas; a++) {
+            outs.writeInt(this.area_ids[a]); 
+        }
  
         for (int a = 0; a < this.nareas; a++) {
             for (int b = 0; b < 4; b++) {
@@ -100,6 +105,11 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
  
         this.nareas = ins.readInt();
  
+        this.area_ids = new int[(int) nareas];
+        for (int a = 0; a < this.nareas; a++) {
+            this.area_ids[a] = ins.readInt();
+        }
+ 
         this.areas = new double[(int) nareas][(int) 4];
         for (int a = 0; a < this.nareas; a++) {
             for (int b = 0; b < 4; b++) {
@@ -130,6 +140,9 @@ public final class map_metadata_t implements lcm.lcm.LCMEncodable
  
         outobj.nareas = this.nareas;
  
+        outobj.area_ids = new int[(int) nareas];
+        if (this.nareas > 0)
+            System.arraycopy(this.area_ids, 0, outobj.area_ids, 0, this.nareas); 
         outobj.areas = new double[(int) nareas][(int) 4];
         for (int a = 0; a < this.nareas; a++) {
             System.arraycopy(this.areas[a], 0, outobj.areas[a], 0, 4);        }

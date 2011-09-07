@@ -72,7 +72,7 @@ public class RectArea implements AreaDescription
             midpoint.setY(xywh.get(1) + xywh.get(3) / 2.0);
             
             for (WallDir dir : WallDir.values())
-                wallMap.put(dir, new WallImpl(pose, midpoint, dir, idg));
+                wallMap.put(dir, new WallImpl(pose, midpoint, dir, idg, false));
         }
 
         public int getId()
@@ -112,7 +112,8 @@ public class RectArea implements AreaDescription
         
         public void openWall(WallDir dir, List<Integer> to)
         {
-            wallMap.put(dir, new WallImpl(pose, midpoint, dir, to, idg));
+            WallImpl wall = new WallImpl(pose, midpoint, dir, to, idg, true);
+            wallMap.put(dir, wall);
         }
 
         public RectArea build()

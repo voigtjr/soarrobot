@@ -1,5 +1,6 @@
 package edu.umich.robot.april;
 
+import java.awt.Color;
 import java.io.IOException;
 
 import lcm.lcm.LCM;
@@ -46,9 +47,10 @@ public class ViewAreaDescriptions implements ViewObject, LCMSubscriber
         
         for (int i = 0; i < data.nareas; ++i)
         {
-            String idString = Integer.toString(i);
-            VisText vt = new VisText(new double[] {data.areas[i][0], data.areas[i][1], 0}, VisText.ANCHOR.CENTER, idString);
-            vt.setDropShadow(false);
+            String idString = Integer.toString(data.area_ids[i]);
+            VisText vt = new VisText(new double[] {data.areas[i][0] + 0.5, data.areas[i][1] + 0.5, 0}, VisText.ANCHOR.CENTER, idString);
+            //vt.defaultColor = Color.YELLOW; 
+            //vt.setDropShadow(false);
             vb.addBuffered(vt);
         }
 

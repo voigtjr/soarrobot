@@ -215,6 +215,10 @@ public class Splinter implements Robot
 
     private final RobotOutput output = new RobotOutput()
     {
+        public Metamap getMetamap() {
+            return metamap;
+        }
+        
         public AreaDescription getAreaDescription()
         {
             return metamap.getArea(getPose());

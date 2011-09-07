@@ -62,7 +62,6 @@ import org.apache.commons.logging.LogFactory;
 
 import april.config.Config;
 import april.config.ConfigFile;
-import april.config.ConfigUtil;
 import april.jmat.geom.GRay3D;
 import april.viewer.Viewer;
 import april.vis.VisCanvas;
@@ -93,6 +92,7 @@ import edu.umich.robot.actions.SoarStepAction;
 import edu.umich.robot.actions.SoarToggleAction;
 import edu.umich.robot.actions.TextMessageAction;
 import edu.umich.robot.april.SoarViewRobot;
+import edu.umich.robot.april.SoarViewRobot.FollowMode;
 import edu.umich.robot.april.ViewTrajectory;
 import edu.umich.robot.events.AfterResetEvent;
 import edu.umich.robot.events.ControllerActivatedEvent;
@@ -221,14 +221,14 @@ public class GuiApplication
      * 
      * @return The selected, loaded configuration file.
      */
-    private Config promptForConfig()
+    public static Config promptForConfig(Component parent)
     {
         JFileChooser fc = new JFileChooser("config");
         fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
         FileFilter filter = new FileNameExtensionFilter("Text Config File", "txt");
         fc.setFileFilter(filter);
         fc.setMultiSelectionEnabled(false);
-        int ret = fc.showOpenDialog(frame);
+        int ret = fc.showOpenDialog(parent);
         if (ret == JFileChooser.APPROVE_OPTION)
         {
             try
@@ -248,7 +248,7 @@ public class GuiApplication
      * 
      * @param args Args from command line.
      */
-    public GuiApplication(String[] args)
+    public GuiApplication(Config config)
     {
         // Heavyweight is not desirable but it is the only thing that will
         // render in front of the Viewer on all platforms. Blame OpenGL
@@ -256,7 +256,7 @@ public class GuiApplication
         ToolTipManager.sharedInstance().setLightWeightPopupEnabled(false);
         
         // must have config
-        Config config = (args.length > 0) ? ConfigUtil.getDefaultConfig(args) : promptForConfig();
+        //Config config = (args.length > 0) ? ConfigUtil.getDefaultConfig(args) : promptForConfig(frame);
         if (config == null)
             System.exit(1);
 
@@ -304,8 +304,10 @@ public class GuiApplication
         fileMenu.add(new JSeparator());
         fileMenu.add(actionManager.getAction(ResetPreferencesAction.class));
 
+        /*
         fileMenu.add(new JSeparator());
         fileMenu.add(actionManager.getAction(TextMessageAction.class));
+        */
         
         fileMenu.add(new JSeparator());
         fileMenu.add(actionManager.getAction(SaveMapAction.class));
@@ -600,16 +602,14 @@ public class GuiApplication
      *            New follow mode.
      */
     // TODO SoarApril
-    /*
     public void setFollowMode(FollowMode mode)
     {
-        ViewRobot vr = getRobot();
+        SoarViewRobot vr = getRobot();
         if (vr == null)
             return;
         vr.setFollowMode(mode, viewer.getVisCanvas());
     }
-    */
-
+    
     /**
      * <p>
      * Moves the camera to the robot using the specified mode. See
@@ -619,14 +619,12 @@ public class GuiApplication
      *            See robot.moveCameraToRobot
      */
     // TODO SoarApril
-    /*
     public void snapCamera(int mode)
     {
-        ViewRobot robot = getRobot();
+        SoarViewRobot robot = getRobot();
         if (robot != null) 
             robot.moveCameraToRobot(mode, viewer.getVisCanvas());
     }
-    */
 
     public void dispose()
     {

@@ -120,6 +120,7 @@ public class Metamap implements RobotEventListener
         
         final map_metadata_t meta = new map_metadata_t();
         meta.nareas = areaList.size();
+        meta.area_ids = new int[meta.nareas];
         meta.areas = new double[areaList.size()][4];
         List<Gateway> gatewayList = Lists.newArrayList();
         for (int i = 0; i < areaList.size(); ++i)
@@ -130,6 +131,7 @@ public class Metamap implements RobotEventListener
             meta.areas[i][2] = ad.getPose().getVel().get(0);
             meta.areas[i][3] = ad.getPose().getVel().get(1);
             gatewayList.addAll(ad.getGateways());
+            meta.area_ids[i] = ad.getId();
         }
         
         meta.ngateways = gatewayList.size();
@@ -170,14 +172,14 @@ public class Metamap implements RobotEventListener
     /**
      * Get an area description from an id number, or null if none.
      * 
-     * @param id
+     * @param index
      * @return
      */
-    public AreaDescription getAreaFromId(int id)
+    public AreaDescription getAreaFromIndex(int index)
     {
-        if (id >= areaList.size())
+        if (index >= areaList.size() || index < 0)
             return null;
-        return areaList.get(id);
+        return areaList.get(index);
     }
     
     /**

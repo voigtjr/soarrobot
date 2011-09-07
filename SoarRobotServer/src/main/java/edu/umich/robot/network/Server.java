@@ -385,6 +385,15 @@ public class Server implements RobotEventListener, RadioHandler {
 
 	public void stop() {
 		running = false;
+		stopLCM();
+		try
+        {
+            socket.close();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
 	}
 
 	public void setController(Controller controller) {

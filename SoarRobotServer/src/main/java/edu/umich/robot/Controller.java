@@ -623,6 +623,7 @@ public class Controller
         if (down)
             return;
         soar.shutdown();
+        server.stop();
         if (gp != null)
             gp.shutdown();
         for (SuperdroidHardware s : superdroids)

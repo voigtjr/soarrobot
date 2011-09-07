@@ -23,6 +23,8 @@ package edu.umich.robot.actions;
 
 import java.awt.event.ActionEvent;
 
+import edu.umich.robot.april.SoarViewRobot.FollowMode;
+
 /**
  * @author voigtjr@gmail.com
  */
@@ -43,7 +45,7 @@ public class FollowPositionAndThetaAction extends AbstractRobotAction
     public void actionPerformed(ActionEvent e)
     {
         // TODO SoarApril
-        // getApplication().setFollowMode(FollowMode.FOLLOW_XY_THETA);
+        getApplication().setFollowMode(FollowMode.FOLLOW_XY_THETA);
     }
 
 }
