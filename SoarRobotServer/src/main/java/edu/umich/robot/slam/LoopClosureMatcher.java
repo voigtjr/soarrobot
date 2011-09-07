@@ -24,10 +24,7 @@ public class LoopClosureMatcher {
 	 *            Sets the resolution on the grid map used in scan matching.
 	 *            Increasing resolution will slow down matching process
 	 *            (specifically the initialization process).
-	 * @param rangeCovariance
-	 *            Approximation on the covariance of a range reading from the
-	 *            LIDAR sensor.
-	 * @param gridmap_size
+	 * @param gridMapSize
 	 *            Size of the desired grid map. This depends on the LIDAR range
 	 *            capabilities (approximately twice the maximum range of the
 	 *            LIDAR, although this can be altered below for efficiency based
@@ -42,11 +39,11 @@ public class LoopClosureMatcher {
 	 * @param minMatchScore
 	 *            Minimum score that must be achieved by the multi-resolution
 	 *            scan matcher before an matching edge is returned.
-	 * @param trange
+	 * @param thetaRange
 	 *            Rotation search space (in radians).
-	 * @param trangeres
+	 * @param thetaRangeRes
 	 *            Rotation search space resolution (in radians).
-	 * @param xyrange
+	 * @param xyRange
 	 *            Search window size (in meters).
 	 * @param xCov
 	 *            Hacked x covariance for a returned edge.
@@ -60,14 +57,13 @@ public class LoopClosureMatcher {
 	 *            or a close loop process.
 	 */
 	double metersPerPixel = 0.05;
-	double rangeCovariance = 0.1;
-	double gridmap_size = 20;
+	double gridMapSize = 20;
 	double distErr = 0.15;
 	double rotErr = 0.1;
-	double minMatchScore = 20 * 255;
-	double trange = Math.toRadians(90);
-	double trangeres = Math.toRadians(1);
-	double xyrange = 0.15;
+	double minMatchScore = 5100;
+	double thetaRange = Math.toRadians(90);
+	double thetaRangeRes = Math.toRadians(1);
+	double xyRange = 0.15;
 	double xCov = 1.0;
 	double yCov = 1.0;
 	double tCov = Math.toRadians(5.0);
@@ -90,18 +86,16 @@ public class LoopClosureMatcher {
 		if (config != null) {
 			this.metersPerPixel = config.getDouble("metersPerPixel",
 					metersPerPixel);
-			this.rangeCovariance = config.getDouble("rangeCovariance",
-					rangeCovariance);
-			this.gridmap_size = config.getDouble("gridmap_size", gridmap_size);
+			this.gridMapSize = config.getDouble("gridMapSize", gridMapSize);
 			this.distErr = config.getDouble("distErr", distErr);
 			this.rotErr = config.getDouble("rotErr", rotErr);
 			this.minMatchScore = config.getDouble("minMatchScore",
 					minMatchScore);
-			this.trange = Math.toRadians(config.getDouble("trange",
-					Math.toDegrees(trange)));
-			this.trangeres = Math.toRadians(config.getDouble("trangeres",
-					Math.toDegrees(trangeres)));
-			this.xyrange = config.getDouble("xyrange", xyrange);
+			this.thetaRange = Math.toRadians(config.getDouble("thetaRange",
+					Math.toDegrees(thetaRange)));
+			this.thetaRangeRes = Math.toRadians(config.getDouble(
+					"thetaRangeRes", Math.toDegrees(thetaRangeRes)));
+			this.xyRange = config.getDouble("xyRange", xyRange);
 			this.xCov = config.getDouble("xCov", xCov);
 			this.yCov = config.getDouble("yCov", yCov);
 			this.tCov = config.getDouble("tCov", tCov);
@@ -126,8 +120,8 @@ public class LoopClosureMatcher {
 	public void init(ArrayList<double[]> lidarPts) {
 
 		// creating the grid map
-		gmLC = GridMap.makeMeters(-(gridmap_size) / 2, -(gridmap_size) / 2,
-				gridmap_size, gridmap_size, metersPerPixel, 0);
+		gmLC = GridMap.makeMeters(-(gridMapSize) / 2, -(gridMapSize) / 2,
+				gridMapSize, gridMapSize, metersPerPixel, 0);
 
 		double minx = Double.MAX_VALUE, maxx = -Double.MAX_VALUE;
 		double miny = Double.MAX_VALUE, maxy = -Double.MAX_VALUE;
@@ -176,7 +170,7 @@ public class LoopClosureMatcher {
 	 * @return Returns the size of the search window for scan matching.
 	 */
 	public double getSearchDist() {
-		return this.xyrange;
+		return this.xyRange;
 	}
 
 	/**
@@ -198,9 +192,9 @@ public class LoopClosureMatcher {
 	public void setMatchParameters(double matchScore, double thetarange,
 			double thetares, double searchrange) {
 		this.minMatchScore = matchScore;
-		this.trange = thetarange;
-		this.trangeres = thetares;
-		this.xyrange = searchrange;
+		this.thetaRange = thetarange;
+		this.thetaRangeRes = thetares;
+		this.xyRange = searchrange;
 	}
 
 	/**
@@ -271,8 +265,8 @@ public class LoopClosureMatcher {
 
 		// matching the nodes
 		double r[] = clMatcher.match(ptsB, priorXYT,
-				LinAlg.inverse(priorScaled), priorXYT, xyrange, xyrange,
-				trange, trangeres);
+				LinAlg.inverse(priorScaled), priorXYT, xyRange, xyRange,
+				thetaRange, thetaRangeRes);
 
 		// hill climbing to improve upon the match
 		HillClimbing hc = new HillClimbing(new Config());
@@ -287,8 +281,8 @@ public class LoopClosureMatcher {
 			err[2] = MathUtil.mod2pi(err[2]);
 			// if the change from the new edge is larger than the search space,
 			// reject the match and return a null edge
-			if (Math.abs(err[0]) > xyrange || Math.abs(err[1]) > xyrange
-					|| Math.abs(err[2]) > trange) {
+			if (Math.abs(err[0]) > xyRange || Math.abs(err[1]) > xyRange
+					|| Math.abs(err[2]) > thetaRange) {
 				return null;
 			}
 		}

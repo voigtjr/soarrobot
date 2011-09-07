@@ -20,7 +20,8 @@ public class DoorFinder {
 	 * 
 	 * @param maxPoints
 	 *            When a possible beginning to a door has been found, the number
-	 *            of lidar points do we search ahead for the end of the door.
+	 *            of lidar points that are followed after the opening in hopes
+	 *            to find the other edge to the door.
 	 * @param angThresh
 	 *            Minimum angle threshold between two lidar points before
 	 *            considering the points a possible edge of a door (see
@@ -54,7 +55,7 @@ public class DoorFinder {
 	 * @param upperDoorSize
 	 *            Maximum size of a possible door before classifying it as a
 	 *            door.
-	 * @param linefitThresh
+	 * @param lineFitThresh
 	 *            Maximum threshold of the linear regression used on the points
 	 *            which make up a possible door.
 	 * @param linePoints
@@ -72,7 +73,7 @@ public class DoorFinder {
 	double windowThresh = 1;
 	double lowerDoorSize = 1.0;
 	double upperDoorSize = 5.0;
-	double linefitThresh = 0.05;
+	double lineFitThresh = 0.05;
 	int linePoints = 4;
 	int maxDoors = 3;
 
@@ -80,16 +81,16 @@ public class DoorFinder {
 	 * The following parameters are used by the 'dataAssociation' method and may
 	 * be adjusted based on environment or desired results.
 	 * 
-	 * @param upperDataThresh
+	 * @param upperAssociationThresh
 	 *            Double gated upper threshold on the best data association
 	 *            match. If outside this value, assign new landmark.
-	 * @param lowerDataThresh
+	 * @param lowerAssociationThresh
 	 *            Double gated lower threshold on the best data association
 	 *            match. If below this value, associate with corresponding
 	 *            landmark.
 	 */
-	double upperDataThresh = 3;
-	double lowerDataThresh = 0.5;
+	double upperAssociationThresh = 3;
+	double lowerAssociationThresh = 0.5;
 
 	// config file for door finder parameters
 	Config config;
@@ -111,7 +112,10 @@ public class DoorFinder {
 	 */
 	public DoorFinder(Config config) {
 
+		// configuration file exists
 		if (config != null) {
+
+			// updating door finding parameters
 			this.maxPoints = config.getInt("maxPoints", maxPoints);
 			this.angThresh = Math.toRadians(config.getDouble("angThresh",
 					Math.toDegrees(angThresh)));
@@ -119,18 +123,20 @@ public class DoorFinder {
 			this.gapThresh = config.getDouble("gapThresh", gapThresh);
 			this.doorDist = config.getDouble("doorDist", doorDist);
 			this.windowThresh = config.getDouble("windowThresh", windowThresh);
-			this.linePoints = config.getInt("linePoints", linePoints);
-			this.maxDoors = config.getInt("maxDoors", maxDoors);
 			this.lowerDoorSize = config.getDouble("lowerDoorSize",
 					lowerDoorSize);
 			this.upperDoorSize = config.getDouble("upperDoorSize",
 					upperDoorSize);
-			this.linefitThresh = config.getDouble("linefitThresh",
-					linefitThresh);
-			this.upperDataThresh = config.getDouble("upperDataThresh",
-					upperDataThresh);
-			this.lowerDataThresh = config.getDouble("lowerDataThresh",
-					lowerDataThresh);
+			this.lineFitThresh = config.getDouble("lineFitThresh",
+					lineFitThresh);
+			this.linePoints = config.getInt("linePoints", linePoints);
+			this.maxDoors = config.getInt("maxDoors", maxDoors);
+
+			// updating data association parameters
+			this.upperAssociationThresh = config.getDouble(
+					"upperAssociationThresh", upperAssociationThresh);
+			this.lowerAssociationThresh = config.getDouble(
+					"lowerAssociationThresh", lowerAssociationThresh);
 		}
 
 	}
@@ -151,7 +157,7 @@ public class DoorFinder {
 	 *            Graph being used for SLAM.
 	 * @param PoseIndex
 	 *            The index of the current pose within graph.nodes corresponding
-	 *            to the lidar scan we are searching for doors within.
+	 *            to the lidar scan that doors may reside within.
 	 * @param curPose
 	 *            The current pose of the robot (x, y, theta).
 	 * @param matcher
@@ -231,7 +237,7 @@ public class DoorFinder {
 			double ang = -MathUtil.mod2pi(Math.atan2(v2[1], v2[0])
 					- Math.atan2(v1[1], v1[0]));
 
-			// determining if we have found a possible edge for a door
+			// determining if a possible edge for a door has been found
 			if ((ang > angThresh && dist > distThresh) || (dist > gapThresh)) {
 				closeOp = true;
 			} else {
@@ -240,7 +246,7 @@ public class DoorFinder {
 				continue;
 			}
 
-			// we have found an edge to a possible door, now looking for
+			// an edge to a possible door has been found, now looking for
 			// the other edge to the door
 			if (closeOp) {
 
@@ -252,7 +258,7 @@ public class DoorFinder {
 						break;
 					}
 
-					// current point we are considering as other door edge
+					// current point being considered as the other door edge
 					double[] closePoint = rpoints.get(j + i);
 
 					// find other edge (same as first edge)
@@ -271,7 +277,7 @@ public class DoorFinder {
 					ang = -MathUtil.mod2pi(Math.atan2(v2[1], v2[0])
 							- Math.atan2(v1[1], v1[0]));
 
-					// determining if we have found a possible edge for a door
+					// determining if there is an edge to a door
 					if ((ang > angThresh && dist > distThresh)
 							|| (dist > gapThresh)) {
 
@@ -311,7 +317,7 @@ public class DoorFinder {
 						}
 
 						// thresholding on the line fitting
-						if (line[2] < linefitThresh) {
+						if (line[2] < lineFitThresh) {
 
 							// check for a true gap
 							double xcenter = (curPoint[0] + closePoint[0]) / 2;
@@ -353,8 +359,9 @@ public class DoorFinder {
 									if (Math.sqrt(Math.pow(xcenter, 2)
 											+ Math.pow(ycenter, 2)) < doorDist) {
 
-										// checking if we can see the door based
-										// on our lidar scan (see method below)
+										// checking if the robot can see the
+										// door based on the LIDAR scan (see
+										// method below)
 										int numPoints = seeDoor(rpoints, i, i
 												+ j, curPoint, closePoint);
 
@@ -401,13 +408,14 @@ public class DoorFinder {
 				}
 			}
 
-			// did we find a door
+			// has a door been found
 			if (!closeOp) {
-				// how many doors were we allowed to find?
+
+				// how many doors in this scan can be found
 				if (doors.size() == maxDoors)
 					return doors;
 			}
-			// we did not find a door, reset index and keep searching
+			// a door was not found, reset index and keep searching
 			else {
 				i = i + 1;
 				curPoint = LinAlg.copy(nextPoint);
@@ -514,19 +522,18 @@ public class DoorFinder {
 		}
 
 		// current pose in our map that has just been added
-		// we are doing association on this pose's scan
 		GXYTNode thisPose = (GXYTNode) graph.nodes.get(poseidx);
 
-		// run through each door we have found to attempt association
+		// run through each door found and attempt association with prior doors
 		for (int j = 0; j < daDoors.size(); j++) {
 
-			// current door we are trying to associate
+			// current door attempting to associate
 			double[] doorLocation = daDoors.get(j);
 			double best;
 			int bestDoorindex;
 
-			// initiate algorithm by associating the door we are considering
-			// with the first door we ever saw
+			// initiate algorithm by assuming association with the first door
+			// ever found
 			int index = doorMap.get(0);
 
 			// get the door node from the graph based on our door map (mapping
@@ -534,16 +541,16 @@ public class DoorFinder {
 			GXYNode doorNode = (GXYNode) graph.nodes.get(index);
 
 			// grab the array list of all the door nodes that have seen the door
-			// we are considering
+			// being considered for association
 			ArrayList<Integer> doorNodes = (ArrayList<Integer>) doorNode
 					.getAttribute("nodeList");
 
 			// get the index within graph.nodes of the last pose that saw the
-			// door we are considering
+			// door being considered for association
 			int lastNodeIdx = doorNodes.get(doorNodes.size() - 1);
 
 			// current association heuristic: do a scan match between our
-			// current pose and the pose that last saw the door we are trying to
+			// current pose and the pose that last saw the door attempting to
 			// associate with. our data association will be based on how well
 			// the difference between the old edge connecting both poses and the
 			// new edge from scan matching agrees with the error in the
@@ -598,15 +605,15 @@ public class DoorFinder {
 
 			// double gate on our scan matching distance heuristic
 			// new door to be added to the graph
-			if (best > upperDataThresh) {
+			if (best > upperAssociationThresh) {
 				indices[j] = -1;
 				continue;
 			}
 
 			// associated door
-			if (best < lowerDataThresh) {
+			if (best < lowerAssociationThresh) {
 				indices[j] = bestDoorindex;
-				// update where we last saw the node
+				// update the last position which saw the door
 				ArrayList<Integer> nodeList = (ArrayList<Integer>) graph.nodes
 						.get(bestDoorindex).getAttribute("nodeList");
 				nodeList.add(poseidx);
@@ -648,7 +655,7 @@ public class DoorFinder {
 		// run through each door, process it accordingly
 		for (int i = 0; i < doors.size(); i++) {
 
-			// door we are working with
+			// current considered door
 			double[] doorState = doors.get(i);
 
 			// initialize new door

@@ -1,6 +1,7 @@
 package edu.umich.robot.slam;
 
 import java.awt.Color;
+import java.net.URL;
 import java.util.ArrayList;
 
 import lcm.lcm.LCM;
@@ -12,9 +13,6 @@ import april.graph.GEdge;
 import april.graph.GNode;
 import april.graph.GXYEdge;
 import april.graph.GXYNode;
-import april.graph.GXYTEdge;
-import april.graph.GXYTNode;
-import april.graph.Graph;
 import april.jmat.LinAlg;
 import april.lcmtypes.laser_t;
 import april.lcmtypes.pose_t;
@@ -96,6 +94,13 @@ public class SlamGui implements LCMSubscriber {
 		this(null);
 	}
 
+	private static Config getDefaultConfig() {
+		URL configLocation = SlamGui.class
+				.getResource("/edu/umich/robot/slam/soarSLAM.config");
+		String[] configPasser = new String[] { "-c", configLocation.getFile() };
+		return ConfigUtil.getDefaultConfig(configPasser);
+	}
+
 	/**
 	 * Creates a SlamGui without subscribing to any LCM channels
 	 */
@@ -103,7 +108,7 @@ public class SlamGui implements LCMSubscriber {
 		if (config != null) {
 			slam = new Slam(config);
 		} else {
-			slam = new Slam(null);
+			slam = new Slam(getDefaultConfig());
 		}
 		if (parameterGui.gb("showscan"))
 			scanFrame.setVisible(true);

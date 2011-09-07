@@ -30,6 +30,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import april.config.Config;
 import april.lcmtypes.laser_t;
 import april.lcmtypes.pose_t;
 import april.util.TimeUtil;

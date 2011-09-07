@@ -93,7 +93,7 @@ import edu.umich.robot.util.properties.PropertyManager;
  * @author voigtjr@gmail.com
  */
 public class Controller
-{
+{	
     /**
      * <p>
      * Used to identify controller in controller list.

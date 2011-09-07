@@ -11,7 +11,6 @@ import april.graph.CholeskySolver;
 import april.graph.DijkstraProjection;
 import april.graph.GEdge;
 import april.graph.GNode;
-import april.graph.GXYNode;
 import april.graph.GXYTEdge;
 import april.graph.GXYTNode;
 import april.graph.GXYTPosEdge;
@@ -29,7 +28,7 @@ public class Slam {
 	/**
 	 * The following booleans control the overall SLAM setup.The configuration
 	 * files hold the variables for each process. The various objects
-	 * instantiate other classes used for SLAM.
+	 * instantiate other classes used by the SLAM process.
 	 * 
 	 * @param useOdom
 	 *            Set to true if using odometry sensors.
@@ -37,7 +36,7 @@ public class Slam {
 	 *            Set to true to attempt to close loops.
 	 * @param noisyOdom
 	 *            Set to true to artificially inflate the odometry information
-	 *            with error (used for simulation environment).
+	 *            with error (used with simulation environment).
 	 * @param includeDoors
 	 *            Set to true to attempt to locate doors and add them to the
 	 *            pose graph.
@@ -56,56 +55,11 @@ public class Slam {
 	Graph g = new Graph();
 
 	/**
-	 * The following variables/parameters control various aspects of the SLAM
-	 * process. See each description for further information.
-	 * 
-	 * @variable lastPoseIndex
-	 * @variable openGridMap
-	 * @variable distErr
-	 * @variable rotErr
-	 * @variable poseDistThresh
-	 * @variable poseRotThresh
-	 * @variable randomGen
-	 * @variable samplingError
-	 * @variable trueOdom
-	 * @variable pureOdom
-	 * @variable slamOdom
-	 * @variable starter
-	 * @variable decimate
-	 * @variable decimateCounter
-	 * @variable lastScan
-	 * @variable xyt
-	 * @variable groundTruth
-	 * @variable XYT
-	 * @variable addedEdges
-	 * 
-	 */
-	int lastPoseIndex = 0;
-	GridMap openGridMap;
-	double distErr = 0.15;
-	double rotErr = 0.1;
-	double poseDistThresh = 1.0;
-	double poseRotThresh = Math.toRadians(25);
-	Random randomGen = new Random();
-	double[] samplingError = new double[] { 0.005, 0.005, Math.toRadians(0.05) };
-	ArrayList<double[]> trueOdom = new ArrayList<double[]>();
-	ArrayList<double[]> pureOdom = new ArrayList<double[]>();
-	ArrayList<double[]> slamOdom = new ArrayList<double[]>();
-	int starter = 0;
-	int decimate = 1;
-	public int decimateCounter;
-	ArrayList<double[]> lastScan;
-	double xyt[] = new double[3];
-	double groundTruth[] = new double[3];
-	double XYT[] = new double[3];
-	ArrayList<GEdge> addedEdges = new ArrayList<GEdge>();
-
-	/**
 	 * Open loop scan matcher parameters / variables used only if the SLAM
 	 * routine does not use odometry sensors. Do not confuse these with the open
 	 * loop matching routine within the loop closure matcher. Those parameters
 	 * are to be set within the configuration file passed to the loop closure
-	 * matcher in it's constructor call below.
+	 * matcher via constructor call.
 	 * 
 	 * @param openMetersPerPixel
 	 *            Resolution on the grid map below (meters per pixel).
@@ -156,8 +110,6 @@ public class Slam {
 	 * The following parameters / variables are for the loop closing method
 	 * 'closer' below.
 	 * 
-	 * @variable lastNode Index of the last node that was processed for loop
-	 *           closures.
 	 * @variable lastEdge Index of the last edge that was created from open loop
 	 *           techniques.
 	 * @param maxLoopLength
@@ -166,32 +118,45 @@ public class Slam {
 	 *            Maximum scan match attempts per loop closing.
 	 * @param maxAddedEdges
 	 *            Maximum number of edges to add per node in the graph.
+	 * @param maxHypothesisAge
+	 *            Maximum age of a hypothesis edge before it is removed (based
+	 *            on the below boolean on removing old hypothesis edges)
 	 * @param minTrace
-	 *            TODO Edit this description.
+	 *            Once a scan matching edge has been validated during the loop
+	 *            closing process, the trace of the covariance on the Dijkstra
+	 *            projection from the current node to the matched node must be
+	 *            above this value before the validated edge will be added to
+	 *            the graph.
 	 * @param maxMahal
-	 *            TODO Edit this description.
+	 *            Once a scan matching edge has been validated during the loop
+	 *            closing process, the Mahalanobis distance between the Dijkstra
+	 *            projection from the current node to the matched node must be
+	 *            below this value before the validated edge will be added to
+	 *            the graph.
 	 * @param hypoThresh
-	 *            TODO Edit this description.
-	 * @param closeFreq
-	 *            Specifies how often to attempt to close the loop (Every Nth
-	 *            number of nodes)
+	 *            Mahalanobis distance threshold between nodes being considered
+	 *            for scan matching and the current node.
+	 * @param removeOldHypoEdges
+	 *            Boolean which controls whether or not the loop closing method
+	 *            below removes old edge hypothesis.
 	 * @variable hypoNodes Hypotheses grouped according to the nodes they
-	 *           connect. Includes odometry edges.
+	 *           connect. Always includes odometry edges, regardless of the
+	 *           routine to remove ages hypothesis edges.
 	 */
-	int lastNode = 2;
 	int lastEdge = 0;
 	int maxLoopLength = 4;
 	int maxMatchAttempts = 40;
 	int maxAddedEdges = 10;
+	int maxHypothesisAge = 100;
 	double minTrace = 0.2;
 	double maxMahal = 1.0;
 	double hypoThresh = 5.0;
-	double closeFreq = 1;
+	boolean removeOldHypoEdges = false;
 	HashMap<Integer, ArrayList<GXYTEdge>> hypoNodes = new HashMap<Integer, ArrayList<GXYTEdge>>();
 
 	/**
 	 * Laser scan class used by open loop scan matcher when no odometry
-	 * information is availalbe.
+	 * information is available.
 	 * 
 	 */
 	public static class Scan {
@@ -203,6 +168,81 @@ public class Slam {
 	}
 
 	/**
+	 * The following variables / parameters control various aspects of the SLAM
+	 * process. See each description for further information.
+	 * 
+	 */
+	// Index of the last pose node within graph.nodes.
+	int lastPoseIndex = 0;
+
+	// Grid map used in the open loop process if no odometry data is being
+	// supplied.
+	GridMap openGridMap;
+
+	// Error estimate on odometry movement.
+	double distErr = 0.15;
+
+	// Error estimate on odometry rotation.
+	double rotErr = 0.1;
+
+	// Minimum distance that must be traveled from the last pose before a new
+	// pose will be added to the graph.
+	double poseDistThresh = 1.0;
+
+	// Minimum rotation that must be traveled from the last pose before a new
+	// pose will be added to the graph.
+	double poseRotThresh = Math.toRadians(25);
+
+	// Random number generator used to artificially inflate the odometry error
+	// based upon SLAM setup.
+	Random randomGen = new Random();
+
+	// Sampling errors (x, y, and theta) used to calculate standard deviation
+	// when artificially inflating the odometry error based upon SLAM setup.
+	double[] samplingError = new double[] { 0.005, 0.005, Math.toRadians(0.05) };
+
+	// Array list capturing poses of the true odometry movement (only available
+	// in the simulation environment).
+	ArrayList<double[]> trueOdom = new ArrayList<double[]>();
+
+	// Array list capturing poses from the odometry sensors (this information
+	// includes the error in the sensors).
+	ArrayList<double[]> pureOdom = new ArrayList<double[]>();
+
+	// Array list capturing poses of the SLAM corrected odometry movement.
+	ArrayList<double[]> slamOdom = new ArrayList<double[]>();
+
+	// Variable used in order to ensure that a odometry measurement (if using
+	// odometry sensors) is received prior to adding a pose to the graph.
+	int starter = 0;
+
+	// Decimate the number of LIDAR scans received that are processed.
+	int decimate = 1;
+
+	// Counter for the above decimation.
+	public int decimateCounter;
+
+	// Holds the last scan received (used by the GUI for visualizing LIDAR on
+	// its own).
+	ArrayList<double[]> lastScan;
+
+	// Constantly holds the best estimate of the current location (x, y, theta
+	// in meters).
+	double xyt[] = new double[3];
+
+	// Holds the last true location received by the odometry sensors (only used
+	// when inflating the odometry with error in the simulation environment).
+	double lastTruePos[] = new double[3];
+
+	// Assists in allowing for odometry data to be passed in as global
+	// coordinates. Holds the last received odometry message at any given
+	// moment.
+	double XYT[] = new double[3];
+
+	// Holds all non odometry edges added to the graph.
+	ArrayList<GEdge> addedEdges = new ArrayList<GEdge>();
+
+	/**
 	 * Constructor method (can be called with null as input).
 	 * 
 	 * @param config
@@ -210,25 +250,23 @@ public class Slam {
 	 */
 	public Slam(Config config) {
 
-		// parsing configuration file
+		// configuration file available (if not, all parameters are set to their
+		// default values currently assigned)
 		if (config != null) {
+
+			// parsing the configuration file
 			slamConfig = config.getChild("Slam");
 			loopMatcherConfig = config.getChild("LoopMatcher");
 			loopCloserConfig = config.getChild("LoopCloser");
 			doorFinderConfig = config.getChild("DoorFinder");
 
 			// setting SLAM configuration parameters
-			decimate = slamConfig.getInt("decimate", decimate);
-			poseDistThresh = slamConfig.getDouble("poseDistThresh",
-					poseDistThresh);
-			poseRotThresh = Math.toRadians(slamConfig.getDouble(
-					"poseRotThresh", Math.toDegrees(poseRotThresh)));
-			distErr = slamConfig.getDouble("distErr", distErr);
-			rotErr = slamConfig.getDouble("rotErr", rotErr);
 			useOdom = slamConfig.getBoolean("useOdom", useOdom);
 			closeLoop = slamConfig.getBoolean("closeLoop", closeLoop);
 			noisyOdom = slamConfig.getBoolean("noisyOdom", noisyOdom);
 			includeDoors = slamConfig.getBoolean("includeDoors", includeDoors);
+
+			// setting close loop matching parameters
 			closeMatchScore = slamConfig.getDouble("closeMatchScore",
 					closeMatchScore);
 			closeThetaRange = Math.toRadians(slamConfig.getDouble(
@@ -237,6 +275,36 @@ public class Slam {
 					"closeThetaRangeRes", closeThetaRangeRes));
 			closeSearchRange = slamConfig.getDouble("closeSearchRange",
 					closeSearchRange);
+
+			// setting remaining SLAM parameters
+			distErr = slamConfig.getDouble("distErr", distErr);
+			rotErr = slamConfig.getDouble("rotErr", rotErr);
+			poseDistThresh = slamConfig.getDouble("poseDistThresh",
+					poseDistThresh);
+			poseRotThresh = Math.toRadians(slamConfig.getDouble(
+					"poseRotThresh", Math.toDegrees(poseRotThresh)));
+			decimate = slamConfig.getInt("decimate", decimate);
+
+			// setting loop closing configuration parameters
+			maxLoopLength = loopCloserConfig.getInt("maxLoopLength",
+					maxLoopLength);
+			maxMatchAttempts = loopCloserConfig.getInt("maxMatchAttempts",
+					maxMatchAttempts);
+			maxAddedEdges = loopCloserConfig.getInt("maxAddedEdges",
+					maxAddedEdges);
+			maxHypothesisAge = loopCloserConfig.getInt("maxHypothesisAge",
+					maxHypothesisAge);
+			minTrace = loopCloserConfig.getDouble("minTrace", minTrace);
+			maxMahal = loopCloserConfig.getDouble("maxMahal", maxMahal);
+			hypoThresh = loopCloserConfig.getDouble("hypoThresh", hypoThresh);
+			removeOldHypoEdges = loopCloserConfig.getBoolean(
+					"removeOldHypoEdges", removeOldHypoEdges);
+		}
+
+		// initializations if odometry information is not available
+		if (!useOdom) {
+
+			// setting open loop matching parameters
 			openMetersPerPixel = slamConfig.getDouble("openMetersPerPixel",
 					openMetersPerPixel);
 			openSearchRange = slamConfig.getDouble("openSearchRange",
@@ -249,32 +317,26 @@ public class Slam {
 					openGridMapSize);
 			scanDecay = slamConfig.getInt("scanDecay", scanDecay);
 
-			// setting loop closer configuration parameters
-			maxLoopLength = loopCloserConfig.getInt("maxLoopLength",
-					maxLoopLength);
-			maxMatchAttempts = loopCloserConfig.getInt("maxMatchAttempts",
-					maxMatchAttempts);
-			maxAddedEdges = loopCloserConfig.getInt("maxAddedEdges",
-					maxAddedEdges);
-			minTrace = loopCloserConfig.getDouble("minTrace", minTrace);
-			maxMahal = loopCloserConfig.getDouble("maxMahal", maxMahal);
-			hypoThresh = loopCloserConfig.getDouble("hypoThresh", hypoThresh);
-			closeFreq = loopCloserConfig.getDouble("closeFreq", closeFreq);
-		}
-
-		// initializations based on SLAM setup
-		if (!useOdom) {
+			// instantiating the open loop matcher and grid map
 			openMatch = new MultiResolutionScanMatcher(new Config());
 			openGridMap = GridMap.makeMeters(-(openGridMapSize / 2),
 					-(openGridMapSize / 2), openGridMapSize, openGridMapSize,
 					openMetersPerPixel, 0);
+
+			// no odometry information available, thus ignore waiting for the
+			// first odometry measurement
 			starter = 1;
 		}
 
+		// initialization if attempting to find doors
 		if (includeDoors) {
+
+			// instantiating the door finder by passing in appropriate
+			// configuration file
 			doorFinder = new DoorFinder(doorFinderConfig);
 		}
 
+		// pose graph instantiation
 		g = new Graph();
 	}
 
@@ -284,7 +346,7 @@ public class Slam {
 	 * 
 	 * @param odomxyt
 	 *            Pose estimate from odometry sensors, pass in as [x, y, theta]
-	 *            in global coordinate frame (units are meters / radians).
+	 *            in global coordinate frame (units are meters | radians).
 	 */
 	public void processOdometry(double odomxyt[]) {
 
@@ -299,7 +361,7 @@ public class Slam {
 		if (starter == 0) {
 			xyt = LinAlg.copy(odomxyt);
 			XYT = LinAlg.copy(odomxyt);
-			groundTruth = LinAlg.copy(odomxyt);
+			lastTruePos = LinAlg.copy(odomxyt);
 			synchronized (trueOdom) {
 				trueOdom.add(LinAlg.copy(odomxyt));
 			}
@@ -317,12 +379,13 @@ public class Slam {
 		if (noisyOdom) {
 			// noisy sampling from odometry using rigid body transformation
 			// process model
-			double dist = LinAlg.distance(groundTruth, odomxyt);
+			double dist = LinAlg.distance(lastTruePos, odomxyt);
 			double dang = Math
-					.abs(MathUtil.mod2pi(groundTruth[2] - odomxyt[2]));
+					.abs(MathUtil.mod2pi(lastTruePos[2] - odomxyt[2]));
 
-			// only adding error in odometry measurement if we have moved since
-			// the last time we received a message
+			// only adding error in odometry measurement if robot has moved
+			// since
+			// the last time an odometry message was received
 			if (dist > 0.00001 || dang > 0.00001) {
 				// synchronizing for GUI threading
 				synchronized (trueOdom) {
@@ -330,9 +393,9 @@ public class Slam {
 				}
 
 				// true movement RBT parameters
-				double[] priorU = LinAlg.xytInvMul31(groundTruth, odomxyt);
+				double[] priorU = LinAlg.xytInvMul31(lastTruePos, odomxyt);
 				priorU[2] = MathUtil.mod2pi(priorU[2]);
-				groundTruth = LinAlg.copy(odomxyt);
+				lastTruePos = LinAlg.copy(odomxyt);
 
 				// sampling from noise parameters, assuming error of al[num] per
 				// each full unit of true movement
@@ -372,7 +435,29 @@ public class Slam {
 		xyt[2] = MathUtil.mod2pi(xyt[2]);
 	}
 
-	/** Pass in points relative to the robot's coordinate, units of 'meters' **/
+	/**
+	 * Updating SLAM pose graph based on LIDAR scan.
+	 * 
+	 * Majority of the SLAM magic happens here. There are two open loop routines
+	 * based on whether or not odometry sensor information is available. If it
+	 * is not available, an open loop matcher estimates the movement of the
+	 * robot using scan matching techniques. Once the minimum movement distance
+	 * or rotation has been achieved according to scan matching, a new pose is
+	 * added to the graph. This pose is then matched with the last pose added to
+	 * the graph to get a better estimate of the movement. Otherwise, odometry
+	 * sensor measurements are used to determine if the robot has achieved the
+	 * minimum movement or rotation distance. If so, a pose is added and matched
+	 * to the prior node in the graph. Depending on the SLAM setup, the
+	 * algorithm then looks for doors (including a data association within the
+	 * door finder class) and attempts to close the loop (method below).
+	 * 
+	 * @param rpoints
+	 *            Set of lidar points in robot coordinate frame. Each entry
+	 *            within the array list is a two element array of type double
+	 *            representing a single lidar point. The first element is the
+	 *            x-coordinate and the second element is the y-coordinate of the
+	 *            lidar point.
+	 */
 	public void processScan(ArrayList<double[]> rpoints) {
 		// used by GUI for displaying scans
 		lastScan = rpoints;
@@ -406,8 +491,8 @@ public class Slam {
 			// add node to graph
 			g.nodes.add(gn);
 
-			// update the open loop grid map if we are not using odometry sensor
-			// information
+			// update the open loop grid map if odometry information is not
+			// available
 			if (!useOdom) {
 				Scan scan = new Scan();
 				scan.xyt = xyt;
@@ -548,8 +633,8 @@ public class Slam {
 				}
 			}
 
-			// updating the open loop grid map if we are not using odometry
-			// information
+			// updating the open loop grid map if odometry information is not
+			// available
 			if (!useOdom) {
 				Scan scan = new Scan();
 				scan.xyt = xyt;
@@ -570,7 +655,7 @@ public class Slam {
 	 * 
 	 * @param s
 	 *            Current Scan object created from the most recent pose and
-	 *            LIDAR scan (see above for the actual Scan class definition)
+	 *            LIDAR scan (see above for the actual Scan class definition).
 	 */
 	void drawScan(Scan s) {
 		double minx = Double.MAX_VALUE, maxx = -Double.MAX_VALUE;
@@ -615,9 +700,279 @@ public class Slam {
 	}
 
 	/**
-	 * ADD HYPOTHESIS USED BY MAIN LOOP CLOSING METHOD
+	 * Main loop closing method.
+	 * 
+	 * Determines which nodes are nearby using a Dikstra projection. Validates
+	 * loops using a depth first search looking for complete loops beginning and
+	 * ending with the most recent node added to the graph.
+	 * 
+	 */
+	public void close() {
+
+		// have not accumulated enough nodes (or somehow got ahead) to
+		// attempt a loop closure
+		if (includeDoors) {
+			if (g == null || (g.nodes.size() - doorFinder.numDoors) <= 2
+					|| lastPoseIndex == g.nodes.size()) {
+				return;
+			}
+		} else {
+			if (g == null || g.nodes.size() <= 2
+					|| lastPoseIndex == g.nodes.size()) {
+				return;
+			}
+		}
+
+		// add all odometry edges to our hypotheses pool of edges for loop
+		// validation
+		for (; lastEdge < g.edges.size(); lastEdge++) {
+
+			// grab edge in the graph
+			GEdge curEdge = g.edges.get(lastEdge);
+
+			// check the type of edge, assign as odometry if it has no type
+			String type = (String) curEdge.getAttribute("type");
+			if (type == null)
+				type = "odom";
+
+			// this check ensures that the edge is an odometry edge
+			if (!type.equals("auto") && (curEdge instanceof GXYTEdge)
+					&& (!type.equals("door"))) {
+				GXYTEdge ge = (GXYTEdge) curEdge;
+				addHypothesis(ge);
+			}
+		}
+
+		// loop closing node
+		GXYTNode refnode = (GXYTNode) g.nodes.get(lastPoseIndex);
+
+		// candidate edges for loop validation
+		ArrayList<GXYTEdge> candidates = new ArrayList<GXYTEdge>();
+
+		// remove all matured hypothesis edges
+		if (removeOldHypoEdges) {
+
+			// run through all array lists of edges within the hash map of
+			// hypothesis edges
+			for (ArrayList<GXYTEdge> edges : hypoNodes.values()) {
+
+				// run through all hypothesis edges within the given array list
+				for (int edgeIndex = 0; edgeIndex < edges.size(); edgeIndex++) {
+
+					// grab the current considered hypothesis edge
+					GXYTEdge ge = edges.get(edgeIndex);
+
+					// do not remove odometry edges
+					String type = (String) ge.getAttribute("type");
+					if (type == null)
+						continue;
+
+					// do not remove validated edges
+					if (type.equals("auto")) {
+						String added = (String) ge.getAttribute("added");
+						if (added != null && added.equals("yes"))
+							continue;
+					}
+
+					// check the age of the hypothesis edge
+					int nodeMax = Math.max(ge.nodes[0], ge.nodes[1]);
+					if ((lastPoseIndex - nodeMax - doorFinder.numDoors) > maxHypothesisAge) {
+
+						// change the last edge in the array list to the index
+						// of this aged edge and remove the last edge
+						int lastEdge = edges.size() - 1;
+						edges.set(edgeIndex, edges.get(lastEdge));
+						edges.remove(lastEdge);
+					}
+				}
+			}
+		}
+
+		// Dijkstra projection of the current pose graph with respect to the
+		// current pose
+		DijkstraProjection dp = new DijkstraProjection(g, lastPoseIndex);
+
+		// identify the set of nodes to scan match with the current pose
+		for (int i = 0; i < lastPoseIndex; i++) {
+
+			// each edge within the Dijkstra projection connects the current
+			// pose to the other nodes while overestimating the cost (or
+			// covariance in this case)
+			GXYTEdge dpPrior = dp.getEdge(i);
+
+			// only want edges which attach poses to poses (Dijkstra projection
+			// will return null edges to doors)
+			if (dpPrior == null) {
+				continue;
+			}
+
+			// compute the current predicted distance to the current considered
+			// node
+			double curDist = LinAlg.distance(refnode.state,
+					g.nodes.get(dpPrior.nodes[1]).state, 2);
+
+			// force the considered node to at least be within the search window
+			// of our scan matcher
+			if (curDist > loopmatcher.getSearchDist())
+				continue;
+
+			// calculate the Mahalanobis distance that this node is within the
+			// given hypothesis threshold
+			double mahl = mahalanobisDistance(dpPrior, hypoThresh);
+
+			// add this edge to our pool of candidates to attempt to match to
+			if (mahl < 0.45)
+				candidates.add(dpPrior);
+		}
+
+		// shuffle, shuffle, shuffle...
+		Collections.shuffle(candidates);
+
+		// matching to as many candidate nodes as is permitted by
+		// maxMatchAttempts parameter
+		for (int cidx = 0; cidx < Math.min(maxMatchAttempts, candidates.size()); cidx++) {
+
+			// grab the current considered candidate edge
+			GXYTEdge dpPrior = candidates.get(cidx);
+
+			// attempting to match the nodes
+			GXYTNode nodeA = (GXYTNode) g.nodes.get(dpPrior.nodes[0]);
+			GXYTNode nodeB = (GXYTNode) g.nodes.get(dpPrior.nodes[1]);
+			double[] prior = LinAlg.xytInvMul31(nodeA.state, nodeB.state);
+			prior[2] = MathUtil.mod2pi(prior[2]);
+			GXYTEdge ge = loopmatcher.match(nodeA, nodeB, prior);
+
+			// scan matcher returned an edge, good match according to the close
+			// loop matching parameters
+			if (ge != null) {
+				ge.nodes = new int[] { dpPrior.nodes[0], dpPrior.nodes[1] };
+				ge.setAttribute("type", "auto");
+				addHypothesis(ge);
+			}
+
+		}
+
+		// cumulative motion around loop within the depth first search for loop
+		// validation
+		double loopMotion[] = new double[3];
+
+		// tracking the edges that have already been traversed during loop
+		// validation
+		HashSet<GXYTEdge> visitedEdges = new HashSet<GXYTEdge>();
+
+		// tracking poses that have already been visited during loop validation
+		int poseIndices[] = new int[maxLoopLength];
+		poseIndices[0] = lastPoseIndex;
+
+		// array list of accepted edges after loop validation
+		ArrayList<GXYTEdge> acceptedEdges = new ArrayList<GXYTEdge>();
+
+		// calling recursively the depth first search loop validation algorithm
+		recurse(1, poseIndices, visitedEdges, loopMotion, acceptedEdges);
+
+		// adding best edges which meet parameter requirements
+		for (int i = 0; i < Math.min(maxAddedEdges, acceptedEdges.size()); i++) {
+
+			GXYTEdge bestEdge = null;
+			double bestTrace = minTrace;
+
+			// check that the edges meet the requirements since there are less
+			// edges than are allowed to be added to the graph
+			if (acceptedEdges.size() < maxAddedEdges) {
+
+				// current considered edge to be added to the graph
+				GXYTEdge currentEdge = acceptedEdges.get(i);
+
+				// going to create another DijkstraProjection which ceases
+				// searching once it has found the needed nodes here
+				HashSet<Integer> neededNodes = new HashSet<Integer>();
+				neededNodes.add(currentEdge.nodes[1]);
+
+				// searching for the path from current node (ge.node[0]) to
+				// matched node (ge.node[1])
+				DijkstraProjection dp2 = new DijkstraProjection(g,
+						currentEdge.nodes[0], null, neededNodes);
+
+				// calculating the trace on the covariance of the returned
+				// Dijkstra edge
+				GXYTEdge dpPrior = dp2.getEdge(currentEdge.nodes[1]);
+				double trace = LinAlg.trace(dpPrior.P);
+
+				// calculating the Mahalanobis distance of the returned
+				// Disjkstra edge
+				MultiGaussian mg = new MultiGaussian(dpPrior.P, dpPrior.z);
+				double mahl = mg.getMahalanobisDistance(currentEdge.z);
+
+				// checking this Mahalanobis distance
+				if (mahl > maxMahal) {
+					continue;
+				}
+
+				// using the trace or the Dijkstra edge as the heuristic for
+				// selecting the best edge to add to the graph
+				if (!(trace > minTrace)) {
+					continue;
+				}
+
+				// met all requirements, add to graph
+				bestEdge = currentEdge;
+
+			} else {
+
+				// run through all edges returned from the depth first search
+				for (GXYTEdge ge : acceptedEdges) {
+
+					// going to create another DijkstraProjection which ceases
+					// searching once it has found the needed nodes here
+					HashSet<Integer> neededNodes = new HashSet<Integer>();
+					neededNodes.add(ge.nodes[1]);
+
+					// searching for the path from current node (ge.node[0]) to
+					// matched node (ge.node[1])
+					DijkstraProjection dp2 = new DijkstraProjection(g,
+							ge.nodes[0], null, neededNodes);
+
+					// calculating the trace on the covariance of the returned
+					// Dijkstra edge
+					GXYTEdge dpPrior = dp2.getEdge(ge.nodes[1]);
+					double trace = LinAlg.trace(dpPrior.P);
+
+					// calculating the Mahalanobis distance of the returned
+					// Disjkstra edge
+					MultiGaussian mg = new MultiGaussian(dpPrior.P, dpPrior.z);
+					double mahl = mg.getMahalanobisDistance(ge.z);
+
+					// checking this Mahalanobis distance
+					if (mahl > maxMahal) {
+						continue;
+					}
+
+					// using the trace as the heuristic for selecting the best
+					// edge
+					// to add to the graph
+					if (trace > bestTrace) {
+						bestEdge = ge;
+						bestTrace = trace;
+					}
+				}
+			}
+
+			// add the best edge to the graph, remove from accepted edges
+			if (bestEdge != null) {
+				g.edges.add(bestEdge);
+				synchronized (addedEdges) {
+					addedEdges.add(bestEdge);
+				}
+				acceptedEdges.remove(bestEdge);
+			}
+		}
+	}
+
+	/**
+	 * Adds hypothesis edge to group of hypotheses for loop validation.
 	 * 
 	 * @param ge
+	 *            GXYTEdge to add to the hypotheses.
 	 */
 	void addHypothesis(GXYTEdge ge) {
 		ArrayList<GXYTEdge> a = hypoNodes.get(ge.nodes[0]);
@@ -636,367 +991,186 @@ public class Slam {
 	}
 
 	/**
-	 * Main loop closing method.
+	 * Depth first search where the limit on the depth is determined by the
+	 * length of the array parameter 'poseIndices'.
+	 * 
+	 * @param currentDepth
+	 *            Current depth of the recursive search. Call initially with a
+	 *            depth of 1.
+	 * @param poseIndices
+	 *            Array which the pose indices of the loop will be written to.
+	 *            Call the search with an empty array minus the first index
+	 *            which should hold the starting pose index for the search. The
+	 *            length of the
+	 * @param visitedEdges
+	 *            Holds all visited edges during the loop search.
+	 * @param loopMotion
+	 *            Motion around the loop. Used to verify that the search has
+	 *            traversed an actual loop once finishing at the same starting
+	 *            pose.
+	 * @param acceptedEdges
+	 *            Holds all accepted edges from the loop verification process.
 	 */
-	public void close() {
+	void recurse(int currentDepth, int poseIndices[],
+			HashSet<GXYTEdge> visitedEdges, double loopMotion[],
+			ArrayList<GXYTEdge> acceptedEdges) {
 
-		// need to fix the autoclose last node shit
-		lastNode = lastPoseIndex;
-
-		// nothing to do
-		if (includeDoors) {
-			if (g == null || (g.nodes.size() - doorFinder.numDoors) <= 2) {
-				return;
-			}
-			if (lastNode == g.nodes.size()) {
-				return;
-			}
-		} else {
-			if (g == null || g.nodes.size() <= 2) {
-				return;
-			}
-			if (lastNode == g.nodes.size()) {
-				return;
-			}
-		}
-
-		// add other XYT edges to our hypothesis pool
-		synchronized (g) {
-			for (; lastEdge < g.edges.size(); lastEdge++) {
-				GEdge _ge = g.edges.get(lastEdge);
-				String type = (String) _ge.getAttribute("type");
-				if (type == null)
-					type = "odom";
-
-				if (!type.equals("auto") && (_ge instanceof GXYTEdge)) {
-					GXYTEdge ge = (GXYTEdge) _ge;
-					addHypothesis(ge);
-				}
-			}
-		}
-
-		DijkstraProjection dp;
-
-		// generate edges between node "autoclose_last" and earlier nodes.
-		GXYTNode refnode = (GXYTNode) g.nodes.get(lastNode);
-
-		ArrayList<GXYTEdge> candidates = new ArrayList<GXYTEdge>();
-
-		synchronized (g) {
-			dp = new DijkstraProjection(g,
-					(Integer) refnode.getAttribute("node_index"));
-		}
-
-		// identify the set of nodes that we'd like to do scanmatching
-		// to.
-		for (int i = 0; i < lastNode; i++) {
-			GXYTEdge dpPrior = dp.getEdge(i);
-
-			// only want edges which attach poses to poses
-			if (dpPrior == null) {
-				continue;
-			}
-
-			if (g.nodes.get(dpPrior.nodes[0]) instanceof GXYNode
-					|| g.nodes.get(dpPrior.nodes[1]) instanceof GXYNode) {
-				continue;
-			}
-
-			// which nodes *might* be in the neighborhood?
-			// Compute the mahalanobis distance that the nodes are
-			// within 5 meters of each other.
-			// HACK - add additional structure to requirements of
-			// possible candidates:
-			// forcing the candidates to be within a "true" distance of
-			// the maximum
-			// xy search area of the loop closure matcher parameter
-			double curDist = LinAlg.distance(refnode.state,
-					g.nodes.get(dpPrior.nodes[1]).state, 2);
-			if (curDist > loopmatcher.getSearchDist())
-				continue;
-
-			// mahalanobis distance to add candidates for loop closure
-			double mahl = mahalanobisDistance(dpPrior, hypoThresh);
-			if (mahl < 0.45)
-				candidates.add(dpPrior);
-		}
-
-		// shuffle, shuffle, shuffle...
-		Collections.shuffle(candidates);
-
-		for (int cidx = 0; cidx < Math.min(maxMatchAttempts, candidates.size()); cidx++) {
-			GXYTEdge dpPrior = candidates.get(cidx);
-
-			// attempting to match nodes
-			GXYTNode nodeA = (GXYTNode) g.nodes.get(dpPrior.nodes[0]);
-			GXYTNode nodeB = (GXYTNode) g.nodes.get(dpPrior.nodes[1]);
-			double[] prior = LinAlg.xytInvMul31(nodeA.state, nodeB.state);
-			prior[2] = MathUtil.mod2pi(prior[2]);
-			GXYTEdge ge = loopmatcher.match(nodeA, nodeB, prior);
-
-			if (ge != null) {
-				ge.z[2] = MathUtil.mod2pi(ge.z[2]);
-				ge.nodes = new int[] { dpPrior.nodes[0], dpPrior.nodes[1] };
-				ge.setAttribute("type", "auto");
-				addHypothesis(ge);
-			}
-
-		}
-
-		// cumulative motion around loop
-		double xytl[] = new double[3];
-
-		// edges that we've already taken (so we don't use the same edge
-		// twice)
-		HashSet<GXYTEdge> visitedEdges = new HashSet<GXYTEdge>();
-
-		// poses that we've already visited
-		int pidxs[] = new int[maxLoopLength];
-		pidxs[0] = lastNode;
-
-		ArrayList<GXYTEdge> acceptedEdges = new ArrayList<GXYTEdge>();
-
-		recurse(1, pidxs, visitedEdges, xytl, acceptedEdges);
-
-		synchronized (g) {
-
-			for (int i = 0; i < maxAddedEdges; i++) {
-				GXYTEdge bestedge = null;
-				double besttrace = minTrace;
-
-				for (GXYTEdge ge : acceptedEdges) {
-					HashSet<Integer> neededNodes = new HashSet<Integer>();
-					neededNodes.add(ge.nodes[1]);
-					DijkstraProjection dp2 = new DijkstraProjection(g,
-							ge.nodes[0], null, neededNodes);
-					GXYTEdge dpPrior = dp2.getEdge(ge.nodes[1]);
-					double trace = (dpPrior == null) ? Double.MAX_VALUE
-							: LinAlg.trace(dpPrior.P);
-
-					if (dpPrior != null) {
-						MultiGaussian mg = new MultiGaussian(dpPrior.P,
-								dpPrior.z);
-						double mahl = mg.getMahalanobisDistance(ge.z);
-						if (mahl > maxMahal) {
-							continue;
-						}
-					}
-
-					if (trace > besttrace) {
-						bestedge = ge;
-						besttrace = trace;
-					}
-				}
-
-				if (bestedge != null) {
-					// hack to prevent very close edges being added
-					// if(Math.abs(bestedge.nodes[0]-bestedge.nodes[1])>6){
-					g.edges.add(bestedge);
-					synchronized (addedEdges) {
-						addedEdges.add(bestedge);
-					}
-					acceptedEdges.remove(bestedge);
-					// }
-				}
-			}
-		}
-	}
-
-	// depth: current depth (index to pidxs and eidxs that we'll write to)
-	void recurse(int depth, int pidxs[], HashSet<GXYTEdge> visitedEdges,
-			double xyt[], ArrayList<GXYTEdge> acceptedEdges) {
-		if (depth >= pidxs.length)
+		// do not allow the depth of the search to extend further than the
+		// length of the array which holds the pose indices for loop search
+		if (currentDepth >= poseIndices.length)
 			return;
 
-		ArrayList<GXYTEdge> edges = hypoNodes.get(pidxs[depth - 1]);
+		// grab the hypothesis edges for the prior node within the pose indices
+		ArrayList<GXYTEdge> edges = hypoNodes
+				.get(poseIndices[currentDepth - 1]);
+
+		// no edges for the considered node, end search
 		if (edges == null)
 			return;
 
-		// limit branching factor to 10.
-		int deidx = 1; // Math.max(1, edges.size() / 10);
+		// run through each edge connected to the considered pose
+		for (int eidx = 0; eidx < edges.size(); eidx++) {
 
-		for (int eidx = 0; eidx < edges.size(); eidx += deidx) {
+			// grab each considered edge
 			GXYTEdge ge = edges.get(eidx);
 
+			// determine if this edge has been traveled through yet in the
+			// search
 			if (visitedEdges.contains(ge))
 				continue;
 
-			// follow this edge, flipping it if it's the wrong direction.
-			double newxyt[];
+			// create the new loop motion for this edge
+			double newLoopMotion[];
 
-			if (ge.nodes[0] == pidxs[depth - 1]) {
-				newxyt = LinAlg.xytMultiply(xyt, ge.z);
-				pidxs[depth] = ge.nodes[1];
-			} else {
-				newxyt = LinAlg.xytMultiply(xyt, LinAlg.xytInverse(ge.z));
-				pidxs[depth] = ge.nodes[0];
+			// edge setup leading the correct way
+			if (ge.nodes[0] == poseIndices[currentDepth - 1]) {
+				newLoopMotion = LinAlg.xytMultiply(loopMotion, ge.z);
+				poseIndices[currentDepth] = ge.nodes[1];
 			}
 
-			// have we arrived back where we started?
-			if (pidxs[depth] == pidxs[0]) {
+			// edge is backwards, flip for computation of new loop motion
+			else {
+				newLoopMotion = LinAlg.xytMultiply(loopMotion,
+						LinAlg.xytInverse(ge.z));
+				poseIndices[currentDepth] = ge.nodes[0];
+			}
 
-				if (depth != 3)
+			// checking if the edges traveled have resulting in returning to
+			// initial position
+			if (poseIndices[currentDepth] == poseIndices[0]) {
+
+				// must have traveled through at least 3 edges before a loop can
+				// truly exist
+				if (currentDepth < 3)
 					continue;
 
-				// We've formed a loop. Is it any good?
-				final double xyerr = Math.sqrt(newxyt[0] * newxyt[0]
-						+ newxyt[1] * newxyt[1]);
-				final double terr = Math.abs(MathUtil.mod2pi(newxyt[2]));
+				// determine the accuracy on the loop for further loop
+				// confirmation
+				final double xyerr = Math.sqrt(newLoopMotion[0]
+						* newLoopMotion[0] + newLoopMotion[1]
+						* newLoopMotion[1]);
+				final double terr = Math.abs(MathUtil.mod2pi(newLoopMotion[2]));
 
-				// accuracy of loop
+				// thresholding the loop
 				final double xythresh = 0.05;
 				final double tthresh = Math.toRadians(1);
 
+				// additional confirmation on the loop
 				if (xyerr < xythresh && terr < tthresh) {
 
-					// we got some confirmation! Mark all these
-					// edges as having been validated. Each edge
-					// in the loop "votes" for all the other edges
-					// in the loop
-
-					// did we add one or more edges from this loop to the
-					// real graph?
-					boolean added = false;
+					// check the edges on this loop and add them to the graph if
+					// they do not already exist
 					for (GXYTEdge te : visitedEdges) {
-						HashSet<GXYTEdge> affirmingEdges = (HashSet<GXYTEdge>) te
-								.getAttribute("affirming-edges");
-						if (affirmingEdges == null) {
-							affirmingEdges = new HashSet<GXYTEdge>();
-							te.setAttribute("affirming-edges", affirmingEdges);
-						}
 
-						for (GXYTEdge se : visitedEdges) {
-							if (se == te)
-								continue;
-							affirmingEdges.add(se);
-						}
-
-						// is this edge now worth adding to the real graph?
+						// set attribute to added if adding to the graph
 						if (te.getAttribute("added") != null)
 							continue;
 
-						if (true || affirmingEdges.size() >= 4) {
-							acceptedEdges.add(te);
-
-							added = true;
-							te.setAttribute("added", "yes");
-						}
+						acceptedEdges.add(te);
+						te.setAttribute("added", "yes");
 					}
 
 				}
 			} else {
-				// It's not a loop.
 
-				// Don't allow loops which use very similar edges
-				// (i.e., a robot is stationary and generates two
-				// identical (but potentially incorrect) edges.
-				boolean reject = false;
-
-				if (true) {
-					GNode ga = g.nodes.get(pidxs[depth]);
-					// int ga_robot_id = (Integer)
-					// ga.getAttribute("robot_id");
-
-					for (int i = 0; i < depth - 1; i++) {
-						GNode gb = g.nodes.get(pidxs[i]);
-
-						// if (ga_robot_id == (Integer)
-						// gb.getAttribute("robot_id")) {
-						if (true) {
-							double xyt_local_a[] = LinAlg.copy(ga.state);
-							double xyt_local_b[] = LinAlg.copy(gb.state);
-
-							double xydist = Math
-									.sqrt(LinAlg.sq(xyt_local_a[0]
-											- xyt_local_b[0])
-											+ LinAlg.sq(xyt_local_a[1]
-													- xyt_local_b[1]));
-							double tdist;
-							if (ga instanceof GXYTNode
-									&& gb instanceof GXYTNode) {
-								tdist = Math.abs(MathUtil.mod2pi(xyt_local_a[2]
-										- xyt_local_b[2]));
-							} else {
-								tdist = 0;
-							}
-
-							if (xydist < 0.25 && tdist < Math.toRadians(30))
-								reject = true;
-						}
-					}
-				}
-
-				if (reject)
+				// avoid looping redundantly by assuring by choosing older nodes
+				// to follow
+				if (poseIndices[currentDepth] > poseIndices[currentDepth - 1])
 					continue;
 
-				// Avoid redundant loops by selecting only the loops in
-				// which the largest pose index is the first one
-				if (pidxs[depth] > pidxs[depth - 1])
-					continue;
-
-				// recurse.
+				// recurse and remove the current edge after recursing
 				visitedEdges.add(ge);
-				recurse(depth + 1, pidxs, visitedEdges, newxyt, acceptedEdges);
+				recurse(currentDepth + 1, poseIndices, visitedEdges,
+						newLoopMotion, acceptedEdges);
 				visitedEdges.remove(ge);
 
 			}
 		}
 	}
 
+	/**
+	 * Calculates the likelihood that two nodes are within a given range of each
+	 * other according to their Mahalanobis distance.
+	 * 
+	 * @param ge
+	 *            The edge used to calculate the Mahalanobis distance between
+	 *            the two nodes in question.
+	 * @param range
+	 *            The range with which to determine the likelihood that the two
+	 *            nodes are that close to each other.
+	 * @return Likelihood that the two nodes are within 'range' meters of each
+	 *         other.
+	 */
 	double mahalanobisDistance(GXYTEdge ge, double range) {
-		// which nodes *might* be in the neighborhood?
-		// Compute the mahalanobis distance that the nodes are
-		// within 5 meters of each other.
 
-		// how far away is the other node according to the dijkstra edge?
+		// distance to other node according to edge values
 		double dist = Math.sqrt(ge.z[0] * ge.z[0] + ge.z[1] * ge.z[1]);
 
-		// when we subtract our sensor range, what fraction of the distance do
-		// we have left?
-		double dist_ratio;
+		// remaining fraction of the distance to the base node after subtracting
+		// range
+		double distRatio;
 
 		if (dist < range)
-			dist_ratio = 0;
+			distRatio = 0;
 		else
-			dist_ratio = (dist - range) / dist;
+			distRatio = (dist - range) / dist;
 
-		// compute the positional error, accounting for our sensor range.
-		double err[] = new double[] { ge.z[0] * dist_ratio,
-				ge.z[1] * dist_ratio };
+		// positional error based on
+		double err[] = new double[] { ge.z[0] * distRatio, ge.z[1] * distRatio };
 
-		// compute mahalanobis distance of err.
+		// compute Mahalanobis distance
 		double W[][] = ge.getW();
-
-		// non invertible. Usually means that we're querying the
-		// distance of node 'a' with respect to the same node 'a'.
-		if (W == null) {
-			if (dist < range)
-				return 0;
-			else
-				return Double.MAX_VALUE;
-		}
-
 		return Math.sqrt(err[0] * err[0] * W[0][0] + 2 * err[0] * err[1]
 				* W[0][1] + err[1] * err[1] * W[1][1]);
 	}
 
+	/**
+	 * Solves the non-linear SLAM equation for the pose graph created by
+	 * reordering the nodes using a Minimum Degree Ordering heuristic and a
+	 * Cholesky decomposition.
+	 * 
+	 * @param g
+	 *            Graph object to solve.
+	 */
 	void optimizeFull(Graph g) {
-		synchronized (g) {
-			double chi2Before = g.getErrorStats().chi2normalized;
-			CholeskySolver gs = new CholeskySolver(g,
-					new MinimumDegreeOrdering());
-			gs.verbose = false;
 
-			for (int iter = 0; iter < 10; iter++) {
-				gs.iterate();
+		// use error statistics to determine when to cease iterating
+		double chi2Before = g.getErrorStats().chi2normalized;
 
-				double chi2After = g.getErrorStats().chi2normalized;
+		// solver using a Cholesky decomposition of the non-linear SLAM matrix
+		CholeskySolver gs = new CholeskySolver(g, new MinimumDegreeOrdering());
+		gs.verbose = false;
 
-				if (chi2After >= 0.8 * chi2Before || chi2After < 0.00001)
-					break;
+		// must iterate due to non-linear approximations using Jacobians
+		for (int iter = 0; iter < 10; iter++) {
+			gs.iterate();
 
-				chi2Before = chi2After;
-			}
+			double chi2After = g.getErrorStats().chi2normalized;
+
+			if (chi2After >= 0.8 * chi2Before || chi2After < 0.00001)
+				break;
+
+			chi2Before = chi2After;
 		}
 	}
 }
