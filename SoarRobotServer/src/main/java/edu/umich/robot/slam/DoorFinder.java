@@ -1,11 +1,8 @@
 package edu.umich.robot.slam;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import april.config.Config;
-import april.graph.GXYEdge;
-import april.graph.GXYNode;
 import april.graph.GXYTEdge;
 import april.graph.GXYTNode;
 import april.graph.Graph;
@@ -95,14 +92,28 @@ public class DoorFinder {
 	// config file for door finder parameters
 	Config config;
 
-	// maps each door to it's index within graph.nodes
-	HashMap<Integer, Integer> doorMap = new HashMap<Integer, Integer>();
-
-	// number of doors that have been found
-	int numDoors = 0;
-
 	// used by the SLAM method to visualize door edges added to the graph
 	int edgesAdded = 0;
+
+	// TODO Document Everything Below (until reaching constructors)
+
+	ArrayList<Door> doors = new ArrayList<Door>();
+
+	int lastDoorInside;
+	double[] priorPose;
+	boolean passedDoor = false;
+	boolean inDoor = false;
+
+	public static class Door {
+
+		int doorNumber;
+
+		int graphNodeIndex;
+
+		int[] connectsRooms;
+
+		ArrayList<Integer> poseNodes = new ArrayList<Integer>();
+	}
 
 	/**
 	 * Constructor method (can be called with null as input).
@@ -164,9 +175,9 @@ public class DoorFinder {
 	 *            The instance of the loop closing matcher used for SLAM.
 	 */
 	public void findDoors(ArrayList<double[]> scan, Graph G, int PoseIndex,
-			double[] curPose, LoopClosureMatcher matcher) {
+			double[] curPose, LoopClosureMatcher matcher, double poseThresh) {
 
-		// reset 'edgesAdded' for SLAM
+		// reset 'edgesAdded' for SLAM GUI
 		edgesAdded = 0;
 
 		// find doors in the given scan
@@ -178,6 +189,8 @@ public class DoorFinder {
 		// update graph according to data association
 		updateGraph(doorIndices, G, PoseIndex, curPose, doorsFound);
 
+		passedThroughDoor(G, curPose, poseThresh);
+		
 	}
 
 	/**
@@ -381,9 +394,13 @@ public class DoorFinder {
 											dHolder[2] = MathUtil
 													.mod2pi(dHolder[2]);
 
+											double[] newDoor = new double[] {
+													dHolder[0], dHolder[1],
+													dHolder[2], gapDist };
+
 											// add this door to array list for
 											// return
-											doors.add(dHolder);
+											doors.add(newDoor);
 
 											// update index i for search
 											i = i + j + 2;
@@ -491,7 +508,7 @@ public class DoorFinder {
 	 * previously seen doors.
 	 * 
 	 * @param daDoors
-	 *            Array list of doors recently found in a lidar scan.
+	 *            Array list of doors recently found in a LIDAR scan.
 	 * @param graph
 	 *            Graph being used for SLAM.
 	 * @param poseidx
@@ -508,6 +525,8 @@ public class DoorFinder {
 	 *         of a door which should be ignored according to our double gated
 	 *         parameters (see class parameters above).
 	 */
+
+	// TODO only associate with doors within our current room
 	public int[] dataAssociation(ArrayList<double[]> daDoors, Graph graph,
 			int poseidx, LoopClosureMatcher matcher) {
 
@@ -515,116 +534,111 @@ public class DoorFinder {
 		int[] indices = new int[daDoors.size()];
 
 		// no doors yet, so all doors are new and should be initialized
-		if (doorMap.isEmpty()) {
+		if (doors.isEmpty()) {
 			for (int i = 0; i < daDoors.size(); i++)
 				indices[i] = -1;
 			return indices;
 		}
 
 		// current pose in our map that has just been added
-		GXYTNode thisPose = (GXYTNode) graph.nodes.get(poseidx);
+		GXYTNode currentPose = (GXYTNode) graph.nodes.get(poseidx);
 
 		// run through each door found and attempt association with prior doors
 		for (int j = 0; j < daDoors.size(); j++) {
 
 			// current door attempting to associate
 			double[] doorLocation = daDoors.get(j);
-			double best;
-			int bestDoorindex;
+			double bestVal;
+			int bestDoor;
 
 			// initiate algorithm by assuming association with the first door
 			// ever found
-			int index = doorMap.get(0);
+			Door curDoor = doors.get(0);
 
 			// get the door node from the graph based on our door map (mapping
 			// door number to index within graph.nodes)
-			GXYNode doorNode = (GXYNode) graph.nodes.get(index);
-
-			// grab the array list of all the door nodes that have seen the door
-			// being considered for association
-			ArrayList<Integer> doorNodes = (ArrayList<Integer>) doorNode
-					.getAttribute("nodeList");
+			GXYTNode doorNode = (GXYTNode) graph.nodes
+					.get(curDoor.graphNodeIndex);
 
 			// get the index within graph.nodes of the last pose that saw the
 			// door being considered for association
-			int lastNodeIdx = doorNodes.get(doorNodes.size() - 1);
+			int lastNodeIdx = curDoor.poseNodes
+					.get(curDoor.poseNodes.size() - 1);
 
-			// current association heuristic: do a scan match between our
-			// current pose and the pose that last saw the door attempting to
-			// associate with. our data association will be based on how well
-			// the difference between the old edge connecting both poses and the
-			// new edge from scan matching agrees with the error in the
-			// association between the considered door and the located door
 			GXYTNode lastPose = (GXYTNode) graph.nodes.get(lastNodeIdx);
-			double[] prior = LinAlg.xytInvMul31(lastPose.state, thisPose.state);
-			prior[2] = MathUtil.mod2pi(prior[2]);
-			GXYTEdge ge = matcher.match(lastPose, thisPose, prior);
-			double[] doorChange = new double[] {
-					doorLocation[0] - doorNode.state[0],
-					doorLocation[1] - doorNode.state[1] };
-			if (ge != null) {
-				double[] newChange = new double[] { prior[0] - ge.z[0],
-						prior[1] - ge.z[1] };
-				best = LinAlg.distance(newChange, doorChange, 2);
-				bestDoorindex = index;
-			} else {
-				best = LinAlg.distance(doorLocation, doorNode.state, 2);
-				bestDoorindex = index;
-			}
+
+			bestVal = associationHueristic(currentPose, lastPose, doorLocation,
+					doorNode.state, matcher);
+
+			bestDoor = curDoor.doorNumber;
 
 			// run through the rest of the doors
-			for (int k = 1; k < doorMap.size(); k++) {
+			for (int p = 1; p < doors.size(); p++) {
+
+				curDoor = doors.get(p);
 
 				// run through each other door, determine if each associations
 				// heuristic value is better than the current running 'best'
-				index = doorMap.get(k);
-				doorNode = (GXYNode) graph.nodes.get(index);
-				doorNodes = (ArrayList<Integer>) doorNode
-						.getAttribute("nodeList");
-				lastNodeIdx = doorNodes.get(doorNodes.size() - 1);
+				doorNode = (GXYTNode) graph.nodes.get(curDoor.graphNodeIndex);
+
+				lastNodeIdx = curDoor.poseNodes
+						.get(curDoor.poseNodes.size() - 1);
+
 				lastPose = (GXYTNode) graph.nodes.get(lastNodeIdx);
-				prior = LinAlg.xytInvMul31(lastPose.state, thisPose.state);
-				prior[2] = MathUtil.mod2pi(prior[2]);
-				ge = matcher.match(lastPose, thisPose, prior);
-				doorChange = new double[] {
-						doorLocation[0] - doorNode.state[0],
-						doorLocation[1] - doorNode.state[1] };
-				double possBest;
-				if (ge != null) {
-					double[] newChange = new double[] { prior[0] - ge.z[0],
-							prior[1] - ge.z[1] };
-					possBest = LinAlg.distance(newChange, doorChange, 2);
-				} else {
-					possBest = LinAlg.distance(doorLocation, doorNode.state, 2);
-				}
-				if (possBest < best) {
-					best = possBest;
-					bestDoorindex = index;
+
+				double possBest = associationHueristic(currentPose, lastPose,
+						doorLocation, doorNode.state, matcher);
+
+				if (possBest < bestVal) {
+					bestVal = possBest;
+					bestDoor = curDoor.doorNumber;
 				}
 			}
 
 			// double gate on our scan matching distance heuristic
 			// new door to be added to the graph
-			if (best > upperAssociationThresh) {
+			if (bestVal > upperAssociationThresh) {
 				indices[j] = -1;
 				continue;
 			}
 
 			// associated door
-			if (best < lowerAssociationThresh) {
-				indices[j] = bestDoorindex;
-				// update the last position which saw the door
-				ArrayList<Integer> nodeList = (ArrayList<Integer>) graph.nodes
-						.get(bestDoorindex).getAttribute("nodeList");
-				nodeList.add(poseidx);
+			if (bestVal < lowerAssociationThresh) {
+				indices[j] = bestDoor;
 				continue;
 			}
 
-			// ignore this observation (inside our gated thresholds)
+			// ignore this observation (inside gated thresholds)
 			indices[j] = -2;
 		}
 
 		return indices;
+	}
+
+	// TODO document this method
+	public double associationHueristic(GXYTNode curPose, GXYTNode oldPose,
+			double[] curDoorLocation, double[] oldDoorLocation,
+			LoopClosureMatcher matcher) {
+
+		double[] prior = LinAlg.xytInvMul31(curPose.state, oldPose.state);
+		prior[2] = MathUtil.mod2pi(prior[2]);
+		GXYTEdge ge = matcher.match(curPose, oldPose, prior);
+		double[] assocDiff = new double[] {
+				oldDoorLocation[0] - curDoorLocation[0],
+				oldDoorLocation[1] - curDoorLocation[1] };
+
+		if (ge != null) {
+			double[] updateEdge = LinAlg.xytInverse(ge.z);
+			double[] newPoseLocation = LinAlg.xytMultiply(oldPose.state,
+					updateEdge);
+			double[] poseLocatDiff = new double[] {
+					newPoseLocation[0] - curPose.state[0],
+					newPoseLocation[1] - curPose.state[1] };
+
+			return LinAlg.distance(poseLocatDiff, assocDiff);
+		}
+
+		return Math.sqrt(Math.pow(assocDiff[0], 2) + Math.pow(assocDiff[1], 2));
 	}
 
 	/**
@@ -650,47 +664,132 @@ public class DoorFinder {
 	 *            Array list of doors recently found in a lidar scan.
 	 */
 	public void updateGraph(int[] idxs, Graph gr, int poseidx, double[] xyt,
-			ArrayList<double[]> doors) {
+			ArrayList<double[]> foundDoors) {
 
 		// run through each door, process it accordingly
-		for (int i = 0; i < doors.size(); i++) {
+		for (int i = 0; i < foundDoors.size(); i++) {
 
 			// current considered door
-			double[] doorState = doors.get(i);
+			double[] doorState = foundDoors.get(i);
+
+			// door associated, update node list of the given door
+			if (idxs[i] > -1) {
+				Door assocDoor = doors.get(idxs[i]);
+				assocDoor.poseNodes.add(poseidx);
+			}
 
 			// initialize new door
 			if (idxs[i] == -1) {
 
+				// create the door object
+				Door newDoor = new Door();
+				newDoor.doorNumber = doors.size();
+				newDoor.graphNodeIndex = gr.nodes.size();
+				newDoor.poseNodes.add(poseidx);
+				doors.add(newDoor);
+
 				// create the node, add to graph, update door map
-				GXYNode doorNode = new GXYNode();
-				doorNode.state = LinAlg.copy(doorState);
-				doorNode.init = LinAlg.copy(doorState);
-				doorNode.setAttribute("doorDirection", doorState[2]);
-				ArrayList<Integer> nodeList = new ArrayList<Integer>();
-				nodeList.add(poseidx);
-				doorNode.setAttribute("nodeList", nodeList);
-				doorMap.put(numDoors, gr.nodes.size());
+				GXYTNode doorNode = new GXYTNode();
+				doorNode.state = LinAlg.copy(doorState, 3);
+				doorNode.init = LinAlg.copy(doorState, 3);
+				doorNode.setAttribute("type", "door");
+				doorNode.setAttribute("doorWidth", doorState[3]);
 				gr.nodes.add(doorNode);
-				numDoors += 1;
 
 				// create the edge between this door and the pose that saw this
 				// door
-				GXYEdge doorEdge = new GXYEdge();
-				double dx = Math.cos(xyt[2]) * (doorNode.state[0] - xyt[0])
-						+ Math.sin(xyt[2]) * (doorNode.state[1] - xyt[1]);
-				double dy = -Math.sin(xyt[2]) * (doorNode.state[0] - xyt[0])
-						+ Math.cos(xyt[2]) * (doorNode.state[1] - xyt[1]);
-				doorEdge.z = new double[] { dx, dy };
+				GXYTEdge doorEdge = new GXYTEdge();
+				doorEdge.z = LinAlg.xytInvMul31(xyt, doorNode.state);
 				doorEdge.nodes = new int[] { poseidx, gr.nodes.size() - 1 };
-				double xyDist = LinAlg.distance(doorNode.state, xyt, 2);
-				doorEdge.P = LinAlg.diag(new double[] {
-						LinAlg.sq(xyDist * 0.1) + 0.01,
-						LinAlg.sq(xyDist * 0.1) + 0.01, });
+				doorEdge.P = LinAlg.diag(new double[] { 0.01, 0.01, 0.001 });
 				doorEdge.setAttribute("type", "door");
 				gr.edges.add(doorEdge);
 				edgesAdded += 1;
 				continue;
 			}
 		}
+	}
+
+	// TODO DOCUMENT
+	public boolean insideDoor(Door thisDoor, Graph gr, double[] pose,
+			double poseThresh) {
+
+		// get door, door's directionality, door's width
+		GXYTNode doorNode = (GXYTNode) gr.nodes.get(thisDoor.graphNodeIndex);
+		double doorDir = doorNode.state[2];
+		double doorNormDir = MathUtil.mod2pi(doorDir + (Math.PI / 2));
+		double doorWidth = (Double) doorNode.getAttribute("doorWidth");
+
+		// calculate rectangular window points
+		double dirXval1 = doorNode.state[0] + poseThresh
+				* Math.cos(doorDir);
+		double dirXval2 = doorNode.state[0] - poseThresh
+				* Math.cos(doorDir);
+		double norXval1 = doorNode.state[0] + (doorWidth / 2)
+				* Math.cos(doorNormDir);
+		double norXval2 = doorNode.state[0] - (doorWidth / 2)
+				* Math.cos(doorNormDir);
+		double[] xvals = new double[] { dirXval1, dirXval2, norXval1, norXval2 };
+
+		// calculate y values of rectangular points
+		double dirYval1 = doorNode.state[1] + poseThresh
+				* Math.sin(doorDir);
+		double dirYval2 = doorNode.state[1] - poseThresh
+				* Math.sin(doorDir);
+		double norYval1 = doorNode.state[1] + (doorWidth / 2)
+				* Math.sin(doorNormDir);
+		double norYval2 = doorNode.state[1] - (doorWidth / 2)
+				* Math.sin(doorNormDir);
+		double[] yvals = new double[] { dirYval1, dirYval2, norYval1, norYval2 };
+
+		// determine if pose within the window
+		if (pose[0] <= LinAlg.max(xvals) && pose[0] >= LinAlg.min(xvals)) {
+			if (pose[1] <= LinAlg.max(yvals) && pose[1] >= LinAlg.min(yvals)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	// TODO Document && eventually only doors connecting the room we are in
+	public void passedThroughDoor(Graph gr, double[] curPose, double poseThresh) {
+		
+		// if last pose not in door, lets see if this pose is
+		if (!inDoor) {
+			for (Door doorCheck : doors) {
+				boolean inDoorNow = insideDoor(doorCheck, gr, curPose,
+						poseThresh);
+				if (inDoorNow) {
+					lastDoorInside = doorCheck.doorNumber;
+					inDoor = true;
+					priorPose = LinAlg.copy(curPose);
+					return;
+				}
+			}
+			return;
+		}
+
+		// last pose was in a door, check if we are still in that door
+		if (!insideDoor(doors.get(lastDoorInside), gr, curPose, poseThresh)) {
+			
+			// reset inside door
+			inDoor = false;
+
+			// checking to see if now on the other side of the door we were in
+			// grab door
+			GXYTNode doorCross = (GXYTNode) gr.nodes.get(doors
+					.get(lastDoorInside).graphNodeIndex);
+
+			// last pose and current pose locations WRT door's reference frame
+			double[] beforeInDoor = LinAlg.xytInvMul31(doorCross.state, priorPose);
+			double[] afterInDoor = LinAlg.xytInvMul31(doorCross.state, curPose);
+			
+			if((afterInDoor[0] > 0 && beforeInDoor[0] < 0) || (afterInDoor[0] < 0 && beforeInDoor[0] > 0)){
+				System.out.println("WE CROSSED A DOOR!!!!!!!!!!!!!");
+			}
+			
+		}
+
 	}
 }

@@ -199,7 +199,7 @@ public class Slam {
 
 	// Sampling errors (x, y, and theta) used to calculate standard deviation
 	// when artificially inflating the odometry error based upon SLAM setup.
-	double[] samplingError = new double[] { 0.005, 0.005, Math.toRadians(0.05) };
+	double[] samplingError = new double[] { 0.005, 0.005, Math.toRadians(0.005) };
 
 	// Array list capturing poses of the true odometry movement (only available
 	// in the simulation environment).
@@ -481,7 +481,7 @@ public class Slam {
 			GXYTPosEdge edge = new GXYTPosEdge();
 			edge.nodes = new int[] { 0 };
 			edge.z = LinAlg.copy(gn.state);
-			edge.P = LinAlg.diag(new double[] { 0.01, 0.01, 0.001 });
+			edge.P = LinAlg.diag(new double[] { 0.001, 0.001, 0.0001 });
 			g.edges.add(edge);
 
 			// add attributes (LIDAR scan and node index within graph.nodes)
@@ -504,7 +504,7 @@ public class Slam {
 			// and add them to the graph
 			if (includeDoors) {
 				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
-						loopmatcher);
+						loopmatcher, poseDistThresh);
 
 				// add door edges to our addedEdges array list for visualization
 				// (see SlamGui for more information)
@@ -613,15 +613,9 @@ public class Slam {
 			// switch scan matcher search information for loop closing
 			loopmatcher.setMatchParameters(closeMatchScore, closeThetaRange,
 					closeThetaRangeRes, closeSearchRange);
-
-			// attempt to find doors based on SLAM setup
-			if (includeDoors) {
-				lastPoseIndex = g.nodes.size() - 1;
-				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
-						loopmatcher);
-				for (int d = 0; d < doorFinder.edgesAdded; d++)
-					addedEdges.add(g.edges.get(g.edges.size() - 1 - d));
-			}
+			
+			//update lastPoseIndex now that a new pose has been added
+			lastPoseIndex = g.nodes.size() - 1;
 
 			// attempt to close the loop based on SLAM setup
 			if (closeLoop) {
@@ -631,6 +625,14 @@ public class Slam {
 					optimizeFull(g);
 					xyt = LinAlg.copy(g.nodes.get(lastPoseIndex).state);
 				}
+			}
+			
+			// attempt to find doors based on SLAM setup
+			if (includeDoors) {
+				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
+						loopmatcher, poseDistThresh);
+				for (int d = 0; d < doorFinder.edgesAdded; d++)
+					addedEdges.add(g.edges.get(g.edges.size() - 1 - d));
 			}
 
 			// updating the open loop grid map if odometry information is not
@@ -712,7 +714,7 @@ public class Slam {
 		// have not accumulated enough nodes (or somehow got ahead) to
 		// attempt a loop closure
 		if (includeDoors) {
-			if (g == null || (g.nodes.size() - doorFinder.numDoors) <= 2
+			if (g == null || (g.nodes.size() - doorFinder.doors.size()) <= 2
 					|| lastPoseIndex == g.nodes.size()) {
 				return;
 			}
@@ -776,7 +778,7 @@ public class Slam {
 
 					// check the age of the hypothesis edge
 					int nodeMax = Math.max(ge.nodes[0], ge.nodes[1]);
-					if ((lastPoseIndex - nodeMax - doorFinder.numDoors) > maxHypothesisAge) {
+					if ((lastPoseIndex - nodeMax - doorFinder.doors.size()) > maxHypothesisAge) {
 
 						// change the last edge in the array list to the index
 						// of this aged edge and remove the last edge
@@ -799,12 +801,6 @@ public class Slam {
 			// pose to the other nodes while overestimating the cost (or
 			// covariance in this case)
 			GXYTEdge dpPrior = dp.getEdge(i);
-
-			// only want edges which attach poses to poses (Dijkstra projection
-			// will return null edges to doors)
-			if (dpPrior == null) {
-				continue;
-			}
 
 			// compute the current predicted distance to the current considered
 			// node
@@ -834,10 +830,12 @@ public class Slam {
 
 			// grab the current considered candidate edge
 			GXYTEdge dpPrior = candidates.get(cidx);
-
+			
 			// attempting to match the nodes
 			GXYTNode nodeA = (GXYTNode) g.nodes.get(dpPrior.nodes[0]);
 			GXYTNode nodeB = (GXYTNode) g.nodes.get(dpPrior.nodes[1]);
+			if(nodeB.getAttribute("type") != null)
+				continue;
 			double[] prior = LinAlg.xytInvMul31(nodeA.state, nodeB.state);
 			prior[2] = MathUtil.mod2pi(prior[2]);
 			GXYTEdge ge = loopmatcher.match(nodeA, nodeB, prior);

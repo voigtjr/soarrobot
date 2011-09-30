@@ -13,6 +13,7 @@ import april.graph.GEdge;
 import april.graph.GNode;
 import april.graph.GXYEdge;
 import april.graph.GXYNode;
+import april.graph.GXYTNode;
 import april.jmat.LinAlg;
 import april.lcmtypes.laser_t;
 import april.lcmtypes.pose_t;
@@ -175,38 +176,35 @@ public class SlamGui implements LCMSubscriber {
 		// Plot all nodes and their corresponding scans
 		for (int i = 0; i < slam.g.nodes.size(); i++) {
 
+			GXYTNode curNode = (GXYTNode) slam.g.nodes.get(i);
+			
 			// plot all of the doors
-			if (slam.g.nodes.get(i) instanceof GXYNode) {
-				double[] state = new double[] { slam.g.nodes.get(i).state[0],
-						slam.g.nodes.get(i).state[1], 0 };
+			if (curNode.getAttribute("type") != null) {
+				double[] state = new double[] { curNode.state[0],
+						curNode.state[1], 0 };
 				worldBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(state),
 						new VisStar()));
 
-				double direction = (Double) slam.g.nodes.get(i).getAttribute(
-						"doorDirection");
 				VisData vd = new VisData(new VisDataPointStyle(Color.blue, 2),
 						new VisDataLineStyle(Color.blue, 1));
 				vd.add(new double[] { state[0], state[1] });
-				vd.add(new double[] { state[0] + Math.cos(direction),
-						state[1] + Math.sin(direction) });
-				vd.add(new double[] { state[0] - Math.cos(direction),
-						state[1] - Math.sin(direction) });
+				vd.add(new double[] { state[0] + Math.cos(curNode.state[2]),
+						state[1] + Math.sin(curNode.state[2]) });
+				vd.add(new double[] { state[0] - Math.cos(curNode.state[2]),
+						state[1] - Math.sin(curNode.state[2]) });
 				worldBuffer.addBuffered(vd);
 
 				continue;
 			}
 
-			// Node's state
-			double[] pose = slam.g.nodes.get(i).state;
-
 			// Node's scan
 			@SuppressWarnings("unchecked")
 			ArrayList<double[]> LPoints = (ArrayList<double[]>) slam.g.nodes
 					.get(i).getAttribute("points");
-			ArrayList<double[]> GPoints = LinAlg.transform(pose, LPoints);
+			ArrayList<double[]> GPoints = LinAlg.transform(curNode.state, LPoints);
 
 			// Add pose to buffer
-			robotsBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(pose),
+			robotsBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(curNode.state),
 					new VisRobot(Color.red)));
 
 			// Add scan to buffer
@@ -220,7 +218,7 @@ public class SlamGui implements LCMSubscriber {
 				for (GEdge gh : slam.addedEdges) {
 
 					VisData vd;
-					if (gh instanceof GXYEdge) {
+					if (gh.getAttribute("type").equals("door")) {
 						vd = new VisData(new VisDataPointStyle(Color.red, 2),
 								new VisDataLineStyle(Color.red, 1));
 					} else {
