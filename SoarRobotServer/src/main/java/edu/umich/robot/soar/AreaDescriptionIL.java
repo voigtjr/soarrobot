@@ -277,6 +277,6 @@ public class AreaDescriptionIL extends InputLinkElement
 
     private static void debug(String message)
     {
-        System.out.println(message);
+        //System.out.println(message);
     }
 }

@@ -26,6 +26,7 @@ import april.vis.VisDataLineStyle;
 import april.vis.VisDataPointStyle;
 import april.vis.VisRobot;
 import april.vis.VisStar;
+import april.vis.VisText;
 import april.vis.VisWorld;
 
 public class SlamGui implements LCMSubscriber {
@@ -61,7 +62,7 @@ public class SlamGui implements LCMSubscriber {
 					double s = Math.sin(rad0);
 					rad0 += laser.radstep;
 
-					if (laser.ranges[i] > 10)
+					if (laser.ranges[i] > 50)
 						continue;
 					// TODO check laser range before adding point to rpoints
 					if (i % skipBeams == 0) {
@@ -184,6 +185,8 @@ public class SlamGui implements LCMSubscriber {
 						curNode.state[1], 0 };
 				worldBuffer.addBuffered(new VisChain(LinAlg.xytToMatrix(state),
 						new VisStar()));
+				worldBuffer.addBuffered(new VisText(new double[] {state[0], state[1], 0},
+						VisText.ANCHOR.CENTER, Integer.toString((Integer) curNode.getAttribute("doorNumber"))));
 
 				VisData vd = new VisData(new VisDataPointStyle(Color.blue, 2),
 						new VisDataLineStyle(Color.blue, 1));

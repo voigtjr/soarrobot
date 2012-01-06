@@ -10,7 +10,6 @@ import april.config.Config;
 import april.graph.CholeskySolver;
 import april.graph.DijkstraProjection;
 import april.graph.GEdge;
-import april.graph.GNode;
 import april.graph.GXYTEdge;
 import april.graph.GXYTNode;
 import april.graph.GXYTPosEdge;
@@ -157,7 +156,6 @@ public class Slam {
 	/**
 	 * Laser scan class used by open loop scan matcher when no odometry
 	 * information is available.
-	 * 
 	 */
 	public static class Scan {
 		// pose of the robot at the time of scan
@@ -613,8 +611,8 @@ public class Slam {
 			// switch scan matcher search information for loop closing
 			loopmatcher.setMatchParameters(closeMatchScore, closeThetaRange,
 					closeThetaRangeRes, closeSearchRange);
-			
-			//update lastPoseIndex now that a new pose has been added
+
+			// update lastPoseIndex now that a new pose has been added
 			lastPoseIndex = g.nodes.size() - 1;
 
 			// attempt to close the loop based on SLAM setup
@@ -626,7 +624,7 @@ public class Slam {
 					xyt = LinAlg.copy(g.nodes.get(lastPoseIndex).state);
 				}
 			}
-			
+
 			// attempt to find doors based on SLAM setup
 			if (includeDoors) {
 				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
@@ -830,11 +828,11 @@ public class Slam {
 
 			// grab the current considered candidate edge
 			GXYTEdge dpPrior = candidates.get(cidx);
-			
+
 			// attempting to match the nodes
 			GXYTNode nodeA = (GXYTNode) g.nodes.get(dpPrior.nodes[0]);
 			GXYTNode nodeB = (GXYTNode) g.nodes.get(dpPrior.nodes[1]);
-			if(nodeB.getAttribute("type") != null)
+			if (nodeB.getAttribute("type") != null)
 				continue;
 			double[] prior = LinAlg.xytInvMul31(nodeA.state, nodeB.state);
 			prior[2] = MathUtil.mod2pi(prior[2]);
@@ -1150,6 +1148,7 @@ public class Slam {
 	 * @param g
 	 *            Graph object to solve.
 	 */
+	@SuppressWarnings("static-access")
 	void optimizeFull(Graph g) {
 
 		// use error statistics to determine when to cease iterating
