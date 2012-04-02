@@ -2,6 +2,12 @@ package edu.umich.robot.slam;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+
+import com.google.common.collect.Lists;
+
+import edu.umich.robot.metamap.Gateway;
+import edu.umich.robot.util.Pose;
 
 import april.config.Config;
 import april.graph.GXYTEdge;
@@ -62,6 +68,9 @@ public class DoorFinder {
 	 * @param lineFitThresh
 	 *            Maximum threshold of the linear regression used on the points
 	 *            which make up a possible door.
+	 * @param wallThickness
+	 *            Expected thickness of walls within the environment (simulator
+	 *            ~ 0.5 m).
 	 * @param linePoints
 	 *            Amount of additional points to use in the linear regression
 	 *            algorithm. Add this number in front and behind the edges of
@@ -78,6 +87,7 @@ public class DoorFinder {
 	double lowerDoorSize = 1.0;
 	double upperDoorSize = 5.0;
 	double lineFitThresh = 0.05;
+	double wallThickness = 0.5;
 	int linePoints = 4;
 	int maxDoors = 3;
 
@@ -127,11 +137,18 @@ public class DoorFinder {
 	int numRooms = 1;
 	int currentRoom = 1;
 	HashMap<Integer, ArrayList<Integer>> roomMap = new HashMap<Integer, ArrayList<Integer>>();
+	HashMap<Integer, double[]> roomPoses = new HashMap<Integer, double[]>();
+
+	// TODO document
+	ArrayList<Gateway> gateWays = new ArrayList<Gateway>();
+	double upperDoorDirection = (3 * Math.PI) / 4;
+	double lowerDoorDirection = -Math.PI / 4;
 
 	/**
 	 * Door class containing information about a door within the environment.
 	 */
-	public static class Door {
+	@SuppressWarnings("unused")
+	private static class Door {
 
 		// door number within the topological map
 		int doorNumber;
@@ -139,11 +156,15 @@ public class DoorFinder {
 		// node index within the pose graph
 		int graphNodeIndex;
 
-		// the room numbers which this door connects
-		int[] connectsRooms = new int[2];
+		// connection information
+		String direction1 = new String();
+		String direction2 = new String();
+		int connects1;
+		int connects2;
 
-		// list of all the poses within the pose graph that have seen this door
-		ArrayList<Integer> poseNodes = new ArrayList<Integer>();
+		// index of first and most recent pose in the graph that saw this door
+		int firstPose;
+		int lastPose;
 	}
 
 	/**
@@ -171,6 +192,8 @@ public class DoorFinder {
 					upperDoorSize);
 			this.lineFitThresh = config.getDouble("lineFitThresh",
 					lineFitThresh);
+			this.wallThickness = config.getDouble("wallThickness",
+					wallThickness);
 			this.linePoints = config.getInt("linePoints", linePoints);
 			this.maxDoors = config.getInt("maxDoors", maxDoors);
 
@@ -229,6 +252,12 @@ public class DoorFinder {
 
 		// update graph according to data association
 		updateGraph(doorIndices, g, poseIndex, curPose, doorsFound, poseThresh);
+
+		// update gateways
+		updateGateways(g, curPose, poseThresh);
+
+		// update current room location estimate
+		updateCurrentRoom(curPose);
 	}
 
 	/**
@@ -410,8 +439,9 @@ public class DoorFinder {
 										&& gapDist < upperDoorSize) {
 
 									// checking how far away the door is
-									if (Math.sqrt(Math.pow(xcenter, 2)
-											+ Math.pow(ycenter, 2)) < doorDist) {
+									double distance = Math.sqrt(Math.pow(
+											xcenter, 2) + Math.pow(ycenter, 2));
+									if (distance < doorDist) {
 
 										// checking if the robot can see the
 										// door based on the LIDAR scan (see
@@ -432,8 +462,8 @@ public class DoorFinder {
 																	xcenter,
 																	ycenter,
 																	AofDoor });
-											dHolder[2] = MathUtil
-													.mod2pi(dHolder[2]);
+											dHolder[2] = mapDirection(MathUtil
+													.mod2pi(dHolder[2]));
 
 											double[] newDoor = new double[] {
 													dHolder[0], dHolder[1],
@@ -442,8 +472,12 @@ public class DoorFinder {
 											// add this door according to
 											// distance sorting to array list
 											// for return
-											doors = sortDoors(doors, newDoor,
-													xyt);
+											if (doors.isEmpty())
+												doors.add(newDoor);
+											else
+												doors = recurseSort(doors,
+														newDoor, xyt, distance,
+														0);
 
 											// update index i for search
 											i = i + j + 2;
@@ -485,38 +519,13 @@ public class DoorFinder {
 		return doors;
 	}
 
-	/**
-	 * The following method places a newly found door into the original array
-	 * list of found doors for a given scan at the index which it occurs with
-	 * respect to its distance from the current robot pose.
-	 * 
-	 * @param oldDoors
-	 *            The prior array list of doors found within a LIDAR scan.
-	 * @param newDoor
-	 *            Location of the newly found door.
-	 * @param xyt
-	 *            Current location of the robot.
-	 * @return Array list containing original door locations as well as the new
-	 *         door location, sorted according to their distance from the
-	 *         robot's pose.
-	 */
-	public ArrayList<double[]> sortDoors(ArrayList<double[]> oldDoors,
-			double[] newDoor, double[] xyt) {
+	// TODO document
+	public double mapDirection(double angle) {
 
-		// if doors is empty, add door and return
-		if (oldDoors.isEmpty()) {
-			oldDoors.add(newDoor);
-			return oldDoors;
-		}
+		if (angle >= lowerDoorDirection && angle <= upperDoorDirection)
+			return angle;
 
-		// calculate distance from current door to others
-		double dist = LinAlg.distance(newDoor, xyt, 2);
-
-		// call recursive sorting method to place door in the correct location
-		// according to distance to robot
-		ArrayList<double[]> sortedDoors = recurseSort(oldDoors, newDoor, xyt,
-				dist, 0);
-		return sortedDoors;
+		return MathUtil.mod2pi(angle + Math.PI);
 	}
 
 	/**
@@ -699,8 +708,7 @@ public class DoorFinder {
 
 			// get the index within graph.nodes of the last pose that saw the
 			// door being considered for association
-			int lastNodeIdx = curDoor.poseNodes
-					.get(curDoor.poseNodes.size() - 1);
+			int lastNodeIdx = curDoor.lastPose;
 
 			GXYTNode lastPose = (GXYTNode) graph.nodes.get(lastNodeIdx);
 
@@ -722,8 +730,7 @@ public class DoorFinder {
 				// heuristic value is better than the current running 'best'
 				doorNode = (GXYTNode) graph.nodes.get(curDoor.graphNodeIndex);
 
-				lastNodeIdx = curDoor.poseNodes
-						.get(curDoor.poseNodes.size() - 1);
+				lastNodeIdx = curDoor.lastPose;
 
 				lastPose = (GXYTNode) graph.nodes.get(lastNodeIdx);
 
@@ -749,8 +756,10 @@ public class DoorFinder {
 			// new door to be added to the graph
 			if (bestVal > upperAssociationThresh) {
 				indices[j] = -1;
-				if (daOutput)
+				if (daOutput) {
 					System.out.println("	Door Not Associated");
+					System.out.println();
+				}
 				continue;
 			}
 
@@ -764,6 +773,7 @@ public class DoorFinder {
 									+ ", "
 									+ graph.nodes.get(doors.get(bestDoor).graphNodeIndex).state[1]);
 					System.out.println("	Association ID: " + bestDoor);
+					System.out.println();
 				}
 				continue;
 			}
@@ -772,6 +782,13 @@ public class DoorFinder {
 			indices[j] = -2;
 			if (daOutput) {
 				System.out.println("	Ignoring new door");
+				System.out.println("	Best Association: Door " + bestDoor);
+				System.out
+						.println("	Associated locate: "
+								+ graph.nodes.get(doors.get(bestDoor).graphNodeIndex).state[0]
+								+ ", "
+								+ graph.nodes.get(doors.get(bestDoor).graphNodeIndex).state[1]);
+				System.out.println("	Association Value: " + bestVal);
 				System.out.println();
 			}
 		}
@@ -874,78 +891,8 @@ public class DoorFinder {
 			final double[] xyt, ArrayList<double[]> foundDoors,
 			double poseThresh) {
 
-		// we have crossed a door, need to update what room we are in
-		if (passedThroughDoor(graph, xyt, poseThresh)) {
-			// according to the door just crossed, what room are we in
-			Door doorPassed = doors.get(lastDoorInside);
-
-			if (mapOutput) {
-				System.out.println("We have crossed through a door:");
-				System.out.println("Door connects room:"
-						+ doorPassed.connectsRooms[0]);
-				System.out.println("Door connects room:"
-						+ doorPassed.connectsRooms[1]);
-			}
-
-			// which room is not the one we were just in
-			int room1 = doorPassed.connectsRooms[0];
-			if (room1 != currentRoom) {
-
-				// been in this room before
-				if (room1 != 0) {
-
-					// simple update of current room
-					currentRoom = room1;
-
-					if (mapOutput)
-						System.out.println("Entering Old Room: " + currentRoom);
-
-				} else {
-
-					// give this room an identification
-					numRooms = numRooms + 1;
-					currentRoom = numRooms;
-					doorPassed.connectsRooms[0] = currentRoom;
-
-					if (mapOutput)
-						System.out
-								.println("Exploring New Room: " + currentRoom);
-
-					// update room map
-					ArrayList<Integer> doorList = new ArrayList<Integer>();
-					doorList.add(doorPassed.doorNumber);
-					roomMap.put(currentRoom, doorList);
-				}
-			} else {
-				int room2 = doorPassed.connectsRooms[1];
-
-				// been in this room before
-				if (room2 != 0) {
-
-					// simple update of current room
-					currentRoom = room2;
-
-					if (mapOutput)
-						System.out.println("Entering Old Room: " + currentRoom);
-
-				} else {
-
-					// give this room an identification
-					numRooms = numRooms + 1;
-					currentRoom = numRooms;
-					doorPassed.connectsRooms[1] = currentRoom;
-
-					if (mapOutput)
-						System.out
-								.println("Exploring New Room: " + currentRoom);
-
-					// update room map
-					ArrayList<Integer> doorList = new ArrayList<Integer>();
-					doorList.add(doorPassed.doorNumber);
-					roomMap.put(currentRoom, doorList);
-				}
-			}
-		}
+		// has the area changed?
+		areaChange(graph, xyt, poseThresh);
 
 		// only updating graph / door map if we are not in a door
 		if (!inDoor) {
@@ -969,8 +916,32 @@ public class DoorFinder {
 					Door newDoor = new Door();
 					newDoor.doorNumber = doors.size();
 					newDoor.graphNodeIndex = graph.nodes.size();
-					newDoor.poseNodes.add(poseidx);
-					newDoor.connectsRooms[0] = currentRoom;
+					newDoor.firstPose = poseidx;
+					newDoor.lastPose = poseidx;
+					newDoor.connects1 = currentRoom;
+
+					// determine direction or door
+					double relativeXpose = LinAlg.xytInvMul31(doorState, xyt)[0];
+					if (doorState[2] >= -Math.PI / 4
+							&& doorState[2] <= Math.PI / 4) {
+						if (relativeXpose <= 0) {
+							newDoor.direction1 = "west";
+							newDoor.direction2 = "east";
+						} else {
+							newDoor.direction1 = "east";
+							newDoor.direction2 = "west";
+						}
+					} else {
+						if (relativeXpose <= 0) {
+							newDoor.direction1 = "south";
+							newDoor.direction2 = "north";
+						} else {
+							newDoor.direction1 = "north";
+							newDoor.direction2 = "south";
+						}
+					}
+
+					// add door to list
 					doors.add(newDoor);
 
 					// update room map according to if this room has any door
@@ -979,12 +950,20 @@ public class DoorFinder {
 
 					// create door node, update it's information, add to graph
 					GXYTNode doorNode = new GXYTNode();
-					doorNode.state = LinAlg.copy(doorState, 3);
-					doorNode.init = LinAlg.copy(doorState, 3);
 					doorNode.setAttribute("type", "door");
 					doorNode.setAttribute("doorWidth", doorState[3]);
 					doorNode.setAttribute("doorNumber", newDoor.doorNumber);
 					graph.nodes.add(doorNode);
+
+					// add in wall buffer to door's location
+					if (relativeXpose < 0)
+						doorState = LinAlg.xytMultiply(doorState, new double[] {
+								wallThickness, 0, 0 });
+					else
+						doorState = LinAlg.xytMultiply(doorState, new double[] {
+								-wallThickness, 0, 0 });
+					doorNode.state = LinAlg.copy(doorState, 3);
+					doorNode.init = LinAlg.copy(doorState, 3);
 
 					// create edge from current pose to this new door
 					GXYTEdge doorEdge = new GXYTEdge();
@@ -1005,14 +984,14 @@ public class DoorFinder {
 					// check if door connection list is in accordance with
 					// current room
 					Door foundDoor = doors.get(idxs[i]);
-					int room1 = foundDoor.connectsRooms[0];
-					int room2 = foundDoor.connectsRooms[1];
+					int room1 = foundDoor.connects1;
+					int room2 = foundDoor.connects2;
 
 					// door is in accordance with current room
 					if (room1 == currentRoom || room2 == currentRoom) {
 
-						// add pose to the doors pose list
-						foundDoor.poseNodes.add(poseidx);
+						// update last pose that saw this door
+						foundDoor.lastPose = poseidx;
 						continue;
 					}
 
@@ -1021,8 +1000,8 @@ public class DoorFinder {
 					if (room1 == 0) {
 						// add this room to connnectsRooms, update poseNodes,
 						// update roomMap
-						foundDoor.connectsRooms[0] = currentRoom;
-						foundDoor.poseNodes.add(poseidx);
+						foundDoor.connects1 = currentRoom;
+						foundDoor.lastPose = poseidx;
 
 						if (mapOutput)
 							System.out.println("Saw door: "
@@ -1033,8 +1012,8 @@ public class DoorFinder {
 						continue;
 					}
 					if (room2 == 0) {
-						foundDoor.connectsRooms[1] = currentRoom;
-						foundDoor.poseNodes.add(poseidx);
+						foundDoor.connects2 = currentRoom;
+						foundDoor.lastPose = poseidx;
 
 						if (mapOutput)
 							System.out.println("Saw door: "
@@ -1051,13 +1030,13 @@ public class DoorFinder {
 					// merge the two rooms...
 					if (connects2Room) {
 						double[] room1Pose = graph.nodes
-								.get(foundDoor.poseNodes.get(0)).state;
+								.get(foundDoor.firstPose).state;
 						int actualRoom;
 						if (oppoSideDoor(xyt, room1Pose,
 								graph.nodes.get(foundDoor.graphNodeIndex).state))
-							actualRoom = foundDoor.connectsRooms[0];
+							actualRoom = foundDoor.connects1;
 						else
-							actualRoom = foundDoor.connectsRooms[1];
+							actualRoom = foundDoor.connects2;
 
 						// merge current room and the actual room
 						mergeRooms(actualRoom, currentRoom);
@@ -1104,10 +1083,10 @@ public class DoorFinder {
 			Door curDoor = doors.get(doorIdx);
 
 			// update the connecting room to be the old room
-			if (curDoor.connectsRooms[0] == newRoom) {
-				curDoor.connectsRooms[0] = oldRoom;
+			if (curDoor.connects1 == newRoom) {
+				curDoor.connects1 = oldRoom;
 			} else {
-				curDoor.connectsRooms[1] = oldRoom;
+				curDoor.connects2 = oldRoom;
 			}
 
 			// add this door to the old rooms door list if not already present
@@ -1394,4 +1373,261 @@ public class DoorFinder {
 		return false;
 	}
 
+	// TODO Document
+	public void areaChange(Graph g, double[] xyt, double poseThresh) {
+
+		// check if passed through door
+		boolean priorInDoor = inDoor;
+		boolean doorPass = passedThroughDoor(g, xyt, poseThresh);
+
+		if (!priorInDoor && inDoor) {
+			updateGateways(g, xyt, poseThresh);
+			return;
+		}
+
+		if (doorPass) {
+			// according to the door just crossed, what room are we in
+			Door doorPassed = doors.get(lastDoorInside);
+
+			if (mapOutput) {
+				System.out.println("We have crossed through a door:");
+				System.out
+						.println("Door connects room:" + doorPassed.connects1);
+				System.out
+						.println("Door connects room:" + doorPassed.connects2);
+			}
+
+			// which room is not the one we were just in
+			int room1 = doorPassed.connects1;
+			if (room1 != currentRoom) {
+
+				// been in this room before
+				if (room1 != 0) {
+
+					// simple update of current room
+					currentRoom = room1;
+
+					if (mapOutput)
+						System.out.println("Entering Old Room: " + currentRoom);
+
+				} else {
+
+					// give this room an identification
+					numRooms = numRooms + 1;
+					currentRoom = numRooms;
+					doorPassed.connects1 = currentRoom;
+
+					if (mapOutput)
+						System.out
+								.println("Exploring New Room: " + currentRoom);
+
+					// update room map
+					ArrayList<Integer> doorList = new ArrayList<Integer>();
+					doorList.add(doorPassed.doorNumber);
+					roomMap.put(currentRoom, doorList);
+				}
+			} else {
+				int room2 = doorPassed.connects2;
+
+				// been in this room before
+				if (room2 != 0) {
+
+					// simple update of current room
+					currentRoom = room2;
+
+					if (mapOutput)
+						System.out.println("Entering Old Room: " + currentRoom);
+
+				} else {
+
+					// give this room an identification
+					numRooms = numRooms + 1;
+					currentRoom = numRooms;
+					doorPassed.connects2 = currentRoom;
+
+					if (mapOutput)
+						System.out
+								.println("Exploring New Room: " + currentRoom);
+
+					// update room map
+					ArrayList<Integer> doorList = new ArrayList<Integer>();
+					doorList.add(doorPassed.doorNumber);
+					roomMap.put(currentRoom, doorList);
+				}
+			}
+			updateGateways(g, xyt, poseThresh);
+		}
+	}
+
+	// TODO document
+	public void updateGateways(Graph g, double[] pose, double poseThresh) {
+
+		// clear gateway lists
+		gateWays.clear();
+
+		// check if inside of a door
+		if (inDoor) {
+
+			// grab door
+			Door doorInside = doors.get(lastDoorInside);
+
+			// gateway locations
+			double[] doorLocation = g.nodes.get(doorInside.graphNodeIndex).state;
+			double[] gwLocation1 = LinAlg.xytMultiply(doorLocation,
+					new double[] { poseThresh, 0, 0 });
+			double[] gwLocation2 = LinAlg.xytMultiply(doorLocation,
+					new double[] { -poseThresh, 0, 0 });
+
+			// gateway 'to' identifier lists
+			List<Integer> gwTo1;
+			List<Integer> gwTo2;
+			if (doorInside.direction1 == "east"
+					|| doorInside.direction1 == "north") {
+
+				gwTo1 = Lists.newArrayList(doorInside.doorNumber + 1001,
+						doorInside.connects1);
+				gwTo2 = Lists.newArrayList(doorInside.doorNumber + 1001,
+						doorInside.connects2);
+			} else {
+				gwTo1 = Lists.newArrayList(doorInside.doorNumber + 1001,
+						doorInside.connects2);
+				gwTo2 = Lists.newArrayList(doorInside.doorNumber + 1001,
+						doorInside.connects1);
+			}
+
+			// gateway door
+			edu.umich.robot.metamap.Door gwDoor = new edu.umich.robot.metamap.Door(
+					doorInside.doorNumber + 1001, Lists.newArrayList(
+							doorLocation[0], doorLocation[1], (Double) g.nodes
+									.get(doorInside.graphNodeIndex)
+									.getAttribute("doorWidth"), poseThresh));
+			// gateway pose
+			Pose gwPose1 = new Pose(new double[] { gwLocation1[0],
+					gwLocation1[1] });
+			Pose gwPose2 = new Pose(new double[] { gwLocation2[0],
+					gwLocation2[1] });
+
+			// add gateways
+			Gateway gw1 = new Gateway(gwPose1, gwTo1, gwDoor,
+					1999 + 2 * (doorInside.doorNumber + 1));
+			Gateway gw2 = new Gateway(gwPose2, gwTo2, gwDoor,
+					2000 + 2 * (doorInside.doorNumber + 1));
+
+			if (doorInside.direction1 == "east"
+					|| doorInside.direction1 == "west") {
+				gw1.direction = "horizontal";
+				gw2.direction = "horizontal";
+			} else {
+				gw1.direction = "vertical";
+				gw2.direction = "vertical";
+			}
+			gateWays.add(gw1);
+			gateWays.add(gw2);
+		}
+
+		// not inside door
+		else {
+
+			// grab door indices & state from map
+			ArrayList<Integer> doorList = roomMap.get(currentRoom);
+
+			// create gateway for each door
+			for (Integer idx : doorList) {
+
+				// grab door
+				Door door = doors.get(idx);
+				double[] doorLocation = g.nodes.get(door.graphNodeIndex).state;
+
+				// calculate gateway location
+				double[] gatewayLocation;
+				int gwSupport;
+
+				// direction of gateway
+				String dir;
+
+				// horizontal door
+				if (door.direction1 == "east" || door.direction1 == "west") {
+
+					dir = "horizontal";
+					// west of door
+					if (pose[0] < doorLocation[0]) {
+						gatewayLocation = LinAlg.xytMultiply(doorLocation,
+								new double[] { -0.3 * poseThresh, 0, 0 });
+						gwSupport = 1;
+					}
+					// east of door
+					else {
+						gatewayLocation = LinAlg.xytMultiply(doorLocation,
+								new double[] { 0.3 * poseThresh, 0, 0 });
+						gwSupport = 0;
+					}
+
+				}
+				// vertical door
+				else {
+
+					dir = "vertical";
+					// south of door
+					if (pose[1] < doorLocation[1]) {
+						gatewayLocation = LinAlg.xytMultiply(doorLocation,
+								new double[] { -0.3 * poseThresh, 0, 0 });
+						gwSupport = 1;
+					}
+					// north of door
+					else {
+						gatewayLocation = LinAlg.xytMultiply(doorLocation,
+								new double[] { 0.3 * poseThresh, 0, 0 });
+						gwSupport = 0;
+					}
+				}
+
+				// gateway pose
+				Pose gwPose = new Pose(new double[] { gatewayLocation[0],
+						gatewayLocation[1] });
+
+				// gateway door
+				edu.umich.robot.metamap.Door gwDoor = new edu.umich.robot.metamap.Door(
+						door.doorNumber + 1001, Lists.newArrayList(
+								doorLocation[0], doorLocation[1],
+								(Double) g.nodes.get(door.graphNodeIndex)
+										.getAttribute("doorWidth"), poseThresh));
+
+				// gateway 'to' list
+				List<Integer> gwTo = Lists.newArrayList(currentRoom,
+						door.doorNumber + 1001);
+
+				// gateway
+				Gateway gw = new Gateway(gwPose, gwTo, gwDoor,
+						(1999 + gwSupport) + 2 * (door.doorNumber + 1));
+				gw.direction = dir;
+
+				// add gateway
+				gateWays.add(gw);
+			}
+		}
+	}
+
+	// TODO document
+	public void updateCurrentRoom(double[] pose) {
+		if (!inDoor) {
+			double[] currentLocation = roomPoses.get(currentRoom);
+			if (currentLocation == null)
+				roomPoses.put(currentRoom, LinAlg.copy(pose));
+			else {
+				currentLocation[0] = (currentLocation[0] + pose[0]) / 2;
+				currentLocation[1] = (currentLocation[1] + pose[1]) / 2;
+			}
+		}
+	}
+
+	public double[] getRoomLocation(Graph g) {
+		if (inDoor) {
+			return g.nodes.get(doors.get(lastDoorInside).graphNodeIndex).state;
+		} else {
+			double[] pose = roomPoses.get(currentRoom);
+			if (pose == null)
+				System.out.println("Room Location Missing");
+			return pose;
+		}
+	}
 }

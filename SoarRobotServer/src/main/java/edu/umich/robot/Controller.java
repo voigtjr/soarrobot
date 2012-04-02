@@ -283,11 +283,11 @@ public class Controller
         splinters.add(splinter);
     }
 
-    public void createSuperdroidRobot(String robotName, Pose pose, boolean collisions)
+    public void createSuperdroidRobot(String robotName, Pose pose, boolean collisions, boolean slamInput)
     {
         RobotData sd = new RobotData(RobotType.SUPERDROID, robotName, pose, collisions);
         simRobots.put(robotName, sd);
-        Robot superdroid = new Superdroid(robotName, radio, metamap);
+        Robot superdroid = new Superdroid(robotName, radio, metamap, slamInput);
         robots.addRobot(superdroid);
     }
 

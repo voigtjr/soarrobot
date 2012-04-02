@@ -493,6 +493,7 @@ public class GuiApplication
 
         for (String s : config.getStrings("superdroids", new String[0]))
         {
+        	boolean slamInput = config.getBoolean(s + ".slamInput", false);
             double[] pos = config.getDoubles(s + ".position");
             if (pos == null)
             {
@@ -504,7 +505,7 @@ public class GuiApplication
             String prods = config.getString(s + ".productions");
             boolean collisions = config.getBoolean(s + ".wallCollisions", true);
             
-            controller.createSuperdroidRobot(s, pose, collisions);
+            controller.createSuperdroidRobot(s, pose, collisions, slamInput);
             boolean simulated = config.getBoolean(s + ".simulated", true);
             if (simulated)
                 controller.createSimSuperdroid(s);
@@ -537,8 +538,7 @@ public class GuiApplication
                 controller.createSoarController(s, s, prods, config.getChild(s + ".properties"));
                 PREFERENCES.put("lastProductions", prods);
             }
-        }
-        
+        } 
     }
     
     /**
@@ -843,7 +843,7 @@ public class GuiApplication
                         return;
                     }
 
-                controller.createSuperdroidRobot(robotName, pose, true);
+                controller.createSuperdroidRobot(robotName, pose, true, false);
                 controller.createSimSuperdroid(robotName);
                 dialog.dispose();
             }

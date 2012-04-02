@@ -4,7 +4,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
+
+import edu.umich.robot.metamap.AreaDescription;
+import edu.umich.robot.metamap.Gateway;
+import edu.umich.robot.metamap.Wall;
+import edu.umich.robot.util.ImmutablePose;
+import edu.umich.robot.util.Pose;
 
 import april.config.Config;
 import april.graph.CholeskySolver;
@@ -226,7 +234,7 @@ public class Slam {
 
 	// Constantly holds the best estimate of the current location (x, y, theta
 	// in meters).
-	double xyt[] = new double[3];
+	public double xyt[] = new double[3];
 
 	// Holds the last true location received by the odometry sensors (only used
 	// when inflating the odometry with error in the simulation environment).
@@ -239,6 +247,9 @@ public class Slam {
 
 	// Holds all non odometry edges added to the graph.
 	ArrayList<GEdge> addedEdges = new ArrayList<GEdge>();
+
+	// Assists in area dexription builder
+	boolean adChanged = false;
 
 	/**
 	 * Constructor method (can be called with null as input).
@@ -431,6 +442,10 @@ public class Slam {
 		// simple updating of the predicted pose
 		xyt = LinAlg.xytMultiply(xyt, u);
 		xyt[2] = MathUtil.mod2pi(xyt[2]);
+
+		// check if this update changes the current area in the environment
+		if (includeDoors)
+			doorFinder.areaChange(g, xyt, poseDistThresh);
 	}
 
 	/**
@@ -503,13 +518,13 @@ public class Slam {
 			if (includeDoors) {
 				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
 						loopmatcher, poseDistThresh);
+				adChanged = true;
 
 				// add door edges to our addedEdges array list for visualization
 				// (see SlamGui for more information)
 				for (int d = 0; d < doorFinder.edgesAdded; d++)
 					addedEdges.add(g.edges.get(g.edges.size() - 1 - d));
 			}
-
 			return;
 		}
 
@@ -629,6 +644,7 @@ public class Slam {
 			if (includeDoors) {
 				doorFinder.findDoors(rpoints, g, lastPoseIndex, xyt,
 						loopmatcher, poseDistThresh);
+				adChanged = true;
 				for (int d = 0; d < doorFinder.edgesAdded; d++)
 					addedEdges.add(g.edges.get(g.edges.size() - 1 - d));
 			}
@@ -1170,4 +1186,65 @@ public class Slam {
 			chi2Before = chi2After;
 		}
 	}
+
+	// TODO : Document everything below here -- Input Link information
+	public AreaDescription getArea() {
+		return area;
+	}
+
+	private final AreaDescription area = new AreaDescription() {
+
+		// room identification
+		public int getId() {
+			if (!doorFinder.inDoor)
+				return doorFinder.currentRoom;
+			else
+				return doorFinder.lastDoorInside + 1001;
+		}
+
+		// location of room -- actually reporting current robot location in
+		// order to hack gateway direction issues
+		public ImmutablePose getPose() {
+			Pose np = new Pose();
+			np.setX(xyt[0]);
+			np.setY(xyt[1]);
+			np.setYaw(xyt[2]);
+			return ImmutablePose.newInstance(np);
+		}
+
+		// properties of room -- nothing to report
+		public Map<String, String> getProperties() {
+			return new HashMap<String, String>();
+		}
+
+		// list of gateways
+		public List<Gateway> getGateways() {
+			return doorFinder.gateWays;
+		}
+
+		// wall information -- nothing to report
+		public List<Wall> getWalls() {
+			return new ArrayList<Wall>();
+		}
+
+		// center of room -- estimation using poses
+		public ImmutablePose getMidpoint() {
+			return ImmutablePose.newInstance(new Pose(doorFinder
+					.getRoomLocation(g)));
+		}
+
+		// room pixels -- nothing to report
+		public int[] getPixelRect() {
+			return null;
+		}
+
+		// this is the time save
+		public boolean hasChanged() {
+			return adChanged;
+		}
+
+		public void setChanged(boolean changed) {
+			adChanged = changed;
+		}
+	};
 }

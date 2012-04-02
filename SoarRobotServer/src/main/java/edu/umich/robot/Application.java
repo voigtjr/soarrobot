@@ -68,7 +68,7 @@ public class Application
         // Config config = ConfigUtil.getDefaultConfig(args);
         Config config = (args.length > 0) ? ConfigUtil.getDefaultConfig(args) : GuiApplication.promptForConfig(null);
         if (config == null || !config.hasKey("multiple-runs.configs"))
-            runGui(config);
+        	runGui(config);
         else
             multipleRuns(config.getChild("multiple-runs"));
     }

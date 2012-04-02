@@ -4,7 +4,7 @@
 sp {elaborate*task*robot
     (state <s> ^superstate nil)
     -->
-    (<s> ^name robot +)
+    (<s> ^name robot ^area -1 ^last-area -1)
 }
 
 ### Initialize parameters
@@ -21,6 +21,27 @@ sp {robot*elaborate*state
            ^max-angular-distance 3 + ^min-angular-distance -3 +
            ^increased-angular-tolerance-range 0.5 +
            ^increased-angular-tolerance-multiplier 10 +)
+}
+
+## keep track of current area and last area
+sp {area*change*update
+    (<s> ^area <a> ^io <io>)
+    (<io> ^input-link <il>)
+    (<il> ^area-description <ad>)
+    (<ad> ^id {<> <a> <id>})
+    -->
+    (<s> ^operator <o> +,>)
+    (<o> ^name change-area
+         ^new-area <id>) 
+}
+
+
+sp {apply*area*change
+    (<s> ^area <a> ^last-area <la> ^operator <o>)
+    (<o> ^name change-area ^new-area <id>)
+    -->
+    (<s> ^last-area <a> ^last-area <la> -
+         ^area <id> ^area <a> -)
 }
 
 ## Copy io link to substates so they can access it directly
@@ -92,10 +113,12 @@ sp {monitor*go-to-waypoint
 }
 
 sp {go-to-area*propose*go-to-gateway
-    (state <s> ^name robot ^io <i*1>)
+    (state <s> ^name robot ^io <i*1> ^area <a> ^last-area <la>)
     (<i*1> ^input-link <i*2>)
     (<i*2> ^area-description <a*1>)
     (<a*1> ^gateway <gw>)
+    (<gw> ^to {<> <a> <to>}
+          ^to {<> <la> <to>})
     -->
     (<s> ^operator <op> + ^operator <op> =)
     (<op> ^name go-to + ^destination <gw> +)
@@ -139,7 +162,6 @@ sp {go-to*elaborate*set-waypoint*true
     -->
     (<s> ^set-waypoint true + ^waypoint-data <wp> +)
 }
-
 
 sp {go-to*elaborate*yaw-aligned*increased-tolerance
     (state <s> ^name go-to ^waypoint-data <w> ^superstate <s*1>)
@@ -195,20 +217,17 @@ sp {go-to*elaborate*yaw-aligned*true
 }
 
 
-
-
-
 ## Operator Move-forward
 
 sp {go-to*propose*move-forward
     (state <s> ^yaw-aligned true ^name go-to ^superstate <s*1>)
     (<s*1> ^parameters <p*1>)
-    (<p*1> ^medium-linear-velocity <medium>)
+    (<p*1> ^high-linear-velocity <high>)
     -->
     (<s> ^operator <op> + ^operator <op> =)
     (<op> ^name move-forward + ^actions <a> +)
     (<a> ^set-velocity <sv> +)
-    (<sv> ^linear-velocity <medium> + ^angular-velocity 0 +)
+    (<sv> ^linear-velocity <high> + ^angular-velocity 0 +)
 }
 
 
@@ -227,7 +246,13 @@ sp {go-to*propose*turn-to-waypoint
     (write (crlf) |Rotating to waypoint at heading | <yaw>)
 }
 
-
+## monitor waypoint value
+sp {monitor*waypoint
+    (state <s> ^waypoint-data <w>)
+    (<w> ^x <x> ^y <y>)
+    -->
+    (write (crlf) |Waypoint Location: | <x> |, | <y>)
+}
 
 ## Operator set-waypoint
 

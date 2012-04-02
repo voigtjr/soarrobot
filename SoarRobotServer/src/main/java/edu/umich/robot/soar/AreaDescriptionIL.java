@@ -21,7 +21,6 @@
  */
 package edu.umich.robot.soar;
 
-import java.awt.geom.Area;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +45,8 @@ import edu.umich.robot.metamap.AreaState;
 import edu.umich.robot.metamap.Door;
 import edu.umich.robot.metamap.Gateway;
 import edu.umich.robot.metamap.Wall;
+import edu.umich.robot.util.ImmutablePose;
+import edu.umich.robot.util.soar.DistanceWme;
 import edu.umich.soar.IntWme;
 import edu.umich.soar.StringWme;
 
@@ -54,229 +55,297 @@ import edu.umich.soar.StringWme;
  * 
  * @author voigtjr
  */
-public class AreaDescriptionIL extends InputLinkElement
-{
-    private static final Log logger = LogFactory.getLog(AreaDescriptionIL.class);
+public class AreaDescriptionIL extends InputLinkElement {
+	private static final Log logger = LogFactory
+			.getLog(AreaDescriptionIL.class);
 
-    private final SoarAgent agent;
+	private final SoarAgent agent;
 
-    private final IntWme idwme;
+	private final IntWme idwme;
 
-    private final StringWme typewme;
+	private final DistanceWme areaX;
+	private final DistanceWme areaY;
 
-    private final StringWme lightwme;
+	private final StringWme typewme;
 
-    private final RobotOutput output;
+	private final StringWme lightwme;
 
-    private final List<Identifier> gatewayWmes = Lists.newArrayList();
+	private final RobotOutput output;
 
-    private final List<PointWithDistanceIL> pointDataList = Lists.newArrayList();
+	private final List<Identifier> gatewayWmes = Lists.newArrayList();
 
-    private final List<Identifier> destroyList = Lists.newArrayList();
+	private final List<PointWithDistanceIL> pointDataList = Lists
+			.newArrayList();
 
-    private final String channel;
+	private final List<Identifier> destroyList = Lists.newArrayList();
 
-    private static final LCM lcm = LCM.getSingleton();
+	private final String channel;
 
-    private boolean warned = false;
+	private static final LCM lcm = LCM.getSingleton();
 
-    public AreaDescriptionIL(SoarAgent agent)
-    {
-        super(agent, IOConstants.AREA_DESCRIPTION, agent.getSoarAgent().GetInputLink());
+	private boolean warned = false;
 
-        this.agent = agent;
-        this.channel = "WAYPOINTS_" + agent.getName();
+	private final HashMap<Integer, Integer> gwToPointData = new HashMap<Integer, Integer>();
 
-        idwme = IntWme.newInstance(getRoot(), IOConstants.ID, -1);
-        typewme = StringWme.newInstance(getRoot(), IOConstants.TYPE);
-        lightwme = StringWme.newInstance(getRoot(), IOConstants.LIGHT);
-        output = agent.getRobotOutput();
+	public AreaDescriptionIL(SoarAgent agent) {
+		super(agent, IOConstants.AREA_DESCRIPTION, agent.getSoarAgent()
+				.GetInputLink());
 
-        update();
-    }
+		this.agent = agent;
+		this.channel = "WAYPOINTS_" + agent.getName();
 
-    private void newArea(AreaDescription ad)
-    {
-        debug("newArea(" + ad.toString() + ")");
-        idwme.update(ad.getId());
-        logger.trace(idwme);
+		idwme = IntWme.newInstance(getRoot(), IOConstants.ID, -1);
+		areaX = DistanceWme.newInstance(getRoot(), IOConstants.X, 0.0,
+				agent.getProperties());
+		areaY = DistanceWme.newInstance(getRoot(), IOConstants.Y, 0.0,
+				agent.getProperties());
+		typewme = StringWme.newInstance(getRoot(), IOConstants.TYPE);
+		lightwme = StringWme.newInstance(getRoot(), IOConstants.LIGHT);
+		output = agent.getRobotOutput();
 
-        String type = ad.getProperties().get("type");
-        typewme.update(type == null ? IOConstants.ROOM : type);
-        logger.trace(typewme);
+		update();
+	}
 
-        waypoint_list_t lcmwps = new waypoint_list_t();
-        lcmwps.utime = TimeUtil.utime();
-        List<waypoint_t> lcmtemplist = Lists.newArrayList();
+	private void newArea(AreaDescription ad) {
+		debug("newArea(" + ad.toString() + ")");
+		idwme.update(ad.getId());
+		ImmutablePose roomLocation = ad.getMidpoint();
+		areaX.update(roomLocation.getX());
+		areaY.update(roomLocation.getY());
+		logger.trace(idwme);
 
-        // gateways
-        for (int i = 0; i < ad.getGateways().size(); ++i)
-        {
-            Gateway gateway = ad.getGateways().get(i);
-            String dir = gateway.getDirection(ad).toString().toLowerCase();
-            if (logger.isTraceEnabled()) logger.trace(dir + ":" + gateway);
+		String type = ad.getProperties().get("type");
+		typewme.update(type == null ? IOConstants.ROOM : type);
+		logger.trace(typewme);
 
-            waypoint_t wp = new waypoint_t();
-            wp.utime = lcmwps.utime;
-            wp.xLocal = gateway.getPose().getX();
-            wp.yLocal = gateway.getPose().getY();
-            wp.tLocal = gateway.getPose().getYaw();
-            lcmtemplist.add(wp);
+		waypoint_list_t lcmwps = new waypoint_list_t();
+		lcmwps.utime = TimeUtil.utime();
+		List<waypoint_t> lcmtemplist = Lists.newArrayList();
 
-            Identifier gatewaywme = agent.getSoarAgent().CreateIdWME(getRoot(), IOConstants.GATEWAY);
+		// gateways
+		for (int i = 0; i < ad.getGateways().size(); ++i) {
+			Gateway gateway = ad.getGateways().get(i);
+			String dir = gateway.getDirection(ad).toString().toLowerCase();
+			if (logger.isTraceEnabled())
+				logger.trace(dir + ":" + gateway);
 
-            Identifier doorwme = agent.getSoarAgent().CreateIdWME(gatewaywme, IOConstants.DOOR);
-            IntWme.newInstance(doorwme, IOConstants.ID, gateway.getDoor().getId());
-            StringWme.newInstance(doorwme, IOConstants.STATE, gateway.getDoor().getState().toString().toLowerCase());
+			waypoint_t wp = new waypoint_t();
+			wp.utime = lcmwps.utime;
+			wp.xLocal = gateway.getPose().getX();
+			wp.yLocal = gateway.getPose().getY();
+			wp.tLocal = gateway.getPose().getYaw();
+			lcmtemplist.add(wp);
 
-            PointWithDistanceIL pointData = new PointWithDistanceIL(gatewaywme, agent, gateway.getPose());
-            StringWme.newInstance(gatewaywme, IOConstants.DIRECTION, dir.toString().toLowerCase());
+			Identifier gatewaywme = agent.getSoarAgent().CreateIdWME(getRoot(),
+					IOConstants.GATEWAY);
+			Identifier doorwme = agent.getSoarAgent().CreateIdWME(gatewaywme,
+					IOConstants.DOOR);
 
-            IntWme.newInstance(gatewaywme, IOConstants.ID, gateway.getId());
-            for (Integer to : gateway.getTo())
-            {
-                IntWme.newInstance(gatewaywme, IOConstants.TO, to);
-            }
+			IntWme.newInstance(doorwme, IOConstants.ID, gateway.getDoor()
+					.getId());
+			StringWme.newInstance(doorwme, IOConstants.STATE, gateway.getDoor()
+					.getState().toString().toLowerCase());
 
-            pointDataList.add(pointData);
-            destroyList.add(gatewaywme);
-            gatewayWmes.add(gatewaywme);
-        }
+			PointWithDistanceIL pointData = new PointWithDistanceIL(gatewaywme,
+					agent, gateway.getPose());
+			StringWme.newInstance(gatewaywme, IOConstants.DIRECTION, dir
+					.toString().toLowerCase());
 
-        // walls
-        for (Wall w : ad.getWalls())
-        {
-            waypoint_t wp = new waypoint_t();
-            wp.utime = lcmwps.utime;
-            wp.xLocal = w.getMidpoint().getX();
-            wp.yLocal = w.getMidpoint().getY();
-            wp.tLocal = w.getMidpoint().getYaw();
-            lcmtemplist.add(wp);
+			IntWme.newInstance(gatewaywme, IOConstants.ID, gateway.getId());
 
-            Identifier wallwme = agent.getSoarAgent().CreateIdWME(getRoot(), IOConstants.WALL);
-            wallwme.CreateIntWME(IOConstants.ID, w.getId());
-            PointWithDistanceIL pointData = new PointWithDistanceIL(wallwme, agent, w.getMidpoint());
+			for (Integer to : gateway.getTo()) {
+				IntWme.newInstance(gatewaywme, IOConstants.TO, to);
+			}
 
-            String dir = w.getDirection().toString().toLowerCase();
-            StringWme.newInstance(wallwme, IOConstants.DIRECTION, dir);
+			gwToPointData.put(gateway.getId(), pointDataList.size());
+			pointDataList.add(pointData);
+			destroyList.add(gatewaywme);
+			gatewayWmes.add(gatewaywme);
+		}
 
-            boolean open = false;
+		// walls
+		for (Wall w : ad.getWalls()) {
+			waypoint_t wp = new waypoint_t();
+			wp.utime = lcmwps.utime;
+			wp.xLocal = w.getMidpoint().getX();
+			wp.yLocal = w.getMidpoint().getY();
+			wp.tLocal = w.getMidpoint().getYaw();
+			lcmtemplist.add(wp);
 
-            // If type is null, this is of "room" type.
-            // Otherwise, this is a door type.
-            // If it's a door type, it already has gateways.
-            if (type == null)
-            {
-                for (Integer id : w.getTo())
-                {
-                    open = true;
+			Identifier wallwme = agent.getSoarAgent().CreateIdWME(getRoot(),
+					IOConstants.WALL);
+			wallwme.CreateIntWME(IOConstants.ID, w.getId());
+			PointWithDistanceIL pointData = new PointWithDistanceIL(wallwme,
+					agent, w.getMidpoint());
 
-                    // Use a ^gateway wme instead of ^to
-                    // IntWme.newInstance(wallwme, IOConstants.TO, id);
+			String dir = w.getDirection().toString().toLowerCase();
+			StringWme.newInstance(wallwme, IOConstants.DIRECTION, dir);
 
-                    // Add something here that looks like a gateway
-                    Identifier gatewayWme = agent.getSoarAgent().CreateIdWME(getRoot(), IOConstants.GATEWAY);
-                    gatewayWme.CreateStringWME(IOConstants.DIRECTION, dir);
-                    PointWithDistanceIL gatewayPoint = new PointWithDistanceIL(gatewayWme, agent, w.getMidpoint());
-                    gatewayWme.CreateStringWME(IOConstants.DOOR, "nil");
-                    gatewayWme.CreateIntWME(IOConstants.TO, id);
-                    gatewayWme.CreateIntWME(IOConstants.TO, ad.getId());
-                    gatewayWme.CreateIntWME(IOConstants.ID, w.getGatewayId());
+			boolean open = false;
 
-                    destroyList.add(gatewayWme);
-                    pointDataList.add(gatewayPoint);
-                }
-            }
-            StringWme.newInstance(wallwme, IOConstants.OPEN, Boolean.toString(open));
+			// If type is null, this is of "room" type.
+			// Otherwise, this is a door type.
+			// If it's a door type, it already has gateways.
+			if (type == null) {
+				for (Integer id : w.getTo()) {
+					open = true;
 
-            pointDataList.add(pointData);
-            destroyList.add(wallwme);
-        }
+					// Use a ^gateway wme instead of ^to
+					// IntWme.newInstance(wallwme, IOConstants.TO, id);
 
-        lcmwps.waypoints = lcmtemplist.toArray(new waypoint_t[lcmtemplist.size()]);
-        lcmwps.nwaypoints = lcmwps.waypoints.length;
+					// Add something here that looks like a gateway
+					Identifier gatewayWme = agent.getSoarAgent().CreateIdWME(
+							getRoot(), IOConstants.GATEWAY);
+					gatewayWme.CreateStringWME(IOConstants.DIRECTION, dir);
+					PointWithDistanceIL gatewayPoint = new PointWithDistanceIL(
+							gatewayWme, agent, w.getMidpoint());
+					gatewayWme.CreateStringWME(IOConstants.DOOR, "nil");
+					gatewayWme.CreateIntWME(IOConstants.TO, id);
+					gatewayWme.CreateIntWME(IOConstants.TO, ad.getId());
+					gatewayWme.CreateIntWME(IOConstants.ID, w.getGatewayId());
 
-        lcm.publish(channel, lcmwps);
-    }
+					destroyList.add(gatewayWme);
+					pointDataList.add(gatewayPoint);
+				}
+			}
+			StringWme.newInstance(wallwme, IOConstants.OPEN,
+					Boolean.toString(open));
 
-    @Override
-    public void update()
-    {
-        AreaDescription ad = output.getAreaDescription();
-        AreaState as = output.getAreaState();
+			pointDataList.add(pointData);
+			destroyList.add(wallwme);
+		}
 
-        if (ad != null)
-        {
-            warned = false;
-            if (ad.getId() != idwme.getValue() || ad.hasChanged())
-            {
-                for (Identifier old : destroyList)
-                    old.DestroyWME();
-                destroyList.clear();
-                pointDataList.clear();
-                gatewayWmes.clear();
+		lcmwps.waypoints = lcmtemplist.toArray(new waypoint_t[lcmtemplist
+				.size()]);
+		lcmwps.nwaypoints = lcmwps.waypoints.length;
 
-                newArea(ad);
-                ad.setChanged(false);
-            }
+		lcm.publish(channel, lcmwps);
 
-            updateLight(as);
-            updateDoors(ad);
-        }
-        else
-        {
-            if (logger.isTraceEnabled() && !warned)
-            {
-                logger.trace("No area description");
-                warned = true;
-            }
-        }
+	}
 
-        for (PointWithDistanceIL pointData : pointDataList)
-            pointData.update();
-    }
+	@Override
+	public void update() {
+		AreaDescription ad = output.getAreaDescription();
+		AreaState as = output.getAreaState();
 
-    private void updateLight(AreaState as)
-    {
-        lightwme.update(as.isLit(false) ? IOConstants.TRUE : IOConstants.FALSE);
-    }
+		if (ad != null) {
+			warned = false;
 
-    private void updateDoors(AreaDescription ad)
-    {
-        Map<Long, Identifier> gatewayIdToDoorWme = new HashMap<Long, Identifier>();
-        for (Identifier gatewayWme : gatewayWmes)
-        {
-            WMElement door = gatewayWme.FindByAttribute(IOConstants.DOOR, 0);
-            if (door == null || !door.IsIdentifier())
-            {
-                continue;
-            }
-            Identifier doorwme = door.ConvertToIdentifier();
-            Long gatewayID = doorwme.FindByAttribute(IOConstants.ID, 0).ConvertToIntElement().GetValue();
-            gatewayIdToDoorWme.put(gatewayID, doorwme);
-        }
-        for (Gateway gateway : ad.getGateways())
-        {
-            Door door = gateway.getDoor();
-            Long id = (long) door.getId();
-            Identifier doorWme = gatewayIdToDoorWme.get(id);
-            if (doorWme == null)
-            {
-                continue;
-            }
-            StringElement wmeState = doorWme.FindByAttribute(IOConstants.STATE, 0).ConvertToStringElement();
-            String wmeStateValue = wmeState.GetValue();
-            String doorStateValue = door.getState().toString().toLowerCase();
-            if (!wmeStateValue.equals(doorStateValue))
-            {
-                wmeState.DestroyWME();
-                StringWme.newInstance(doorWme, IOConstants.STATE, doorStateValue);
-            }
-        }
-    }
+			// new area - rebuild input-link
+			if (ad.getId() != idwme.getValue()) {
+				for (Identifier old : destroyList)
+					old.DestroyWME();
 
-    private static void debug(String message)
-    {
-        //System.out.println(message);
-    }
+				destroyList.clear();
+				pointDataList.clear();
+				gatewayWmes.clear();
+				gwToPointData.clear();
+
+				newArea(ad);
+				ad.setChanged(false);
+			}
+
+			// area needs to be updated
+			else if (ad.hasChanged()) {
+				ad.setChanged(false);
+				List<Gateway> gws = ad.getGateways();
+				int size = gws.size();
+				ImmutablePose roomLocation = ad.getMidpoint();
+				areaX.update(roomLocation.getX());
+				areaY.update(roomLocation.getY());
+
+				for (int i = 0; i < size; i++) {
+					Gateway gw = gws.get(i);
+					Integer location = gwToPointData.get(gw.getId());
+					if (location != null) {
+						pointDataList.get(location)
+								.updateLocation(gw.getPose());
+					} else {
+						String dir = gw.getDirection(ad).toString()
+								.toLowerCase();
+
+						Identifier gatewaywme = agent.getSoarAgent()
+								.CreateIdWME(getRoot(), IOConstants.GATEWAY);
+						Identifier doorwme = agent.getSoarAgent().CreateIdWME(
+								gatewaywme, IOConstants.DOOR);
+
+						IntWme.newInstance(doorwme, IOConstants.ID, gw
+								.getDoor().getId());
+						StringWme.newInstance(doorwme, IOConstants.STATE, gw
+								.getDoor().getState().toString().toLowerCase());
+
+						PointWithDistanceIL pointData = new PointWithDistanceIL(
+								gatewaywme, agent, gw.getPose());
+						StringWme.newInstance(gatewaywme,
+								IOConstants.DIRECTION, dir.toString()
+										.toLowerCase());
+
+						IntWme.newInstance(gatewaywme, IOConstants.ID,
+								gw.getId());
+
+						for (Integer to : gw.getTo()) {
+							IntWme.newInstance(gatewaywme, IOConstants.TO, to);
+						}
+
+						gwToPointData.put(gw.getId(), pointDataList.size());
+						pointDataList.add(pointData);
+						destroyList.add(gatewaywme);
+						gatewayWmes.add(gatewaywme);
+
+						// TODO not publishing over LCM these new door updates
+					}
+				}
+			}
+
+			updateLight(as);
+			updateDoors(ad);
+		} else {
+			if (logger.isTraceEnabled() && !warned) {
+				logger.trace("No area description");
+				warned = true;
+			}
+		}
+
+		for (PointWithDistanceIL pointData : pointDataList)
+			pointData.update();
+	}
+
+	private void updateLight(AreaState as) {
+		lightwme.update(as.isLit(false) ? IOConstants.TRUE : IOConstants.FALSE);
+	}
+
+	private void updateDoors(AreaDescription ad) {
+		Map<Long, Identifier> gatewayIdToDoorWme = new HashMap<Long, Identifier>();
+		for (Identifier gatewayWme : gatewayWmes) {
+			WMElement door = gatewayWme.FindByAttribute(IOConstants.DOOR, 0);
+			if (door == null || !door.IsIdentifier()) {
+				continue;
+			}
+			Identifier doorwme = door.ConvertToIdentifier();
+			Long gatewayID = doorwme.FindByAttribute(IOConstants.ID, 0)
+					.ConvertToIntElement().GetValue();
+			gatewayIdToDoorWme.put(gatewayID, doorwme);
+		}
+		for (Gateway gateway : ad.getGateways()) {
+			Door door = gateway.getDoor();
+			Long id = (long) door.getId();
+			Identifier doorWme = gatewayIdToDoorWme.get(id);
+			if (doorWme == null) {
+				continue;
+			}
+			StringElement wmeState = doorWme.FindByAttribute(IOConstants.STATE,
+					0).ConvertToStringElement();
+			String wmeStateValue = wmeState.GetValue();
+			String doorStateValue = door.getState().toString().toLowerCase();
+			if (!wmeStateValue.equals(doorStateValue)) {
+				wmeState.DestroyWME();
+				StringWme.newInstance(doorWme, IOConstants.STATE,
+						doorStateValue);
+			}
+		}
+	}
+
+	private static void debug(String message) {
+		// System.out.println(message);
+	}
 }

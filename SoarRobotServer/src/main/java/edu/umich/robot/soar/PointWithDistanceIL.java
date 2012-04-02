@@ -30,57 +30,58 @@ import edu.umich.robot.util.soar.DistanceWme;
 /**
  * @author voigtjr@gmail.com
  */
-public class PointWithDistanceIL
-{
-    private final Identifier root;
+public class PointWithDistanceIL {
+	private final Identifier root;
 
-    private final DistanceWme x;
+	private final DistanceWme x;
 
-    private final DistanceWme y;
+	private final DistanceWme y;
 
-    private final DistanceWme z;
+	private final DistanceWme z;
 
-    private final DistanceWme distance;
+	private final DistanceWme distance;
 
-    private final RobotOutput output;
+	private final RobotOutput output;
 
-    private final Pose p;
+	private final Pose p;
 
-    PointWithDistanceIL(Identifier root, SoarAgent agent, Pose p)
-    {
-        this.root = root;
-        this.output = agent.getRobotOutput();
-        this.p = p;
+	PointWithDistanceIL(Identifier root, SoarAgent agent, Pose p) {
+		this.root = root;
+		this.output = agent.getRobotOutput();
+		this.p = p;
 
-        PropertyManager properties = agent.getProperties();
-        x = DistanceWme.newInstance(root, IOConstants.X, p.getX(), properties);
-        y = DistanceWme.newInstance(root, IOConstants.Y, p.getY(), properties);
-        z = DistanceWme.newInstance(root, IOConstants.Z, p.getZ(), properties);
+		PropertyManager properties = agent.getProperties();
+		x = DistanceWme.newInstance(root, IOConstants.X, p.getX(), properties);
+		y = DistanceWme.newInstance(root, IOConstants.Y, p.getY(), properties);
+		z = DistanceWme.newInstance(root, IOConstants.Z, p.getZ(), properties);
 
-        distance = DistanceWme.newInstance(root, IOConstants.DISTANCE, properties);
-    }
+		distance = DistanceWme.newInstance(root, IOConstants.DISTANCE,
+				properties);
+	}
 
-    public Identifier getRoot()
-    {
-        return root;
-    }
+	public void updateLocation(Pose pose) {
+		x.update(pose.getX());
+		y.update(pose.getY());
+		z.update(pose.getZ());
+	}
 
-    public void update()
-    {
-        distance.update(output.getPose().getDistance(p));
-    }
+	public Identifier getRoot() {
+		return root;
+	}
 
-    public Pose getPose()
-    {
-        return p;
-    }
+	public void update() {
+		distance.update(output.getPose().getDistance(p));
+	}
 
-    public void destroyChildren()
-    {
-        x.destroy();
-        y.destroy();
-        z.destroy();
-        distance.destroy();
-    }
+	public Pose getPose() {
+		return p;
+	}
+
+	public void destroyChildren() {
+		x.destroy();
+		y.destroy();
+		z.destroy();
+		distance.destroy();
+	}
 
 }
