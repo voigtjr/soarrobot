@@ -381,7 +381,7 @@ public class DoorFinder {
 							// point ahead
 							points.add(rpoints.get(i + j + z));
 						}
-
+						
 						// fit this line
 						double[] line = LinAlg.fitLine(points);
 

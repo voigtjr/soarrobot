@@ -139,10 +139,12 @@ public class Superdroid implements Robot, LidarChangedListener,
 	private SlamGui slamGui;
 	private Slam slam;
 	private boolean slamInput = false;
+	private boolean slamVis = false;
 
 	public Superdroid(String name, Radio radio, Metamap metamap,
-			boolean slamInput) {
+			boolean slamInput, boolean slamVis) {
 		this.slamInput = slamInput;
+		this.slamVis = slamVis;
 		this.name = name;
 		this.radio = radio;
 		this.metamap = metamap;
@@ -155,17 +157,22 @@ public class Superdroid implements Robot, LidarChangedListener,
 		velocities = new SuperdroidVelocities(name, drive, pose, apid, lpid);
 		heading = new HeadingController(velocities, pose, hpid);
 
-		// TODO: simulated battery current draw, will stay at 100% now
-		// except for headlight, that does pull power, see setHeadlight()
+		// simulated battery current draw, will stay at 100% now
+		// except for head light, that does pull power, see setHeadlight()
 
 		long period = properties.get(SuperdroidProperties.UPDATE_PERIOD);
 		commandTask = schexec.scheduleAtFixedRate(command, 0, period,
 				TimeUnit.MILLISECONDS);
 
-		// Initalize slam.
-		if (slamInput) {
+		// visualize SLAM
+		if (slamVis) {
 			slamGui = new SlamGui();
 			slam = slamGui.getSlam();
+			lidar.addLidarChangedListener(this);
+		}
+		// do not visualize SLAM but use SLAM for input-link
+		else if(slamInput) {
+			slam = new Slam(SlamGui.getDefaultConfig());
 			lidar.addLidarChangedListener(this);
 		}
 	}
@@ -237,6 +244,7 @@ public class Superdroid implements Robot, LidarChangedListener,
 		@SuppressWarnings("unused")
 		public AreaDescription getAreaDescription() {
 
+			// output for viewing slam construction (for debugging purposes)
 			if (false) {
 				System.out.println("Current Room Identification: "
 						+ slam.getArea().getId());
@@ -305,7 +313,6 @@ public class Superdroid implements Robot, LidarChangedListener,
 		}
 
 		public RobotConfiguration getRobotConfiguration() {
-			// TODO: more
 			return new RobotConfiguration.Builder().gainsHeading(
 					properties.get(SuperdroidProperties.HEADING_PID_GAINS))
 					.build();
@@ -488,10 +495,15 @@ public class Superdroid implements Robot, LidarChangedListener,
 		lidar.shutdown();
 		battery.shutdown();
 	}
+	
+	@Override
+	public void onLidarChanged(UrgBinner binner) {
+		// needs implementation
+	}
 
 	@Override
 	public void onLidarChanged(SickBinner binner) {
-		if (slamInput) {
+		if (slamInput || slamVis) {
 			// pass to "processScan" points from lidar scan in robot's
 			// coordinate
 			// frame
@@ -504,9 +516,9 @@ public class Superdroid implements Robot, LidarChangedListener,
 				double s = Math.sin(rad0);
 				rad0 += laser.radstep;
 
-				if (laser.ranges[i] > 15)
+				// check laser range (this is based on the LIDAR sensor being simulated)
+				if (laser.ranges[i] > 29 || laser.ranges[i] < 0.1)
 					continue;
-				// TODO check laser range before adding point to rpoints
 				if (i % skipBeams == 0) {
 					double[] xy = { laser.ranges[i] * c, laser.ranges[i] * s };
 					rpoints.add(xy);
@@ -517,13 +529,8 @@ public class Superdroid implements Robot, LidarChangedListener,
 	}
 
 	@Override
-	public void onLidarChanged(UrgBinner binner) {
-		// TODO implement
-	}
-
-	@Override
 	public void onPoseChanged(pose_t pose) {
-		if (slamInput) {
+		if (slamInput || slamVis) {
 			// pass to "processOdometry" robots [x,y,theta] pose in global
 			// coordinate frame
 			double[] q = pose.orientation;

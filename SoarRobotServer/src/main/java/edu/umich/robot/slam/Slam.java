@@ -205,7 +205,7 @@ public class Slam {
 
 	// Sampling errors (x, y, and theta) used to calculate standard deviation
 	// when artificially inflating the odometry error based upon SLAM setup.
-	double[] samplingError = new double[] { 0.005, 0.005, Math.toRadians(0.005) };
+	double[] samplingError = new double[] { 0.01, 0.01, 0.01};
 
 	// Array list capturing poses of the true odometry movement (only available
 	// in the simulation environment).
@@ -248,7 +248,7 @@ public class Slam {
 	// Holds all non odometry edges added to the graph.
 	ArrayList<GEdge> addedEdges = new ArrayList<GEdge>();
 
-	// Assists in area dexription builder
+	// Assists in area description building
 	boolean adChanged = false;
 
 	/**
@@ -258,7 +258,7 @@ public class Slam {
 	 *            Configuration file (see april.config for more information).
 	 */
 	public Slam(Config config) {
-
+		
 		// configuration file available (if not, all parameters are set to their
 		// default values currently assigned)
 		if (config != null) {
@@ -413,11 +413,11 @@ public class Slam {
 				double s3 = Math.abs(samplingError[2] * priorU[2]);
 
 				double Dx = priorU[0] + Math.sqrt(s1)
-						* randomGen.nextGaussian();
+						* (2*randomGen.nextDouble() - 1);
 				double Dy = priorU[1] + Math.sqrt(s2)
-						* randomGen.nextGaussian();
+						* (2*randomGen.nextDouble() - 1);
 				double Dt = priorU[2] + Math.sqrt(s3)
-						* randomGen.nextGaussian();
+						* (2*randomGen.nextDouble() - 1);
 
 				// new odomxyt after sampling from noisy motion model
 				double[] newU = new double[] { Dx, Dy, Dt };
@@ -488,6 +488,7 @@ public class Slam {
 			GXYTNode gn = new GXYTNode();
 			gn.state = xyt;
 			gn.init = xyt;
+			gn.truth = trueOdom.get(trueOdom.size() - 1);
 
 			// anchor this node in the graph using a GXYTPosEdge (see
 			// GXYTPosEdge for more information)
@@ -500,8 +501,6 @@ public class Slam {
 			// add attributes (LIDAR scan and node index within graph.nodes)
 			gn.setAttribute("points", rpoints);
 			gn.setAttribute("node_index", g.nodes.size());
-
-			// add node to graph
 			g.nodes.add(gn);
 
 			// update the open loop grid map if odometry information is not
@@ -556,6 +555,7 @@ public class Slam {
 			GXYTNode gn = new GXYTNode();
 			gn.state = xyt;
 			gn.init = xyt;
+			gn.truth = LinAlg.copy(trueOdom.get(trueOdom.size() - 1));
 			gn.setAttribute("points", rpoints);
 			gn.setAttribute("node_index", g.nodes.size());
 			g.nodes.add(gn);
@@ -633,7 +633,7 @@ public class Slam {
 			// attempt to close the loop based on SLAM setup
 			if (closeLoop) {
 				int curEdges = g.edges.size();
-				close();
+				closeLoop();
 				if (curEdges < g.edges.size()) {
 					optimizeFull(g);
 					xyt = LinAlg.copy(g.nodes.get(lastPoseIndex).state);
@@ -723,7 +723,7 @@ public class Slam {
 	 * ending with the most recent node added to the graph.
 	 * 
 	 */
-	public void close() {
+	public void closeLoop() {
 
 		// have not accumulated enough nodes (or somehow got ahead) to
 		// attempt a loop closure
@@ -835,7 +835,7 @@ public class Slam {
 				candidates.add(dpPrior);
 		}
 
-		// shuffle, shuffle, shuffle...
+		// random ordering of candidate edges
 		Collections.shuffle(candidates);
 
 		// matching to as many candidate nodes as is permitted by
@@ -1187,7 +1187,9 @@ public class Slam {
 		}
 	}
 
-	// TODO : Document everything below here -- Input Link information
+	/** 
+	 * Returns the current area description based on door finding and SLAM. 
+	 */
 	public AreaDescription getArea() {
 		return area;
 	}

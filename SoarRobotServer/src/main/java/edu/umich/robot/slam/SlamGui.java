@@ -11,8 +11,6 @@ import april.config.Config;
 import april.config.ConfigUtil;
 import april.graph.GEdge;
 import april.graph.GNode;
-import april.graph.GXYEdge;
-import april.graph.GXYNode;
 import april.graph.GXYTNode;
 import april.jmat.LinAlg;
 import april.lcmtypes.laser_t;
@@ -62,9 +60,9 @@ public class SlamGui implements LCMSubscriber {
 					double s = Math.sin(rad0);
 					rad0 += laser.radstep;
 
+					// set simulated laser range specifications
 					if (laser.ranges[i] > 50)
 						continue;
-					// TODO check laser range before adding point to rpoints
 					if (i % skipBeams == 0) {
 						double[] xy = { laser.ranges[i] * c,
 								laser.ranges[i] * s };
@@ -96,7 +94,7 @@ public class SlamGui implements LCMSubscriber {
 		this(null);
 	}
 
-	private static Config getDefaultConfig() {
+	public static Config getDefaultConfig() {
 		URL configLocation = SlamGui.class
 				.getResource("/edu/umich/robot/slam/soarSLAM.config");
 		String[] configPasser = new String[] { "-c", configLocation.getFile() };
@@ -221,7 +219,7 @@ public class SlamGui implements LCMSubscriber {
 				for (GEdge gh : slam.addedEdges) {
 
 					VisData vd;
-					if (gh.getAttribute("type").equals("door")) {
+					if (gh.getAttribute("type") != null && gh.getAttribute("type").equals("door")) {
 						vd = new VisData(new VisDataPointStyle(Color.red, 2),
 								new VisDataLineStyle(Color.red, 1));
 					} else {
