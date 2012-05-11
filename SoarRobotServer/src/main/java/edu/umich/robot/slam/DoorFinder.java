@@ -139,7 +139,7 @@ public class DoorFinder {
 	HashMap<Integer, ArrayList<Integer>> roomMap = new HashMap<Integer, ArrayList<Integer>>();
 	HashMap<Integer, double[]> roomPoses = new HashMap<Integer, double[]>();
 
-	// TODO document
+	// variables to assist in gateway building
 	ArrayList<Gateway> gateWays = new ArrayList<Gateway>();
 	double upperDoorDirection = (3 * Math.PI) / 4;
 	double lowerDoorDirection = -Math.PI / 4;
@@ -381,7 +381,7 @@ public class DoorFinder {
 							// point ahead
 							points.add(rpoints.get(i + j + z));
 						}
-						
+
 						// fit this line
 						double[] line = LinAlg.fitLine(points);
 
@@ -519,7 +519,14 @@ public class DoorFinder {
 		return doors;
 	}
 
-	// TODO document
+	/**
+	 * The following method maps a doors angle to either be pointing north or
+	 * east.
+	 * 
+	 * @param angle
+	 *            The prior angle of the doorway in question.
+	 * @return Angle of the doorway pointing either north or east.
+	 */
 	public double mapDirection(double angle) {
 
 		if (angle >= lowerDoorDirection && angle <= upperDoorDirection)
@@ -1373,7 +1380,17 @@ public class DoorFinder {
 		return false;
 	}
 
-	// TODO Document
+	/**
+	 * The following method determines if the robot has passed in a new area,
+	 * and sets such flags accordingly.
+	 * 
+	 * @param g
+	 *            SLAM graph.
+	 * @param xyt
+	 *            Current pose of the robot (provided by SLAM).
+	 * @param poseThresh
+	 *            Threshold of adding poses to SLAM graph.
+	 */
 	public void areaChange(Graph g, double[] xyt, double poseThresh) {
 
 		// check if passed through door
@@ -1459,7 +1476,16 @@ public class DoorFinder {
 		}
 	}
 
-	// TODO document
+	/**
+	 * The following method updates gateways in the environment.
+	 * 
+	 * @param g
+	 *            SLAM graph.
+	 * @param pose
+	 *            Current pose of the robot (provided by SLAM).
+	 * @param poseThresh
+	 *            Threshold of adding poses to SLAM graph.
+	 */
 	public void updateGateways(Graph g, double[] pose, double poseThresh) {
 
 		// clear gateway lists
@@ -1607,7 +1633,14 @@ public class DoorFinder {
 		}
 	}
 
-	// TODO document
+	/**
+	 * The following method updates the estimate of the center of the room which
+	 * the robot is operating in by taking an average of all poses within this
+	 * room.
+	 * 
+	 * @param pose
+	 *            Current pose of the robot (as provided by SLAM).
+	 */
 	public void updateCurrentRoom(double[] pose) {
 		if (!inDoor) {
 			double[] currentLocation = roomPoses.get(currentRoom);
@@ -1620,6 +1653,15 @@ public class DoorFinder {
 		}
 	}
 
+	/**
+	 * The following method returns the estimate on the center of the room which
+	 * the robot is currently operating in (see method 'updateCurrentRoom' for
+	 * details).
+	 * 
+	 * @param g
+	 *            SLAM graph.
+	 * @return Estimate on the center of the room the robot is operating in.
+	 */
 	public double[] getRoomLocation(Graph g) {
 		if (inDoor) {
 			return g.nodes.get(doors.get(lastDoorInside).graphNodeIndex).state;
